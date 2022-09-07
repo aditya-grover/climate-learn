@@ -1,0 +1,42 @@
+seed_everything: 42
+
+# ---------------------------- TRAINER -------------------------------------------
+trainer:
+  gpus: 1
+  num_nodes: 1
+  accelerator: gpu
+  strategy: ddp_find_unused_parameters_false
+
+# ---------------------------- MODEL -------------------------------------------
+model:
+  lr: 0.0005
+  weight_decay: 0.005
+
+  net:
+    class_path: src.models.components.vit.VisionTransformer
+    init_args:
+      img_size: [128, 256]
+      patch_size: 16
+      in_vars:
+        ["2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind"]
+      embed_dim: 1024
+      depth: 8
+      num_heads: 16
+      mlp_ratio: 4
+      out_vars: null
+  pretrained_path: ""
+
+# ---------------------------- DATA -------------------------------------------
+data:
+  dataset:
+    class_path: src.datamodules.era5_dataset.ERA5Forecast
+    init_args:
+      root: /mnt/weatherbench
+      variables:
+        ["2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind"]
+      predict_range: 6
+  train_val_test_split: [54056, 2924, 1459]
+  random_split: False
+  batch_size: 128
+  num_workers: 2
+  pin_memory: False

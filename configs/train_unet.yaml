@@ -1,0 +1,111 @@
+seed_everything: 42
+
+# ---------------------------- TRAINER -------------------------------------------
+trainer:
+  default_root_dir: ${oc.env:AMLT_OUTPUT_DIR,/mnt/climate_pretraining/outputs/vit}
+
+  precision: 16
+
+  gpus: null
+  num_nodes: 1
+  accelerator: gpu
+  strategy: ddp_find_unused_parameters_false
+
+  min_epochs: 1
+  max_epochs: 20
+  enable_progress_bar: true
+
+  sync_batchnorm: True
+  enable_checkpointing: True
+  resume_from_checkpoint: null
+
+  # debugging
+  fast_dev_run: false
+
+  logger:
+    class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+    init_args:
+      save_dir: ${trainer.default_root_dir}/logs
+      name: null
+      version: null
+      log_graph: False
+      default_hp_metric: True
+      prefix: ""
+
+  callbacks:
+    - class_path: pytorch_lightning.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: "step"
+
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: "${trainer.default_root_dir}/checkpoints"
+        monitor: "val/w_rmse" # name of the logged metric which determines when model is improving
+        mode: "min" # "max" means higher metric value is better, can be also "min"
+        save_top_k: 1 # save k best models (determined by above metric)
+        save_last: True # additionaly always save model from last epoch
+        verbose: False
+        filename: "epoch_{epoch:03d}"
+        auto_insert_metric_name: False
+
+    # - class_path: pytorch_lightning.callbacks.EarlyStopping
+    #   init_args:
+    #     monitor: "train/loss" # name of the logged metric which determines when model is improving
+    #     mode: "min" # "max" means higher metric value is better, can be also "min"
+    #     patience: 100 # how many validation epochs of not improving until training stops
+    #     min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
+
+    - class_path: pytorch_lightning.callbacks.RichModelSummary
+      init_args:
+        max_depth: -1
+
+    - class_path: pytorch_lightning.callbacks.RichProgressBar
+
+# ---------------------------- MODEL -------------------------------------------
+model:
+  lr: 0.0005
+  weight_decay: 0.005
+  warmup_epochs: 5
+  max_epochs: 30
+  warmup_start_lr: 1e-8
+  eta_min: 1e-8
+
+  net:
+    class_path: src.models.components.unet.Unet
+    init_args:
+      in_channels: 17
+      hidden_channels: 64
+      out_channels: 2
+      n_blocks: 2
+  pretrained_path: ""
+
+# ---------------------------- DATA -------------------------------------------
+data:
+  root_dir: /datadrive/datasets/1.40625deg_equally_np
+  variables: [
+      "z_1000",
+      "z_850",
+      "z_500",
+      "z_50",
+      "r_850",
+      "r_500",
+      "u_1000",
+      "u_850",
+      "u_500",
+      "v_1000",
+      "v_850",
+      "v_500",
+      "t_850",
+      "t_500",
+      "t2m",
+      "u10",
+      "v10",
+    ]
+  predict_range: 6
+  predict_steps: 4
+  history: 3
+  interval: 6
+  buffer_size: 20000
+  batch_size: 128
+  num_workers: 2
+  pin_memory: False
