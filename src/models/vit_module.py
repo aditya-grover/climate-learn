@@ -18,7 +18,6 @@ class ViTLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        pretrained_path: str,
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -29,24 +28,6 @@ class ViTLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
-        if len(pretrained_path) > 0:
-            self.load_mae_weights(pretrained_path)
-
-    def load_mae_weights(self, pretrained_path):
-        checkpoint = torch.load(pretrained_path)
-
-        print("Loading pre-trained checkpoint from: %s" % pretrained_path)
-        checkpoint_model = checkpoint["state_dict"]
-        state_dict = self.state_dict()
-        checkpoint_keys = list(checkpoint_model.keys())
-        for k in checkpoint_keys:
-            if k not in state_dict.keys() or checkpoint_model[k].shape != state_dict[k].shape:
-                print(f"Removing key {k} from pretrained checkpoint")
-                del checkpoint_model[k]
-
-        # load pre-trained model
-        msg = self.load_state_dict(checkpoint_model, strict=False)
-        print(msg)
 
     def forward(self, x):
         return self.net.predict(x)
@@ -62,36 +43,19 @@ class ViTLitModule(LightningModule):
         self.pred_range = r
 
     def training_step(self, batch: Any, batch_idx: int):
-        if isinstance(batch, dict):
-            loss = 0
-            for source_id in batch.keys():
-                x, y, variables, out_variables = batch[source_id]
-                loss_dict, _ = self.net.forward(x, y, variables, out_variables, [lat_weighted_mse], lat=self.lat)
-                loss_dict = loss_dict[0]
-                for var in loss_dict.keys():
-                    self.log(
-                        f"train/{source_id}/" + var,
-                        loss_dict[var],
-                        on_step=True,
-                        on_epoch=False,
-                        prog_bar=True,
-                    )
-                # return loss_dict
-                loss += loss_dict["loss"]
-            return loss / len(batch.keys())
-        else:
-            x, y, variables, out_variables = batch
-            loss_dict, _ = self.net.forward(x, y, variables, out_variables, [lat_weighted_mse], lat=self.lat)
-            loss_dict = loss_dict[0]
-            for var in loss_dict.keys():
-                self.log(
-                    "train/" + var,
-                    loss_dict[var],
-                    on_step=True,
-                    on_epoch=False,
-                    prog_bar=True,
-                )
-            return loss_dict['loss']
+        x, y, variables, out_variables = batch
+        loss_dict, _ = self.net.forward(x, y, variables, out_variables, [lat_weighted_mse], lat=self.lat)
+        loss_dict = loss_dict[0]
+        for var in loss_dict.keys():
+            # print (var)
+            self.log(
+                "train/" + var,
+                loss_dict[var],
+                on_step=True,
+                on_epoch=False,
+                prog_bar=True,
+            )
+        return loss_dict
 
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
@@ -132,15 +96,6 @@ class ViTLitModule(LightningModule):
                 sync_dist=True,
             )
         return loss_dict
-
-    # def validation_epoch_end(self, outputs: List[Any]):
-    #     acc = self.val_acc.compute()  # get val accuracy from current epoch
-    #     self.val_acc_best.update(acc)
-    #     self.log(
-    #         "val/acc_best", self.val_acc_best.compute(), on_epoch=True, prog_bar=True
-    #     )
-
-    #     self.val_acc.reset()  # reset val accuracy for next epoch
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch

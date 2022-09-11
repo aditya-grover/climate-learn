@@ -64,7 +64,7 @@ trainer:
 # ---------------------------- MODEL -------------------------------------------
 model:
   lr: 0.0005
-  weight_decay: 0.05
+  weight_decay: 1e-5
   warmup_epochs: 5
   max_epochs: 30
   warmup_start_lr: 1e-8
@@ -73,65 +73,37 @@ model:
   net:
     class_path: src.models.components.vit.VisionTransformer
     init_args:
-      img_size: [128, 256]
-      patch_size: 16
-      drop_path: 0.0
-      learn_pos_emb: False
-      in_vars:
-        [
-          "geopotential_1000",
-          "geopotential_850",
-          "geopotential_500",
-          "geopotential_50",
-          "relative_humidity_850",
-          "relative_humidity_500",
-          "u_component_of_wind_1000",
-          "u_component_of_wind_850",
-          "u_component_of_wind_500",
-          "v_component_of_wind_1000",
-          "v_component_of_wind_850",
-          "v_component_of_wind_500",
-          "temperature_850",
-          "temperature_500",
+      img_size: [32, 64]
+      patch_size: 2
+      drop_path: 0.1
+      drop_rate: 0.1
+      learn_pos_emb: True
+      in_vars: [
           "2m_temperature",
           "10m_u_component_of_wind",
           "10m_v_component_of_wind",
         ]
-      embed_dim: 1024
+      out_vars: ["2m_temperature"]
+      embed_dim: 128
       depth: 8
-      decoder_depth: 0 # linear layer, if > 0 use transformer blocks
-      num_heads: 16
+      decoder_depth: 0 # linear prediction head
+      num_heads: 4
       mlp_ratio: 4
-      out_vars: null
-  pretrained_path: ""
 
 # ---------------------------- DATA -------------------------------------------
 data:
-  root_dir: /datadrive/datasets/1.40625deg_equally_np
-  variables: [
-      "z_1000",
-      "z_850",
-      "z_500",
-      "z_50",
-      "r_850",
-      "r_500",
-      "u_1000",
-      "u_850",
-      "u_500",
-      "v_1000",
-      "v_850",
-      "v_500",
-      "t_850",
-      "t_500",
-      "t2m",
-      "u10",
-      "v10",
+  root_dir: /datadrive/datasets/5.625deg
+  inp_vars: [
+      "2m_temperature",
+      "10m_u_component_of_wind",
+      "10m_v_component_of_wind",
     ]
-  predict_range: 6
-  predict_steps: 4
-  history: 3
-  interval: 6
-  buffer_size: 20000
+  out_vars: ["2m_temperature"]
+  train_start_year: 1979
+  val_start_year: 2015
+  test_start_year: 2017
+  end_year: 2018
+  pred_range: 6
   batch_size: 128
   num_workers: 2
   pin_memory: False

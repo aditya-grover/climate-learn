@@ -19,13 +19,13 @@ class ERA5(Dataset):
         self.partition = partition
 
         self.load_from_nc()
+        self.get_lat_lon()
 
     def load_from_nc(self):
-        data_dict = {}
+        data_dict = {k: [] for k in self.variables}
 
         for year in tqdm(self.years):
             for var in self.variables:
-                data_dict[var] = []
                 dir_var = os.path.join(self.root_dir, var)
                 ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
                 xr_data = xr.open_mfdataset(ps, combine='by_coords')
@@ -34,9 +34,19 @@ class ERA5(Dataset):
                 if len(np_data.shape) == 3: # 8760, 32, 64
                     np_data = np.expand_dims(np_data, axis=1)
                 data_dict[var].append(np_data)
-            data_dict[var] = np.concatenate(data_dict[var], axis=0)
+        
+        data_dict = {k: np.concatenate(data_dict[k], axis=0) for k in self.variables}
         
         self.data_dict = data_dict
+
+    def get_lat_lon(self):
+        # lat lon is stored in each of the nc files, just need to load one and extract
+        dir_var = os.path.join(self.root_dir, self.variables[0])
+        year = self.years[0]
+        ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
+        xr_data = xr.open_mfdataset(ps, combine='by_coords')
+        self.lat = xr_data['lat'].to_numpy()
+        self.lon = xr_data['lon'].to_numpy()
 
     def __getitem__(self, index):
         np_data = np.concatenate([self.data_dict[var][index] for var in self.data_dict.keys()], axis=0)
@@ -81,7 +91,7 @@ class ERA5Forecast(ERA5):
     def __getitem__(self, index):
         inp = torch.from_numpy(self.inp_data[index])
         out = torch.from_numpy(self.out_data[index])
-        return self.inp_transform(inp), self.out_transform(out)
+        return self.inp_transform(inp), self.out_transform(out), self.in_vars, self.out_vars
 
     def __len__(self):
         return len(self.inp_data)
