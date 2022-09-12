@@ -30,12 +30,12 @@ class ERA5(Dataset):
                 ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
                 xr_data = xr.open_mfdataset(ps, combine='by_coords')
                 xr_data = xr_data[NAME_TO_VAR[var]]
-                np_data = xr_data.to_numpy()
-                if len(np_data.shape) == 3: # 8760, 32, 64
-                    np_data = np.expand_dims(np_data, axis=1)
-                data_dict[var].append(np_data)
+                # np_data = xr_data.to_numpy()
+                if len(xr_data.shape) == 3: # 8760, 32, 64
+                    xr_data = xr_data.expand_dims(dim='level', axis=1)
+                data_dict[var].append(xr_data)
         
-        data_dict = {k: np.concatenate(data_dict[k], axis=0) for k in self.variables}
+        data_dict = {k: xr.concat(data_dict[k], dim='time') for k in self.variables}
         
         self.data_dict = data_dict
 
@@ -49,11 +49,10 @@ class ERA5(Dataset):
         self.lon = xr_data['lon'].to_numpy()
 
     def __getitem__(self, index):
-        np_data = np.concatenate([self.data_dict[var][index] for var in self.data_dict.keys()], axis=0)
-        return torch.from_numpy(np_data)
+        pass
 
     def __len__(self):
-        return self.data_dict[list(self.data_dict.keys())[0]].shape[0]
+        pass
 
 class ERA5Forecast(ERA5):
     def __init__(self, root_dir, in_vars, out_vars, pred_range, years, partition='train'):
@@ -64,11 +63,11 @@ class ERA5Forecast(ERA5):
         self.out_vars = out_vars
         self.pred_range = pred_range
 
-        inp_data = np.concatenate([self.data_dict[k] for k in in_vars], axis=1)
-        out_data = np.concatenate([self.data_dict[k] for k in out_vars], axis=1)
+        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
+        out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
 
-        self.inp_data = inp_data[0 : -pred_range]
-        self.out_data = out_data[pred_range:]
+        self.inp_data = inp_data[0 : -pred_range].to_numpy().astype(np.float32)
+        self.out_data = out_data[pred_range:].to_numpy().astype(np.float32)
 
         assert len(self.inp_data) == len(self.out_data)
 
@@ -78,6 +77,8 @@ class ERA5Forecast(ERA5):
         else:
             self.inp_transform = None
             self.out_transform = None
+
+        del self.data_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
