@@ -4,7 +4,7 @@ import os
 import cdsapi
 
 
-def download_era5(root, year, variable, pressure):
+def download_era5(root, year, variable, pressure=False):
     months = [
         "01",
         "02",
