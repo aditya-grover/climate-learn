@@ -4,7 +4,7 @@ import os
 import cdsapi
 
 
-def download_era5(args):
+def download_era5(root, year, variable, pressure):
     months = [
         "01",
         "02",
@@ -79,21 +79,21 @@ def download_era5(args):
         "23:00",
     ]
     c = cdsapi.Client()
-    print(f"Downloading {args.variable} data for year {args.year}, pressure={args.pressure}")
-    fn = os.path.join(args.save_dir, args.variable, f"{args.variable}_{args.year}_0.25deg.nc")
+    print(f"Downloading {variable} data for year {year}, pressure={pressure}")
+    fn = os.path.join(root, variable, f"{variable}_{year}_0.25deg.nc")
     if os.path.exists(fn):
         return
-    os.makedirs(os.path.join(args.save_dir, args.variable), exist_ok=True)
+    os.makedirs(os.path.join(root, variable), exist_ok=True)
     download_args = {
         "product_type": "reanalysis",
         "format": "netcdf",
-        "variable": args.variable,
-        "year": str(args.year),
+        "variable": variable,
+        "year": str(year),
         "month": months,
         "day": days,
         "time": times,
     }
-    if not args.pressure:
+    if not pressure:
         c.retrieve(
             "reanalysis-era5-single-levels",
             download_args,
@@ -111,14 +111,14 @@ def download_era5(args):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--save_dir", type=str, default="/datadrive/datasets/0.25deg")
+    parser.add_argument("--root", type=str, default="")
     parser.add_argument("--year", type=int, required=True)
     parser.add_argument("--variable", type=str, required=True)
     parser.add_argument("--pressure", action="store_true", default=False)
 
     args = parser.parse_args()
 
-    download_era5(args)
+    download_era5(args.root, args.year, args.variable, args.pressure)
 
 
 if __name__ == "__main__":
