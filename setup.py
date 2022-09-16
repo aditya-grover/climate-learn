@@ -1,4 +1,6 @@
+import os
 import setuptools
+import pkg_resources
 
 setuptools.setup(
     name = "climate_tutorial",
@@ -11,15 +13,15 @@ setuptools.setup(
     url = "https://github.com/tung-nd/climate_tutorial",
     packages = setuptools.find_packages(),
     install_requires = [
-        "rich",
-        "timm",
-        "cdsapi",
-        "pytorch-lightning"
+        str(r)
+        for r in pkg_resources.parse_requirements(
+            open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
+        )
     ],
     classifiers = [
         "Development Status :: In Progress"
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: MIT License",
         "Operating System :: OS Independent",
     ],
 )

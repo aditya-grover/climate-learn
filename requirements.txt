@@ -1,0 +1,4 @@
+rich
+timm
+cdsapi
+pytorch-lightning
