@@ -2,13 +2,13 @@ import os
 
 from pytorch_lightning.utilities.cli import LightningCLI
 
-from src.models.cnn_module import CNNLitModule
+from src.models.forecast_module import ForecastLitModule
 from src.datamodules.era5_datamodule import ERA5DataModule
 
 
 def main():
     cli = LightningCLI(
-        model_class=CNNLitModule,
+        model_class=ForecastLitModule,
         datamodule_class=ERA5DataModule,
         seed_everything_default=42,
         save_config_overwrite=True,

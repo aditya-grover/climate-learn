@@ -12,21 +12,27 @@ from src.utils.metrics import (
 )
 
 
-class CNNLitModule(LightningModule):
+class ForecastLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
+        optimizer: str = 'adam',
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
         max_epochs: int = 30,
         warmup_start_lr: float = 1e-8,
         eta_min: float = 1e-8,
-    ) -> None:
-        super().__init__()
+    ):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        if optimizer == 'adam':
+            self.optim_cls = torch.optim.Adam
+        elif optimizer == 'adamw':
+            self.optim_cls = torch.optim.AdamW
+        else:
+            raise NotImplementedError('Only support Adam and AdamW')
 
     def forward(self, x):
         return self.net.predict(x)
@@ -142,7 +148,7 @@ class CNNLitModule(LightningModule):
             else:
                 decay.append(m)
 
-        optimizer = torch.optim.Adam(
+        optimizer = self.optim_cls(
             [
                 {
                     "params": decay,

@@ -63,6 +63,7 @@ trainer:
 
 # ---------------------------- MODEL -------------------------------------------
 model:
+  optimizer: "adamw"
   lr: 0.0005
   weight_decay: 1e-5
   warmup_epochs: 5

@@ -164,7 +164,7 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward_loss(self, y, pred, variables, out_variables, metric, lat):  # metric is a list
+    def forward_loss(self, y, pred, out_variables, metric, lat):  # metric is a list
         """
         y: [N, 3, H, W]
         pred: [N, L, p*p*3]
@@ -172,10 +172,10 @@ class VisionTransformer(nn.Module):
         pred = self.unpatchify(pred)
         return [m(pred, y, out_variables, lat) for m in metric], pred
 
-    def forward(self, x, y, variables, out_variables, metric, lat):
+    def forward(self, x, y, out_variables, metric, lat):
         embeddings = self.forward_encoder(x)  # B, L, D
         preds = self.head(embeddings)
-        loss, preds = self.forward_loss(y, preds, variables, out_variables, metric, lat)
+        loss, preds = self.forward_loss(y, preds, out_variables, metric, lat)
         return loss, preds
 
     def predict(self, x, variables):

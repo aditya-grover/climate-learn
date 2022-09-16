@@ -2,14 +2,14 @@ import os
 
 from pytorch_lightning.utilities.cli import LightningCLI
 
-from models.vit_module import ViTLitModule
+from models.forecast_module import ForecastLitModule
 from src.datamodules.era5_datamodule import ERA5DataModule
 
 
 def main():
     # Initialize Lightning with the model and data modules, and instruct it to parse the config yml
     cli = LightningCLI(
-        model_class=ViTLitModule,
+        model_class=ForecastLitModule,
         datamodule_class=ERA5DataModule,
         seed_everything_default=42,
         save_config_overwrite=True,
