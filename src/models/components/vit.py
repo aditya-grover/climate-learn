@@ -178,7 +178,7 @@ class VisionTransformer(nn.Module):
         loss, preds = self.forward_loss(y, preds, out_variables, metric, lat)
         return loss, preds
 
-    def predict(self, x, variables):
+    def predict(self, x):
         with torch.no_grad():
             embeddings = self.forward_encoder(x)
             pred = self.head(embeddings)
@@ -199,3 +199,5 @@ class VisionTransformer(nn.Module):
 # model = VisionTransformer(depth=8).cuda()
 # x, y = torch.randn(2, 3, 128, 256).cuda(), torch.randn(2, 3, 128, 256).cuda()
 # loss, preds = model.forward(x, y)
+# pred = model.predict(x)
+# print (pred.shape)
