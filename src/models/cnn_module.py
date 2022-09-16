@@ -8,16 +8,14 @@ from src.utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from src.utils.metrics import (
     lat_weighted_acc,
     lat_weighted_mse,
-    lat_weighted_mse_val,
     lat_weighted_rmse,
 )
 
 
-class UnetLitModule(LightningModule):
+class CNNLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        pretrained_path: str,
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -29,24 +27,6 @@ class UnetLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
-        if len(pretrained_path) > 0:
-            self.load_pretrain_weights(pretrained_path)
-
-    def load_pretrain_weights(self, pretrained_path):
-        checkpoint = torch.load(pretrained_path)
-
-        print("Loading pre-trained checkpoint from: %s" % pretrained_path)
-        checkpoint_model = checkpoint["state_dict"]
-        state_dict = self.state_dict()
-        checkpoint_keys = list(checkpoint_model.keys())
-        for k in checkpoint_keys:
-            if k not in state_dict.keys() or checkpoint_model[k].shape != state_dict[k].shape:
-                print(f"Removing key {k} from pretrained checkpoint")
-                del checkpoint_model[k]
-
-        # load pre-trained model
-        msg = self.load_state_dict(checkpoint_model, strict=False)
-        print(msg)
 
     def forward(self, x):
         return self.net.predict(x)
@@ -92,7 +72,7 @@ class UnetLitModule(LightningModule):
             variables,
             out_variables,
             pred_steps,
-            [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc],
+            [lat_weighted_rmse, lat_weighted_acc],
             self.denormalization,
             lat=self.lat,
             log_steps=steps,
@@ -131,7 +111,7 @@ class UnetLitModule(LightningModule):
             variables,
             out_variables,
             pred_steps,
-            [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc],
+            [lat_weighted_rmse, lat_weighted_acc],
             self.denormalization,
             lat=self.lat,
             log_steps=steps,

@@ -64,7 +64,7 @@ trainer:
 # ---------------------------- MODEL -------------------------------------------
 model:
   lr: 0.0005
-  weight_decay: 0.005
+  weight_decay: 1e-5
   warmup_epochs: 5
   max_epochs: 30
   warmup_start_lr: 1e-8
@@ -73,40 +73,25 @@ model:
   net:
     class_path: src.models.components.resnet.ResNet
     init_args:
-      in_channels: 17
-      time_history: 3
+      in_channels: 3
       hidden_channels: 64
       out_channels: 2
-      n_blocks: 2
-  pretrained_path: ""
+      n_blocks: 28
 
 # ---------------------------- DATA -------------------------------------------
 data:
-  root_dir: /datadrive/datasets/1.40625deg_equally_np
-  variables: [
-      "z_1000",
-      "z_850",
-      "z_500",
-      "z_50",
-      "r_850",
-      "r_500",
-      "u_1000",
-      "u_850",
-      "u_500",
-      "v_1000",
-      "v_850",
-      "v_500",
-      "t_850",
-      "t_500",
-      "t2m",
-      "u10",
-      "v10",
+  root_dir: /datadrive/datasets/5.625deg
+  inp_vars: [
+      "2m_temperature",
+      "10m_u_component_of_wind",
+      "10m_v_component_of_wind",
     ]
-  predict_range: 6
-  predict_steps: 4
-  history: 3
-  interval: 6
-  buffer_size: 20000
+  out_vars: ["2m_temperature"]
+  train_start_year: 1979
+  val_start_year: 2015
+  test_start_year: 2017
+  end_year: 2018
+  pred_range: 6
   batch_size: 128
   num_workers: 2
   pin_memory: False

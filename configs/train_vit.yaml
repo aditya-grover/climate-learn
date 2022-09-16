@@ -26,7 +26,7 @@ trainer:
     class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
     init_args:
       save_dir: ${trainer.default_root_dir}/logs
-      name: test
+      name: null
       version: null
       log_graph: False
       default_hp_metric: True
@@ -39,7 +39,7 @@ trainer:
 
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
-        dirpath: "${trainer.default_root_dir}/checkpoints/test"
+        dirpath: "${trainer.default_root_dir}/checkpoints"
         monitor: "val/w_rmse" # name of the logged metric which determines when model is improving
         mode: "min" # "max" means higher metric value is better, can be also "min"
         save_top_k: 1 # save k best models (determined by above metric)
