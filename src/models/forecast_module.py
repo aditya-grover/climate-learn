@@ -47,6 +47,12 @@ class ForecastLitModule(LightningModule):
     def set_pred_range(self, r):
         self.pred_range = r
 
+    def set_val_climatology(self, clim):
+        self.val_clim = clim
+
+    def set_test_climatology(self, clim):
+        self.test_clim = clim
+
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
         loss_dict, _ = self.net.forward(x, y, out_variables, [lat_weighted_mse], lat=self.lat)
@@ -75,6 +81,7 @@ class ForecastLitModule(LightningModule):
         all_loss_dicts, _ = self.net.rollout(
             x,
             y,
+            self.val_clim,
             variables,
             out_variables,
             pred_steps,
@@ -114,6 +121,7 @@ class ForecastLitModule(LightningModule):
         all_loss_dicts, _ = self.net.rollout(
             x,
             y,
+            self.test_clim,
             variables,
             out_variables,
             pred_steps,

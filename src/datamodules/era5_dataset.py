@@ -89,6 +89,9 @@ class ERA5Forecast(ERA5):
         self.inp_transform = inp_normalize
         self.out_transform = out_normalize
 
+    def get_climatology(self):
+        return torch.from_numpy(self.out_data.mean(axis=0))
+
     def __getitem__(self, index):
         inp = torch.from_numpy(self.inp_data[index])
         out = torch.from_numpy(self.out_data[index])

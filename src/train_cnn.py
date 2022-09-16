@@ -24,6 +24,8 @@ def main():
     cli.model.set_denormalization(mean_denorm, std_denorm)
     cli.model.set_lat_lon(*cli.datamodule.get_lat_lon())
     cli.model.set_pred_range(cli.datamodule.hparams.pred_range)
+    cli.model.set_val_climatology(cli.datamodule.get_climatology(split='val'))
+    cli.model.set_test_climatology(cli.datamodule.get_climatology(split='test'))
 
     # fit() runs the training
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)

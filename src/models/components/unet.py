@@ -146,7 +146,7 @@ class Unet(nn.Module):
         pred = self.predict(x)
         return [m(pred, y, out_variables, lat) for m in metric], x
 
-    def rollout(self, x, y, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
+    def rollout(self, x, y, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
         if steps > 1:
             assert len(variables) == len(out_variables)
 
@@ -156,7 +156,7 @@ class Unet(nn.Module):
             preds.append(x)
         preds = torch.stack(preds, dim=1)
 
-        return [m(preds, y, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+        return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
 
 # model = Unet(in_channels=2, out_channels=2).cuda()

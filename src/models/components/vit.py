@@ -184,7 +184,7 @@ class VisionTransformer(nn.Module):
             pred = self.head(embeddings)
         return self.unpatchify(pred)
 
-    def rollout(self, x, y, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
+    def rollout(self, x, y, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
         preds = []
         for _ in range(steps):
             x = self.predict(x, variables)
@@ -193,7 +193,7 @@ class VisionTransformer(nn.Module):
         if len(y.shape) == 4:
             y = y.unsqueeze(1)
 
-        return [m(preds, y, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+        return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
 
 # model = VisionTransformer(depth=8).cuda()

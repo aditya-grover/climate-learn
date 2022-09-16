@@ -54,6 +54,14 @@ class ERA5DataModule(LightningDataModule):
     def get_out_transforms(self):
         return self.train_dataset.out_transform
 
+    def get_climatology(self, split='val'):
+        if split == 'val':
+            return self.val_dataset.get_climatology()
+        elif split == 'test':
+            return self.test_dataset.get_climatology()
+        else:
+            raise NotImplementedError
+
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
