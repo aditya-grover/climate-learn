@@ -107,8 +107,8 @@ class ForecastLitModule(LightningModule):
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
-        steps = [int(d / days_each_step) for d in default_days]
-        steps = [s for s in steps if s <= pred_steps]
+        default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
+        steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
 
         all_loss_dicts, _ = self.net.rollout(
