@@ -3,10 +3,8 @@ import os
 import subprocess
 
 
-def download_weatherbench(args):
-    resolution = args.resolution
-    variable = args.variable
-    if args.dataset == "era5":
+def download_weatherbench(root, dataset, variable, resolution):
+    if dataset == "era5":
         url = (
             "https://dataserv.ub.tum.de/s/m1524895"
             "/download?path=%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
@@ -16,9 +14,10 @@ def download_weatherbench(args):
             "https://dataserv.ub.tum.de/s/m1524895"
             "/download?path=%2FCMIP%2FMPI-ESM%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
         ).format(resolution=resolution, variable=variable)
-    cmd = ["wget", "--no-check-certificate", f'"{url}"', "-O", os.path.join(args.root, variable + ".zip")]
+    # cmd = ["wget", "--no-check-certificate", f'"{url}"', "-O", os.path.join(root, variable + ".zip")]
     # print (" ".join(cmd))
-    subprocess.run(["wget", "--no-check-certificate", url, "-O", os.path.join(args.root, variable + ".zip")])
+    subprocess.check_call(["wget", "--no-check-certificate", url, "-O", os.path.join(root, variable + ".zip")])
+    subprocess.check_call(["unzip", os.path.join(root, variable + ".zip"), "-d", os.path.join(root, variable)])
 
 
 def main():
@@ -34,7 +33,7 @@ def main():
     if not os.path.exists(args.root):
         os.makedirs(args.root, exist_ok=True)
 
-    download_weatherbench(args)
+    download_weatherbench(args.root, args.dataset, args.variable, args.resolution)
 
 
 if __name__ == "__main__":
