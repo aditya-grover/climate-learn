@@ -4,6 +4,7 @@ import pkg_resources
 
 setuptools.setup(
     name = "climate_tutorial",
+    py_modules = ["climate_tutorial"],
     version = "0.0.1",
     author = "Hritik Bansal, Shashank Goel, Tung Nguyen, Aditya Grover",
     author_email = "hbansal@ucla.edu, shashankgoel@ucla.edu, tungnd@ucla.edu, agrover@ucla.edu",
