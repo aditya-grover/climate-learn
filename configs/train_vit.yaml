@@ -105,6 +105,7 @@ data:
   test_start_year: 2017
   end_year: 2018
   pred_range: 6
+  subsample: 1
   batch_size: 128
   num_workers: 2
   pin_memory: False

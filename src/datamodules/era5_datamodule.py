@@ -25,7 +25,7 @@ class ERA5DataModule(LightningDataModule):
         end_year: int = 2018,
         pred_range: int = 6,
         # predict_steps: int = 4,
-        # subsample: int = 1,  # used for forecast
+        subsample: int = 1,
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -38,14 +38,14 @@ class ERA5DataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
 
         train_years = range(train_start_year, val_start_year)
-        self.train_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, train_years, 'train')
+        self.train_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, train_years, subsample, 'train')
 
         val_years = range(val_start_year, test_start_year)
-        self.val_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, val_years, 'val')
+        self.val_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, val_years, subsample, 'val')
         self.val_dataset.set_normalize(self.train_dataset.inp_transform, self.train_dataset.out_transform)
 
         test_years = range(test_start_year, end_year + 1)
-        self.test_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, test_years, 'test')
+        self.test_dataset = ERA5Forecast(root_dir, inp_vars, out_vars, pred_range, test_years, subsample, 'test')
         self.test_dataset.set_normalize(self.train_dataset.inp_transform, self.train_dataset.out_transform)
 
     def get_lat_lon(self):

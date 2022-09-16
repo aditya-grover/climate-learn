@@ -55,7 +55,7 @@ class ERA5(Dataset):
         pass
 
 class ERA5Forecast(ERA5):
-    def __init__(self, root_dir, in_vars, out_vars, pred_range, years, partition='train'):
+    def __init__(self, root_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
         print (f'Creating {partition} dataset from netCDF files')
         super().__init__(root_dir, in_vars, years, partition)
         
@@ -66,8 +66,8 @@ class ERA5Forecast(ERA5):
         inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
 
-        self.inp_data = inp_data[0 : -pred_range].to_numpy().astype(np.float32)
-        self.out_data = out_data[pred_range:].to_numpy().astype(np.float32)
+        self.inp_data = inp_data[0 : -pred_range : subsample].to_numpy().astype(np.float32)
+        self.out_data = out_data[pred_range::subsample].to_numpy().astype(np.float32)
 
         assert len(self.inp_data) == len(self.out_data)
 
