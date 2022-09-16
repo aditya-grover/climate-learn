@@ -4,6 +4,8 @@ import subprocess
 
 
 def download_weatherbench(root, dataset, variable, resolution):
+    if not os.path.exists(root):
+        os.makedirs(root, exist_ok=True)
     if dataset == "era5":
         url = (
             "https://dataserv.ub.tum.de/s/m1524895"
@@ -29,9 +31,6 @@ def main():
     parser.add_argument("--resolution", type=str, default="1.40625")
 
     args = parser.parse_args()
-
-    if not os.path.exists(args.root):
-        os.makedirs(args.root, exist_ok=True)
 
     download_weatherbench(args.root, args.dataset, args.variable, args.resolution)
 
