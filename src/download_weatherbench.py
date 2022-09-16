@@ -23,7 +23,7 @@ def download_weatherbench(root, dataset, variable, resolution):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--root", type=str, default="/datadrive/1.40625deg")
+    parser.add_argument("--root", type=str, default="")
     parser.add_argument("--dataset", type=str, choices=["era5", "cmip6"])
     parser.add_argument("--variable", type=str, required=True)
     parser.add_argument("--resolution", type=str, default="1.40625")
