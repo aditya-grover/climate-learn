@@ -64,7 +64,7 @@ def _download_weatherbench(root, dataset, variable, resolution):
     subprocess.check_call(["unzip", path + ".zip", "-d", path])
 
 def download(source, **kwargs):
-    if(kwargs["root"] is None):
+    if("root" not in kwargs or kwargs["root"] is None):
         kwargs["root"] = f"~/.climate_tutorial/data/{source}/"
 
     if(source == "copernicus"):
