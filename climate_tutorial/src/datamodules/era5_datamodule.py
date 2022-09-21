@@ -91,22 +91,3 @@ class ERA5DataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=collate_fn,
         )
-
-# era5_module = ERA5DataModule(
-#     root_dir='/datadrive/datasets/5.625deg',
-#     inp_vars=['2m_temperature', '10m_u_component_of_wind', '10m_v_component_of_wind'],
-#     out_vars=['2m_temperature'],
-#     train_start_year=1979,
-#     val_start_year=2015,
-#     test_start_year=2017,
-#     end_year=2018,
-#     pred_range=6,
-#     batch_size=64,
-#     num_workers=1,
-#     pin_memory=False
-# )
-# train_loader = era5_module.train_dataloader()
-# for x, y in train_loader:
-#     print (x.shape)
-#     print (y.shape)
-#     break
