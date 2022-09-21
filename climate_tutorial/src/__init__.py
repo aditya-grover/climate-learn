@@ -1,7 +1,5 @@
 import os
 import sys
-from os.path import abspath, dirname
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-sys.path.append(dirname(dirname(abspath(__file__))))
-
-from .utils import *
+# from .utils import *
