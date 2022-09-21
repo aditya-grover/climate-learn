@@ -49,7 +49,7 @@ class LinearLitModule(LightningModule):
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
         pred_steps = y.shape[1]
-        pred_range = self.pred_range
+        pred_range = self.pred_range.hours()
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
@@ -88,7 +88,7 @@ class LinearLitModule(LightningModule):
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
         pred_steps = y.shape[1]
-        pred_range = self.pred_range
+        pred_range = self.pred_range.hours()
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
