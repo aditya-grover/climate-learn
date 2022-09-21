@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import LightningDataModule
 
 from .datamodules import *
-from ..utils import Year, Days, Hours
+from climate_tutorial.utils import Year, Days, Hours
 
 def collate_fn(batch):
     inp = torch.stack([batch[i][0] for i in range(len(batch))])
