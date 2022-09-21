@@ -13,7 +13,7 @@ class Trainer:
     def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4, logger = False):
         seed_everything(seed)
         self.trainer = LitTrainer(
-            logger = False,
+            logger = logger,
             accelerator = accelerator,
             precision = precision,
             max_epochs = max_epochs,
