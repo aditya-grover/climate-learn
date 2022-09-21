@@ -64,6 +64,7 @@ class ForecastLitModule(LightningModule):
                 on_step=True,
                 on_epoch=False,
                 prog_bar=True,
+                batch_size = len(x)
             )
         return loss_dict
 
@@ -104,6 +105,7 @@ class ForecastLitModule(LightningModule):
                 on_epoch=True,
                 prog_bar=False,
                 sync_dist=True,
+                batch_size = len(x)
             )
         return loss_dict
 
@@ -144,6 +146,7 @@ class ForecastLitModule(LightningModule):
                 on_step=False,
                 on_epoch=True,
                 sync_dist=True,
+                batch_size = len(x)
             )
         return loss_dict
 

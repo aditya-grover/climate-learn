@@ -10,9 +10,10 @@ class Trainer:
     summary_callback = RichModelSummary(max_depth = -1)
     progress_callback = RichProgressBar()
 
-    def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4):
+    def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4, logger = False):
         seed_everything(seed)
         self.trainer = LitTrainer(
+            logger = False,
             accelerator = accelerator,
             precision = precision,
             max_epochs = max_epochs,
