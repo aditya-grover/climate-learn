@@ -7,7 +7,7 @@ months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 
-def _download_copernicus(root, variable, year, pressure):
+def _download_copernicus(root, variable, year, pressure = False):
     dataset = "era5"
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus")
@@ -41,7 +41,7 @@ def _download_copernicus(root, variable, year, pressure):
             path,
         )
 
-def _download_weatherbench(root, dataset, variable, resolution):
+def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     path = os.path.join(root, dataset, variable, f"{variable}_{resolution}deg")
     print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench")
     if(os.path.exists(path)):
