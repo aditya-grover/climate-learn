@@ -75,7 +75,7 @@ class ERA5(Dataset):
 
 class ERA5Forecasting(ERA5):
     def __init__(self, root_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
-        print (f'Creating {partition} dataset from netCDF files')
+        print (f'Creating {partition} dataset')
         super().__init__(root_dir, in_vars, years, partition)
         
         self.in_vars = in_vars
