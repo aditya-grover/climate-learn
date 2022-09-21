@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from pytorch_lightning import LightningDataModule
 
-from .datamodules import *
+from .modules import *
 from ..utils.datetime import Year, Hours
 
 def collate_fn(batch):
