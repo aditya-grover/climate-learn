@@ -10,7 +10,7 @@ times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 def _download_copernicus(root, variable, year, pressure = False):
     dataset = "era5"
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
-    print(f"Downloading {dataset} {variable} data for year {year} from copernicus")
+    print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
     if(os.path.exists(path)):
         return
     os.makedirs(os.path.dirname(path), exist_ok = True)
@@ -43,7 +43,7 @@ def _download_copernicus(root, variable, year, pressure = False):
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     path = os.path.join(root, dataset, variable, f"{variable}_{resolution}deg")
-    print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench")
+    print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}")
     if(os.path.exists(path)):
         return
     os.makedirs(os.path.dirname(path), exist_ok = True)
@@ -59,7 +59,6 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
             "/download?path=%2FCMIP%2FMPI-ESM%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
         ).format(resolution = resolution, variable = variable)
     
-    print(path)
     subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
     subprocess.check_call(["unzip", path + ".zip", "-d", path])
 
