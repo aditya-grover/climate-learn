@@ -8,7 +8,7 @@ class Days:
         return self.value
 
     def hours(self):
-        return self.value * 24
+        return int(self.value * 24)
 
 class Hours:
     def __init__(self, value):
