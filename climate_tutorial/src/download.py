@@ -9,7 +9,7 @@ times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 
 def _download_copernicus(root, variable, year, pressure = False, api_key = None):
     if(api_key is not None):
-        content = "url: https://cds.climate.copernicus.eu/api/v2\nkey: {api_key}"
+        content = f"url: https://cds.climate.copernicus.eu/api/v2\nkey: {api_key}"
         open(f"{os.environ['HOME']}/.cdsapirc", "w").write(content)
 
     dataset = "era5"
