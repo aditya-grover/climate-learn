@@ -7,7 +7,11 @@ months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 
-def _download_copernicus(root, variable, year, pressure = False):
+def _download_copernicus(root, variable, year, pressure = False, api_key = None):
+    if(api_key is not None):
+        content = "url: https://cds.climate.copernicus.eu/api/v2\nkey: {api_key}"
+        open(f"{os.environ['HOME']}/.cdsapirc", "w").write(content)
+
     dataset = "era5"
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
@@ -81,6 +85,7 @@ def main():
     subparser.add_argument("--variable", type = str, required = True)
     subparser.add_argument("--year", type = int, required = True)
     subparser.add_argument("--pressure", action = "store_true", default = False)
+    subparser.add_argument("--api_key", type = str, default = None)
 
     subparser = subparsers.add_parser("weatherbench")
     subparser.add_argument("--root", type = str, default = None)
