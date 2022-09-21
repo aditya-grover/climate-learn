@@ -68,7 +68,9 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
 
 def download(source, **kwargs):
     if("root" not in kwargs or kwargs["root"] is None):
-        kwargs["root"] = f"./.climate_tutorial/data/{source}/"
+        kwargs["root"] = f".climate_tutorial"
+
+    kwargs["root"] = os.path.join(kwargs["root"], f"data/{source}")
 
     if(source == "copernicus"):
         _download_copernicus(**kwargs)
