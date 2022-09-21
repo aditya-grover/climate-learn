@@ -5,3 +5,4 @@ from os.path import abspath, dirname
 sys.path.append(dirname(dirname(abspath(__file__))))
 
 from .download import *
+from .utils import *
