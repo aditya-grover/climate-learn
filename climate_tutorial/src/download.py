@@ -42,7 +42,7 @@ def _download_copernicus(root, variable, year, pressure = False):
         )
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
-    path = os.path.join(root, dataset, variable, f"{variable}_{resolution}deg")
+    path = os.path.join(root, dataset, variable)
     print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}")
     if(os.path.exists(path)):
         return
