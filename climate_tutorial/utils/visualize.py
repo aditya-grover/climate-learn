@@ -6,9 +6,6 @@ def visualize(model_module, data_module, save_dir = None):
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok = True)
 
-    if(data_module.hparams.task != "forecasting"):
-        raise NotImplementedError
-
     # dataset.setup()
     dataset = data_module.test_dataset
 
@@ -32,10 +29,18 @@ def visualize(model_module, data_module, save_dir = None):
         im.set_cmap(cmap=plt.cm.RdBu)
         fig.colorbar(im, ax=ax)
 
-    axes[0].set_title("Initial condition")
-    axes[1].set_title("Ground truth")
-    axes[2].set_title("Prediction")
-    axes[3].set_title("Bias")
+    if(data_module.hparams.task == "forecasting"):
+        axes[0].set_title("Initial condition")
+        axes[1].set_title("Ground truth")
+        axes[2].set_title("Prediction")
+        axes[3].set_title("Bias")
+    elif(data_module.hparams.task == "downscaling"):
+        axes[0].set_title("Low resolution data")
+        axes[1].set_title("High resolution data")
+        axes[2].set_title("Downscaled")
+        axes[3].set_title("Bias")
+    else:
+        raise NotImplementedError
 
     fig.tight_layout()
     
