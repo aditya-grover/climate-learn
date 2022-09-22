@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from scipy import stats
 
 
 def mse(pred, y, vars, lat=None, mask=None):
@@ -76,6 +77,9 @@ def lat_weighted_mse_val(pred, y, clim, transform, vars, lat, log_steps, log_day
     return loss_dict
 
 
+### Forecasting metrics
+
+
 def lat_weighted_rmse(pred, y, clim, transform, vars, lat, log_steps, log_days):
     """
     y: [N, T, 3, H, W]
@@ -144,42 +148,64 @@ def lat_weighted_acc(pred, y, clim, transform, vars, lat, log_steps, log_days):
     return loss_dict
 
 
-# def compute_weighted_acc(da_fc, da_true, mean_dims):
-#     """
-#     Compute the ACC with latitude weighting from two xr.DataArrays.
-#     WARNING: Does not work if datasets contain NaNs
-#     Args:
-#         da_fc (xr.DataArray): Forecast. Time coordinate must be validation time.
-#         da_true (xr.DataArray): Truth.
-#         mean_dims: dimensions over which to average score
-#     Returns:
-#         acc: Latitude weighted acc
-#     """
+### Downscaling metrics
+def rmse(pred, y, transform, vars):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    pred = transform(pred)
+    y = transform(y)
+    pred = pred.to(torch.float32)
+    y = y.to(torch.float32)
 
-#     clim = da_true.mean("time")
-#     try:
-#         t = np.intersect1d(da_fc.time, da_true.time)
-#         fa = da_fc.sel(time=t) - clim
-#     except AttributeError:
-#         t = da_true.time.values
-#         fa = da_fc - clim
-#     a = da_true.sel(time=t) - clim
+    error = (pred - y) ** 2  # [N, C, H, W]
 
-#     weights_lat = np.cos(np.deg2rad(da_fc.lat))
-#     weights_lat /= weights_lat.mean()
-#     w = weights_lat
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"rmse_{var}"] = torch.mean(
+                torch.sqrt(torch.mean(error[:, i], dim=(-2, -1)))
+            )
 
-#     fa_prime = fa - fa.mean()
-#     a_prime = a - a.mean()
+    return loss_dict
 
-#     acc = np.sum(w * fa_prime * a_prime) / np.sqrt(
-#         np.sum(w * fa_prime ** 2) * np.sum(w * a_prime ** 2)
-#     )
-#     return acc
+def pearson(pred, y, transform, vars):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    pred = transform(pred)
+    y = transform(y)
+    pred = pred.to(torch.float32)
+    y = y.to(torch.float32)
 
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"pearsonr_{var}"] = stats.pearsonr(
+                pred[:, i].flatten().cpu().numpy(),
+                y[:, i].flatten().cpu().numpy()
+            )[0]
 
-# pred = torch.randn(2, 4, 3, 128, 256).cuda()
-# y = torch.randn(2, 4, 3, 128, 256).cuda()
-# vars = ["x", "y", "z"]
-# print(lat_weighted_rmse(pred, y, vars))
-# print(lat_weighted_acc(pred, y, vars))
+    return loss_dict
+
+def mean_bias(pred, y, transform, vars):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    pred = transform(pred)
+    y = transform(y)
+    pred = pred.to(torch.float32)
+    y = y.to(torch.float32)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"mean_bias_{var}"] = y.mean() - pred.mean()
+
+    return loss_dict

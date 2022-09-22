@@ -1,3 +1,4 @@
+from climate_tutorial.models.modules.downscale import DownscaleLitModule
 from .components import *
 from .modules import *
 
@@ -13,8 +14,10 @@ def load_model(name, task, model_kwargs, optim_kwargs):
 
     if(task == "forecasting"):
         module = ForecastLitModule(model, **optim_kwargs)
+    elif(task == 'downscaling'):
+        module = DownscaleLitModule(model, **optim_kwargs)
     else:
-        raise NotImplementedError
+        raise NotImplementedError("Only support foreacasting and downscaling")
     
     return module
 

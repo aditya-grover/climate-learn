@@ -30,6 +30,7 @@ class VisionTransformer(nn.Module):
             "10m_v_component_of_wind",
         ],
         out_vars=["2m_temperature"],
+        upsampling=1,
         embed_dim=1024,
         depth=24,
         decoder_depth=8,
@@ -39,6 +40,8 @@ class VisionTransformer(nn.Module):
         super().__init__()
 
         self.img_size = img_size
+        self.upsampling = upsampling
+        self.img_out_size = [img_size[0]*upsampling, img_size[1]*upsampling]
         self.n_channels = len(in_vars)
         self.patch_size = patch_size
 
@@ -79,7 +82,7 @@ class VisionTransformer(nn.Module):
         for i in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
             self.head.append(nn.GELU())
-        self.head.append(nn.Linear(embed_dim, len(self.out_vars) * patch_size**2))
+        self.head.append(nn.Linear(embed_dim, len(self.out_vars) * patch_size**2 * upsampling**2))
         self.head = nn.Sequential(*self.head)
         # --------------------------------------------------------------------------
 
@@ -133,10 +136,10 @@ class VisionTransformer(nn.Module):
         x: (N, L, patch_size**2 *3)
         imgs: (N, 3, H, W)
         """
-        p = self.patch_size
+        p = self.patch_size * self.upsampling
         c = len(self.out_vars)
-        h = self.img_size[0] // p
-        w = self.img_size[1] // p
+        h = self.img_out_size[0] // p
+        w = self.img_out_size[1] // p
         assert h * w == x.shape[1]
 
         x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
@@ -195,9 +198,13 @@ class VisionTransformer(nn.Module):
 
         return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
+    def upsample(self, x, y, out_vars, transform, metric):
+        with torch.no_grad():
+            pred = self.predict(x)
+        return [m(pred, y, transform, out_vars) for m in metric], pred
 
-# model = VisionTransformer(depth=8).cuda()
-# x, y = torch.randn(2, 3, 128, 256).cuda(), torch.randn(2, 3, 128, 256).cuda()
-# loss, preds = model.forward(x, y)
+
+# model = VisionTransformer(img_size=[32, 64], embed_dim=128, patch_size=2, depth=8, upsampling=2).cuda()
+# x, y = torch.randn(2, 3, 32, 64).cuda(), torch.randn(2, 3, 64, 128).cuda()
 # pred = model.predict(x)
 # print (pred.shape)

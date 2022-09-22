@@ -30,22 +30,26 @@ NAME_TO_VAR = {
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
 
 class ERA5(Dataset):
-    def __init__(self, root_dir, variables, years, partition = 'train'):
+    def __init__(self, root_dir, root_highres_dir, variables, years, partition = 'train'):
         super().__init__()
         self.root_dir = root_dir
+        self.root_highres_dir = root_highres_dir
         self.variables = variables
         self.years = years
         self.partition = partition
 
-        self.load_from_nc()
+        self.data_dict = self.load_from_nc(self.root_dir)
+        if self.root_highres_dir is not None:
+            self.data_highres_dict = self.load_from_nc(self.root_highres_dir)
+
         self.get_lat_lon()
 
-    def load_from_nc(self):
+    def load_from_nc(self, data_dir):
         data_dict = {k: [] for k in self.variables}
 
         for year in tqdm(self.years):
             for var in self.variables:
-                dir_var = os.path.join(self.root_dir, var)
+                dir_var = os.path.join(data_dir, var)
                 ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
                 xr_data = xr.open_mfdataset(ps, combine='by_coords')
                 xr_data = xr_data[NAME_TO_VAR[var]]
@@ -56,7 +60,7 @@ class ERA5(Dataset):
         
         data_dict = {k: xr.concat(data_dict[k], dim='time') for k in self.variables}
         
-        self.data_dict = data_dict
+        return data_dict
 
     def get_lat_lon(self):
         # lat lon is stored in each of the nc files, just need to load one and extract
@@ -74,9 +78,9 @@ class ERA5(Dataset):
         pass
 
 class ERA5Forecasting(ERA5):
-    def __init__(self, root_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
+    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
         print (f'Creating {partition} dataset')
-        super().__init__(root_dir, in_vars, years, partition)
+        super().__init__(root_dir, root_highres_dir, in_vars, years, partition)
         
         self.in_vars = in_vars
         self.out_vars = out_vars
@@ -89,6 +93,8 @@ class ERA5Forecasting(ERA5):
         self.out_data = out_data[pred_range::subsample].to_numpy().astype(np.float32)
 
         assert len(self.inp_data) == len(self.out_data)
+
+        self.downscale_ratio = 1
 
         if partition == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
@@ -120,21 +126,23 @@ class ERA5Forecasting(ERA5):
         return len(self.inp_data)
 
 class ERA5Downscaling(ERA5):
-    def __init__(self, root_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
+    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
         print (f'Creating {partition} dataset')
-        super().__init__(root_dir, in_vars, years, partition)
+        super().__init__(root_dir, root_highres_dir, in_vars, years, partition)
         
         self.in_vars = in_vars
         self.out_vars = out_vars
         self.pred_range = pred_range
 
         inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
-        out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
+        out_data = xr.concat([self.data_highres_dict[k] for k in out_vars], dim='level')
 
-        self.inp_data = inp_data[0 : -pred_range : subsample].to_numpy().astype(np.float32)
-        self.out_data = out_data[pred_range::subsample].to_numpy().astype(np.float32)
+        self.inp_data = inp_data[::subsample].to_numpy().astype(np.float32)
+        self.out_data = out_data[::subsample].to_numpy().astype(np.float32)
 
         assert len(self.inp_data) == len(self.out_data)
+
+        self.downscale_ratio = self.out_data.shape[-1] // self.inp_data.shape[-1]
 
         if partition == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
@@ -144,6 +152,7 @@ class ERA5Downscaling(ERA5):
             self.out_transform = None
 
         del self.data_dict
+        del self.data_highres_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
