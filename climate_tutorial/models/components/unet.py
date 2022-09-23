@@ -3,7 +3,7 @@ from typing import List, Tuple, Union
 
 import torch
 from torch import nn
-from cnn_blocks import PeriodicConv2D, DownBlock, UpBlock, MiddleBlock, Downsample, Upsample
+from .cnn_blocks import PeriodicConv2D, DownBlock, UpBlock, MiddleBlock, Downsample, Upsample
 
 # Large based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
 # MIT License
@@ -175,6 +175,11 @@ class Unet(nn.Module):
             y = y.unsqueeze(1)
 
         return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+
+    def upsample(self, x, y, out_vars, transform, metric):
+        with torch.no_grad():
+            pred = self.predict(x)
+        return [m(pred, y, transform, out_vars) for m in metric], pred
 
 
 # model = Unet(in_channels=1, out_channels=1, upsampling=2).cuda()

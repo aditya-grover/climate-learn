@@ -35,7 +35,8 @@ class ForecastLitModule(LightningModule):
             raise NotImplementedError('Only support Adam and AdamW')
 
     def forward(self, x):
-        return self.net.predict(x)
+        with torch.no_grad():
+            return self.net.predict(x)
 
     def set_denormalization(self, mean, std):
         self.denormalization = transforms.Normalize(mean, std)

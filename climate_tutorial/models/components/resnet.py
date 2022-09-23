@@ -97,6 +97,11 @@ class ResNet(nn.Module):
 
         return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
+    def upsample(self, x, y, out_vars, transform, metric):
+        with torch.no_grad():
+            pred = self.predict(x)
+        return [m(pred, y, transform, out_vars) for m in metric], pred
+
 
 # model = ResNet(in_channels=1, out_channels=1, upsampling=2).cuda()
 # x = torch.randn((64, 1, 32, 64)).cuda()
