@@ -1,6 +1,7 @@
+from math import log
 import torch
 from torch import nn
-from .cnn_blocks import PeriodicConv2D, ResidualBlock
+from .cnn_blocks import PeriodicConv2D, ResidualBlock, Upsample
 
 # Large based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
 # MIT License
@@ -13,6 +14,7 @@ class ResNet(nn.Module):
         hidden_channels=128,
         activation="leaky",
         out_channels=None,
+        upsampling=1,
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
@@ -23,6 +25,7 @@ class ResNet(nn.Module):
             out_channels = in_channels
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
+        self.upsampling = upsampling
 
         if activation == "gelu":
             self.activation = nn.GELU()
@@ -50,6 +53,13 @@ class ResNet(nn.Module):
                     dropout=dropout
                 )
             )
+        
+        if upsampling > 1:
+            n_upsamplers = int(log(upsampling, 2))
+            for i in range(n_upsamplers - 1):
+                blocks.append(Upsample(hidden_channels))
+                blocks.append(self.activation)
+            blocks.append(Upsample(hidden_channels))
 
         self.blocks = nn.ModuleList(blocks)
 
@@ -82,11 +92,13 @@ class ResNet(nn.Module):
             x = self.predict(x)
             preds.append(x)
         preds = torch.stack(preds, dim=1)
+        if len(y.shape) == 4:
+            y = y.unsqueeze(1)
 
         return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
 
-# model = ResNet(in_channels=2, out_channels=2).cuda()
-# x = torch.randn((64, 2, 32, 64)).cuda()
+# model = ResNet(in_channels=1, out_channels=1, upsampling=2).cuda()
+# x = torch.randn((64, 1, 32, 64)).cuda()
 # y = model.predict(x)
 # print (y.shape)

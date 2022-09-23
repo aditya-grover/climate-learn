@@ -1,8 +1,9 @@
+from math import log
 from typing import List, Tuple, Union
 
 import torch
 from torch import nn
-from .cnn_blocks import PeriodicConv2D, DownBlock, UpBlock, MiddleBlock, Downsample, Upsample
+from cnn_blocks import PeriodicConv2D, DownBlock, UpBlock, MiddleBlock, Downsample, Upsample
 
 # Large based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
 # MIT License
@@ -15,6 +16,7 @@ class Unet(nn.Module):
         hidden_channels=64,
         activation="leaky",
         out_channels=None,
+        upsampling=1,
         norm: bool = True,
         dropout: float = 0.1,
         ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
@@ -28,6 +30,7 @@ class Unet(nn.Module):
             out_channels = in_channels
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
+        self.upsampling = upsampling
 
         if activation == "gelu":
             self.activation = nn.GELU()
@@ -113,6 +116,15 @@ class Unet(nn.Module):
         # Combine the set of modules
         self.up = nn.ModuleList(up)
 
+        upsamplers = []
+        if upsampling > 1:
+            n_upsamplers = int(log(upsampling, 2))
+            for i in range(n_upsamplers - 1):
+                upsamplers.append(Upsample(hidden_channels))
+                upsamplers.append(self.activation)
+            upsamplers.append(Upsample(hidden_channels))
+        self.upsamplers = nn.ModuleList(upsamplers)
+
         if norm:
             self.norm = nn.BatchNorm2d(n_channels)
         else:
@@ -138,6 +150,10 @@ class Unet(nn.Module):
                 s = h.pop()
                 x = torch.cat((x, s), dim=1)
                 x = m(x)
+        
+        if self.upsampling > 1:
+            for m in self.upsamplers:
+                x = m(x)
 
         return self.final(self.activation(self.norm(x)))
 
@@ -155,11 +171,13 @@ class Unet(nn.Module):
             x = self.predict(x)
             preds.append(x)
         preds = torch.stack(preds, dim=1)
+        if len(y.shape) == 4:
+            y = y.unsqueeze(1)
 
         return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
 
 
-# model = Unet(in_channels=2, out_channels=2).cuda()
-# x = torch.randn((64, 2, 32, 64)).cuda()
+# model = Unet(in_channels=1, out_channels=1, upsampling=2).cuda()
+# x = torch.randn((64, 1, 32, 64)).cuda()
 # y = model.predict(x)
 # print (y.shape)
