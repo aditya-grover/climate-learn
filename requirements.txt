@@ -1,4 +1,5 @@
 rich
 timm
+wandb
 cdsapi
 pytorch-lightning
