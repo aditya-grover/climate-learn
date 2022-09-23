@@ -21,7 +21,7 @@ def load_model(name, task, model_kwargs, optim_kwargs):
     
     return module
 
-def set_info(model_module, data_module):
+def set_climatology(model_module, data_module):
     normalization = data_module.get_out_transforms()
     mean_norm, std_norm = normalization.mean, normalization.std
     mean_denorm, std_denorm = -mean_norm / std_norm, 1 / std_norm
