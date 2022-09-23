@@ -7,12 +7,14 @@ months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 
-def _download_copernicus(root, variable, year, pressure = False, api_key = None):
+def _download_copernicus(root, dataset, variable, year, pressure = False, api_key = None):
+    if(dataset not in ["era5"]):
+        raise Exception("Dataset not supported")
+
     if(api_key is not None):
         content = f"url: https://cds.climate.copernicus.eu/api/v2\nkey: {api_key}"
         open(f"{os.environ['HOME']}/.cdsapirc", "w").write(content)
 
-    dataset = "era5"
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
     if(os.path.exists(path)):
@@ -46,6 +48,9 @@ def _download_copernicus(root, variable, year, pressure = False, api_key = None)
         )
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
+    if(dataset not in ["era5", "cmip6"]):
+        raise Exception("Dataset not supported")
+
     path = os.path.join(root, dataset, resolution, variable)
     print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}")
     if(os.path.exists(path)):
@@ -85,6 +90,7 @@ def main():
     subparser = subparsers.add_parser("copernicus")
     subparser.add_argument("--root", type = str, default = None)
     subparser.add_argument("--variable", type = str, required = True)
+    subparser.add_argument("--dataset", type = str, choices = ["era5"], required = True)
     subparser.add_argument("--year", type = int, required = True)
     subparser.add_argument("--pressure", action = "store_true", default = False)
     subparser.add_argument("--api_key", type = str, default = None)
