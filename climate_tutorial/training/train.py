@@ -1,7 +1,5 @@
-import wandb
 from pytorch_lightning import Trainer as LitTrainer
 from pytorch_lightning import seed_everything
-from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, RichModelSummary, RichProgressBar
 
 import logging
@@ -15,8 +13,6 @@ class Trainer:
 
     def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4, logger = False):
         seed_everything(seed)
-        if(type(logger) == WandbLogger):
-            wandb.login()
         self.trainer = LitTrainer(
             logger = logger,
             accelerator = accelerator,
