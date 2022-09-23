@@ -25,7 +25,7 @@ def visualize(model_module, data_module, save_dir = None):
 
     for i, tensor in enumerate([init_condition, gt, pred, bias]):
         ax = axes[i]
-        im = ax.imshow(tensor.squeeze().cpu().numpy())
+        im = ax.imshow(tensor.detach().squeeze().cpu().numpy())
         im.set_cmap(cmap=plt.cm.RdBu)
         fig.colorbar(im, ax=ax)
 
