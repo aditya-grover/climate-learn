@@ -89,7 +89,7 @@ class ERA5Forecasting(ERA5):
         inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
 
-        self.inp_data = inp_data[0 : -pred_range : subsample].to_numpy().astype(np.float32)
+        self.inp_data = inp_data[0:-pred_range:subsample].to_numpy().astype(np.float32)
         self.out_data = out_data[pred_range::subsample].to_numpy().astype(np.float32)
 
         assert len(self.inp_data) == len(self.out_data)
@@ -103,7 +103,7 @@ class ERA5Forecasting(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        self.time = self.data_dict[in_vars[0]].time.to_numpy().copy()
+        self.time = self.data_dict[in_vars[0]].time.to_numpy()[:-pred_range:subsample].copy()
         self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
         self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
         self.out_lon = self.data_dict[out_vars[0]].lon.to_numpy().copy()
@@ -157,7 +157,7 @@ class ERA5Downscaling(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        self.time = self.data_dict[in_vars[0]].time.to_numpy().copy()
+        self.time = self.data_dict[in_vars[0]].time.to_numpy()[::subsample].copy()
         self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
         self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
         self.out_lon = self.data_highres_dict[out_vars[0]].lon.to_numpy().copy()
