@@ -30,13 +30,13 @@ NAME_TO_VAR = {
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
 
 class ERA5(Dataset):
-    def __init__(self, root_dir, root_highres_dir, variables, years, partition = 'train'):
+    def __init__(self, root_dir, root_highres_dir, variables, years, split = 'train'):
         super().__init__()
         self.root_dir = root_dir
         self.root_highres_dir = root_highres_dir
         self.variables = variables
         self.years = years
-        self.partition = partition
+        self.split = split
 
         self.data_dict = self.load_from_nc(self.root_dir)
         if self.root_highres_dir is not None:
@@ -78,9 +78,9 @@ class ERA5(Dataset):
         pass
 
 class ERA5Forecasting(ERA5):
-    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
-        print (f'Creating {partition} dataset')
-        super().__init__(root_dir, root_highres_dir, in_vars, years, partition)
+    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, split='train'):
+        print (f'Creating {split} dataset')
+        super().__init__(root_dir, root_highres_dir, in_vars, years, split)
         
         self.in_vars = in_vars
         self.out_vars = out_vars
@@ -96,7 +96,7 @@ class ERA5Forecasting(ERA5):
 
         self.downscale_ratio = 1
 
-        if partition == 'train':
+        if split == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
             self.out_transform = self.get_normalize(self.out_data)
         else:
@@ -126,9 +126,9 @@ class ERA5Forecasting(ERA5):
         return len(self.inp_data)
 
 class ERA5Downscaling(ERA5):
-    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, partition='train'):
-        print (f'Creating {partition} dataset')
-        super().__init__(root_dir, root_highres_dir, in_vars, years, partition)
+    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, split='train'):
+        print (f'Creating {split} dataset')
+        super().__init__(root_dir, root_highres_dir, in_vars, years, split)
         
         self.in_vars = in_vars
         self.out_vars = out_vars
@@ -144,7 +144,7 @@ class ERA5Downscaling(ERA5):
 
         self.downscale_ratio = self.out_data.shape[-1] // self.inp_data.shape[-1]
 
-        if partition == 'train':
+        if split == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
             self.out_transform = self.get_normalize(self.out_data)
         else:
