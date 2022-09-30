@@ -103,7 +103,7 @@ class ERA5Forecasting(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        del self.data_dict
+        # del self.data_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
@@ -151,8 +151,8 @@ class ERA5Downscaling(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        del self.data_dict
-        del self.data_highres_dict
+        # del self.data_dict
+        # del self.data_highres_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
