@@ -103,7 +103,13 @@ class ERA5Forecasting(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        # del self.data_dict
+        self.time = self.data_dict[in_vars[0]].time.to_numpy().copy()
+        self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
+        self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
+        self.out_lon = self.data_dict[out_vars[0]].lon.to_numpy().copy()
+        self.out_lat = self.data_dict[out_vars[0]].lat.to_numpy().copy()
+
+        del self.data_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
@@ -151,8 +157,14 @@ class ERA5Downscaling(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
-        # del self.data_dict
-        # del self.data_highres_dict
+        self.time = self.data_dict[in_vars[0]].time.to_numpy().copy()
+        self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
+        self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
+        self.out_lon = self.data_highres_dict[out_vars[0]].lon.to_numpy().copy()
+        self.out_lat = self.data_highres_dict[out_vars[0]].lat.to_numpy().copy()
+
+        del self.data_dict
+        del self.data_highres_dict
 
     def get_normalize(self, data):
         mean = np.mean(data, axis=(0, 2, 3))
