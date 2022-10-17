@@ -3,3 +3,4 @@ timm
 wandb
 cdsapi
 pytorch-lightning
+importlib-metadata==4.13.0
