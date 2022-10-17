@@ -25,6 +25,8 @@ NAME_TO_VAR = {
     "temperature": "t",
     "relative_humidity": "r",
     "specific_humidity": "q",
+    "geopotential_500": "z500",
+    "temperature_850": "t850"
 }
 
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
