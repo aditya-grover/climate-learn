@@ -7,7 +7,7 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
 class Trainer:
-    def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4, logger = False, devices=1):
+    def __init__(self, seed = 0, accelerator = "gpu", precision = 16, max_epochs = 4, logger = False, devices="auto"):
         seed_everything(seed)
 
         checkpoint_callback = ModelCheckpoint(save_last = True, verbose = False, filename = "epoch_{epoch:03d}", auto_insert_metric_name = False)
