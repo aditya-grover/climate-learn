@@ -3,9 +3,20 @@ import cdsapi
 import argparse
 import subprocess
 
+NAME_TO_CMIP = {
+    "geopotential": "zg",
+    "u_component_of_wind": "ua",
+    "v_component_of_wind": "va",
+    "temperature": "ta",
+    "relative_humidity": "r",
+    "specific_humidity": "hus",
+    "geopotential_500": "z",
+}
+
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
+
 
 def _download_copernicus(root, dataset, variable, year, pressure = False, api_key = None):
     if(dataset not in ["era5"]):
@@ -47,6 +58,31 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
             path,
         )
 
+def _download_esgf(root, dataset, variable, resolution = "1.40625"):
+    if (dataset not in ["cmip6"]):
+        raise Exception("Dataset not supported")
+
+    path = os.path.join(root, dataset, resolution, variable)
+    print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}")
+    if(os.path.exists(path)):
+        raise Exception("Directory already exists")
+        return
+    os.makedirs(os.path.dirname(path), exist_ok = True)
+
+
+    year_strings = [f'{y}01010600-{y+5}01010000' for y in range(1850, 2015, 5)]
+    for yr in year_strings:
+        url = (
+            "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/6hrPlevPt/"
+            "/{variable}/gn/v20190815/{variable}_6hrPlevPt_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_{yr_string}.nc"
+        ).format(yr_string = yr, variable = NAME_TO_CMIP[variable])
+
+        subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
+    # TODO: regrid to resolution
+    # https://github.com/pangeo-data/WeatherBench/blob/master/snakemake_configs_CMIP/MPI-ESM/Snakefile
+    # https://github.com/pangeo-data/WeatherBench/blob/master/src/regrid.py
+
+
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     if(dataset not in ["era5", "cmip6"]):
         raise Exception("Dataset not supported")
@@ -81,6 +117,8 @@ def download(source, **kwargs):
         _download_copernicus(**kwargs)
     elif(source == "weatherbench"):
         _download_weatherbench(**kwargs)
+    elif(source == "esgf"):
+        _download_esgf(**kwargs)
 
 def main():
     parser = argparse.ArgumentParser()
