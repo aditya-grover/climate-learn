@@ -62,8 +62,8 @@ def _download_esgf(root, dataset, variable, resolution = "1.40625"):
     if (dataset not in ["cmip6"]):
         raise Exception("Dataset not supported")
 
-    path = os.path.join(root, dataset, resolution, variable)
-    print(f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}")
+    path = os.path.join(root, dataset, "pre-regrided", variable)
+    print(f"Downloading {dataset} {variable} data from esgf to {path}")
     if(os.path.exists(path)):
         raise Exception("Directory already exists")
         return
