@@ -88,9 +88,9 @@ def regrider(
 
     print(f"Regridding {dataset} {variable} data in {input_fns} to {resolution}deg")
 
-    if(os.path.exists(output_dir)):
-        raise Exception("Directory already exists")
-        return
+    # if(os.path.exists(output_dir)):
+    #     raise Exception("Directory already exists")
+    #     return
     # Make sure output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
@@ -106,11 +106,16 @@ def regrider(
         print(f'Regridding file: {fn}')
         ds_in = xr.open_dataset(fn, engine='cfgrib') if is_grib else xr.open_dataset(fn)
         
-        ds_out = regrid(ds_in, float(resolution), method, reuse_weights)
         fn_out = (
             custom_fn or
             '_'.join(str(fn).split('/')[-1][:-3].split('_')[-1:]) + '_' + str(resolution) + 'deg.' + file_ending
         )
+        if os.path.exists(output_dir + '/' + fn_out):
+            print(output_dir + '/' + fn_out + " already generated")
+            continue
+        ds_out = regrid(ds_in, float(resolution), method, reuse_weights)
+
+
         print(f"Saving file: {output_dir + '/' + fn_out}")
         ds_out.to_netcdf(output_dir + '/' + fn_out)
         ds_in.close(); ds_out.close()
