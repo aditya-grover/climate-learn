@@ -58,7 +58,7 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
             path,
         )
 
-def _download_esgf(root, dataset, variable, resolution = "1.40625"):
+def _download_esgf(root, dataset, variable):
     if (dataset not in ["cmip6"]):
         raise Exception("Dataset not supported")
 
