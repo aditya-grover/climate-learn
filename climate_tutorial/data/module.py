@@ -62,7 +62,9 @@ class DataModule(LightningDataModule):
         return self.train_dataset.out_transform
 
     def get_climatology(self, split="val"):
-        if split == "val":
+        if split == "train":
+            return self.train_dataset.get_climatology()
+        elif split == "val":
             return self.val_dataset.get_climatology()
         elif split == "test":
             return self.test_dataset.get_climatology()

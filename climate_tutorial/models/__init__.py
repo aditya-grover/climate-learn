@@ -28,5 +28,6 @@ def set_climatology(model_module, data_module):
     model_module.set_denormalization(mean_denorm, std_denorm)
     model_module.set_lat_lon(*data_module.get_lat_lon())
     model_module.set_pred_range(data_module.hparams.pred_range)
+    model_module.set_train_climatology(data_module.get_climatology(split = "train"))
     model_module.set_val_climatology(data_module.get_climatology(split = "val"))
     model_module.set_test_climatology(data_module.get_climatology(split = "test"))
