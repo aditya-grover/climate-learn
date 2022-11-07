@@ -1,4 +1,3 @@
-from climate_tutorial.models.modules.downscale import DownscaleLitModule
 from .components import *
 from .modules import *
 
