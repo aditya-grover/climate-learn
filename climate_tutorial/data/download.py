@@ -2,6 +2,7 @@ import os
 import cdsapi
 import argparse
 import subprocess
+from .regrid import *
 
 NAME_TO_CMIP = {
     "geopotential": "zg",
@@ -30,6 +31,8 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
     if(os.path.exists(path)):
         return
+        # maybe not a silent return?
+
     os.makedirs(os.path.dirname(path), exist_ok = True)
 
     download_args = {
@@ -58,29 +61,39 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
             path,
         )
 
-def _download_esgf(root, dataset, variable):
+def _download_esgf(root, dataset, variable, resolution):
     if (dataset not in ["cmip6"]):
         raise Exception("Dataset not supported")
 
     path = os.path.join(root, dataset, "pre-regrided", variable)
     print(f"Downloading {dataset} {variable} data from esgf to {path}")
-    if(os.path.exists(path)):
-        raise Exception("Directory already exists")
-        return
+    # if(os.path.exists(path)):
+    #     raise Exception("Directory already exists")
+    #     return
+
+
     os.makedirs(os.path.dirname(path), exist_ok = True)
 
 
     year_strings = [f'{y}01010600-{y+5}01010000' for y in range(1850, 2015, 5)]
     for yr in year_strings:
-        url = (
-            "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/6hrPlevPt/"
-            "/{variable}/gn/v20190815/{variable}_6hrPlevPt_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_{yr_string}.nc"
-        ).format(yr_string = yr, variable = NAME_TO_CMIP[variable])
+        file_name = (
+            "{var}_6hrPlevPt_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_{yr}.nc"
+        ).format(var = NAME_TO_CMIP[variable], yr = yr)
 
-        subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
-    # TODO: regrid to resolution
-    # https://github.com/pangeo-data/WeatherBench/blob/master/snakemake_configs_CMIP/MPI-ESM/Snakefile
-    # https://github.com/pangeo-data/WeatherBench/blob/master/src/regrid.py
+        file_path = os.path.join(path, file_name)
+        if os.path.exists(file_path):
+            print(file_name, "exists")
+
+        else:
+            url = (
+                "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/6hrPlevPt/"
+                "{variable}/gn/v20190815/{file}"
+            ).format(yr_string = yr, variable = NAME_TO_CMIP[variable], file=file_name)
+            subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
+    
+    regrider(root = path, source = "esgf", variable = variable, dataset = dataset, resolution = resolution)
+    
 
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
