@@ -1,13 +1,17 @@
 from typing import Any
 
+import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import (
+    crps_gaussian,
+    crps_gaussian_val,
     lat_weighted_acc,
     lat_weighted_mse,
+    lat_weighted_nll,
     lat_weighted_rmse,
 )
 
@@ -27,6 +31,17 @@ class ForecastLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        if net.prob_type == 'parametric':
+            self.train_loss = crps_gaussian
+            # self.train_loss = lat_weighted_nll
+            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+        elif net.prob_type == 'mcdropout':
+            self.train_loss = lat_weighted_mse
+            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+        else: # deter
+            self.train_loss = lat_weighted_mse
+            self.val_loss = [lat_weighted_rmse]
+        
         if optimizer == 'adam':
             self.optim_cls = torch.optim.Adam
         elif optimizer == 'adamw':
