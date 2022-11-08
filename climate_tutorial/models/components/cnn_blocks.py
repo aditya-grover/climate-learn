@@ -77,7 +77,10 @@ class ResidualBlock(nn.Module):
 
         self.drop = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, mcdropout):
+        if mcdropout:
+            # print (self.drop)
+            self.drop.train(True)
         # First convolution layer
         # h = self.drop(self.conv1(self.activation(self.norm1(x))))
         h = self.drop(self.norm1(self.activation(self.conv1(x))))
@@ -166,8 +169,8 @@ class DownBlock(nn.Module):
         else:
             self.attn = nn.Identity()
 
-    def forward(self, x: torch.Tensor):
-        x = self.res(x)
+    def forward(self, x: torch.Tensor, mcdropout=False):
+        x = self.res(x, mcdropout)
         x = self.attn(x)
         return x
 
@@ -198,8 +201,8 @@ class UpBlock(nn.Module):
         else:
             self.attn = nn.Identity()
 
-    def forward(self, x: torch.Tensor):
-        x = self.res(x)
+    def forward(self, x: torch.Tensor, mcdropout=False):
+        x = self.res(x, mcdropout)
         x = self.attn(x)
         return x
 
@@ -224,10 +227,10 @@ class MiddleBlock(nn.Module):
         self.attn = AttentionBlock(n_channels) if has_attn else nn.Identity()
         self.res2 = ResidualBlock(n_channels, n_channels, activation=activation, norm=norm, dropout=dropout)
 
-    def forward(self, x: torch.Tensor):
-        x = self.res1(x)
+    def forward(self, x: torch.Tensor, mcdropout=False):
+        x = self.res1(x, mcdropout)
         x = self.attn(x)
-        x = self.res2(x)
+        x = self.res2(x, mcdropout)
         return x
 
 
@@ -238,7 +241,7 @@ class Upsample(nn.Module):
         super().__init__()
         self.conv = nn.ConvTranspose2d(n_channels, n_channels, (4, 4), (2, 2), (1, 1))
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, mcdropout=False):
         return self.conv(x)
 
 
@@ -249,5 +252,5 @@ class Downsample(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(n_channels, n_channels, (3, 3), (2, 2), (1, 1))
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, mcdropout=False):
         return self.conv(x)
