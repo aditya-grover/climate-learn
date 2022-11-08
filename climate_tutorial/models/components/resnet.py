@@ -85,6 +85,10 @@ class ResNet(nn.Module):
                 o = nn.Softmax()(x[..., i*bins:(i+1)*bins])
                 outputs.append(o)
             x = torch.stack(outputs, dim=3)
+            print(x.shape)
+            print(self.activation(x).shape)
+            print(self.final(self.activation(x)).shape)
+            return self.final(self.activation(x))
 
         return self.final(self.activation(self.norm(x)))
 
