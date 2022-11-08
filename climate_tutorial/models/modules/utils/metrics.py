@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from scipy import stats
+from torch.distributions.normal import Normal
 
 
 def mse(pred, y, vars, lat=None, mask=None):
@@ -74,6 +75,30 @@ def lat_weighted_mse_val(pred, y, clim, transform, vars, lat, log_steps, log_day
 
     # loss_dict["w_mse"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
 
+    return loss_dict
+
+
+def lat_weighted_nll(pred: Normal, y, vars, lat, mask=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    assert type(pred) == Normal
+
+    error = - pred.log_prob(y)  # [N, C, H, W]
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)  # (1, H, 1)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"w_nll_{var}"] = torch.mean(error[:, i] * w_lat)
+
+    loss_dict["loss"] = torch.mean((error * w_lat.unsqueeze(1)).mean(dim=1))
     return loss_dict
 
 
