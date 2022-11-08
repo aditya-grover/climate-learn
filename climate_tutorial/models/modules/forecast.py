@@ -59,6 +59,7 @@ class ForecastLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
+        print(x.shape, y.shape, out_variables.shape)
         loss_dict, _ = self.net.forward(x, y, out_variables, [lat_weighted_mse], lat=self.lat)
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
