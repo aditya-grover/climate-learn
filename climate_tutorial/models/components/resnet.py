@@ -18,6 +18,7 @@ class ResNet(nn.Module):
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
+        categorical: bool = False,
     ) -> None:
         super().__init__()
         self.in_channels = in_channels
@@ -26,6 +27,7 @@ class ResNet(nn.Module):
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
         self.upsampling = upsampling
+        self.categorical = categorical
 
         if activation == "gelu":
             self.activation = nn.GELU()
@@ -70,17 +72,27 @@ class ResNet(nn.Module):
         out_channels = self.out_channels
         self.final = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
 
-    def predict(self, x):
+    def predict(self, x, nvars):
         x = self.image_proj(x)
 
         for m in self.blocks:
             x = m(x)
 
+        if self.categorical:
+            bins = int(self.out_channels / nvars)
+            outputs = []
+            for i in range(self.in_channels):
+                o = nn.Softmax()(x[..., i*bins:(i+1)*bins])
+                outputs.append(o)
+            x = torch.stack(outputs, dim=3)
+
         return self.final(self.activation(self.norm(x)))
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x)
+        pred = self.predict(x, len(out_variables))
+        if self.categorical:
+            return 
         return [m(pred, y, out_variables, lat) for m in metric], x
 
     def rollout(self, x, y, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
@@ -89,7 +101,7 @@ class ResNet(nn.Module):
 
         preds = []
         for _ in range(steps):
-            x = self.predict(x)
+            x = self.predict(x, len(out_variables))
             preds.append(x)
         preds = torch.stack(preds, dim=1)
         if len(y.shape) == 4:
@@ -99,7 +111,7 @@ class ResNet(nn.Module):
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
-            pred = self.predict(x)
+            pred = self.predict(x, len(out_vars))
         return [m(pred, y, transform, out_vars) for m in metric], pred
 
 

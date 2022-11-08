@@ -149,6 +149,42 @@ def lat_weighted_acc(pred, y, clim, transform, vars, lat, log_steps, log_days, t
     # loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
     return loss_dict
 
+def categorical_loss(pred, y, clim, transform, vars, lat, log_steps, log_days, transform_pred=True):
+    # """
+    # y: [N, T, 3, H, W]
+    # pred: [N, T, 3, H, W]
+    # vars: list of variable names
+    # lat: H
+    # TODO: subtract the climatology
+    # """
+    # if transform_pred:
+    #     pred = transform(pred)
+    # y = transform(y)
+    # pred = pred.to(torch.float32)
+    # y = y.to(torch.float32)
+
+    # # lattitude weights
+    # w_lat = np.cos(np.deg2rad(lat))
+    # w_lat = w_lat / w_lat.mean()  # (H, )
+    # w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(pred.device)  # [1, H, 1]
+
+    # # clim = torch.mean(y, dim=(0, 1), keepdim=True)
+    # clim = clim.to(pred.device)
+    # pred = pred - clim
+    # y = y - clim
+    loss_dict = {}
+
+    # with torch.no_grad():
+    #     for i, var in enumerate(vars):
+    #         for day, step in zip(log_days, log_steps):
+    #             pred_prime = pred[:, step - 1, i] - torch.mean(pred[:, step - 1, i])
+    #             y_prime = y[:, step - 1, i] - torch.mean(y[:, step - 1, i])
+    #             loss_dict[f"acc_{var}_day_{day}"] = torch.sum(w_lat * pred_prime * y_prime) / torch.sqrt(
+    #                 torch.sum(w_lat * pred_prime**2) * torch.sum(w_lat * y_prime**2)
+    #             )
+
+    # # loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
+    return loss_dict
 
 ### Downscaling metrics
 def rmse(pred, y, transform, vars):
