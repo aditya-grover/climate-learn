@@ -11,6 +11,7 @@ class ResNet(nn.Module):
     def __init__(
         self,
         in_channels,
+        history=1,
         hidden_channels=128,
         activation="leaky",
         out_channels=None,
@@ -18,6 +19,8 @@ class ResNet(nn.Module):
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
+        prob_type: str = None, # parametric, mcdropout, deter (used for ensembling)
+        n_samples: int = 50 # only used for mcdropout
     ) -> None:
         super().__init__()
         self.in_channels = in_channels
@@ -37,8 +40,12 @@ class ResNet(nn.Module):
             self.activation = nn.LeakyReLU(0.3)
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
+        
+        assert not prob_type or prob_type in ['parametric', 'mcdropout', 'deter']
+        self.prob_type = prob_type
+        self.n_samples = n_samples
 
-        insize = self.in_channels
+        insize = self.in_channels * history
         # Project image into feature map
         self.image_proj = PeriodicConv2D(insize, hidden_channels, kernel_size=7, padding=3)
 
@@ -69,14 +76,28 @@ class ResNet(nn.Module):
             self.norm = nn.Identity()
         out_channels = self.out_channels
         self.final = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
+        
+        if prob_type == 'parametric':
+            self.final_std = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
 
     def predict(self, x):
+        if len(x.shape) == 5: # history
+            x = x.flatten(1, 2)
         x = self.image_proj(x)
 
-        for m in self.blocks:
-            x = m(x)
+        mcdropout = (self.prob_type == 'mcdropout')
 
-        return self.final(self.activation(self.norm(x)))
+        for m in self.blocks:
+            x = m(x, mcdropout)
+
+        pred = self.final(self.activation(self.norm(x)))
+
+        if self.prob_type == 'parametric':
+            std = self.final_std(self.activation(self.norm(x)))
+            std = torch.exp(std)
+            pred = Normal(pred, std)
+
+        return pred
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
