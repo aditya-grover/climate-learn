@@ -77,6 +77,9 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     if variable != "constants":
         subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
         subprocess.check_call(["unzip", path + ".zip", "-d", path])
+    else:
+        subprocess.check_call(["mkdir", path])
+        subprocess.check_call(["wget", "--no-check-certificate", url, "-O", os.path.join(path, "constants.nc")]) 
 
 def download(source, **kwargs):
     if("root" not in kwargs or kwargs["root"] is None):
