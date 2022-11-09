@@ -74,8 +74,9 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
             "/download?path=%2FCMIP%2FMPI-ESM%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
         ).format(resolution = resolution, variable = variable)
     
-    subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
-    subprocess.check_call(["unzip", path + ".zip", "-d", path])
+    if variable != "constants":
+        subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
+        subprocess.check_call(["unzip", path + ".zip", "-d", path])
 
 def download(source, **kwargs):
     if("root" not in kwargs or kwargs["root"] is None):
