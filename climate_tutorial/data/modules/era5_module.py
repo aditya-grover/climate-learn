@@ -28,7 +28,6 @@ class ERA5(Dataset):
     def load_from_nc(self, data_dir):
         constant_names = [name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS]
         ps = glob.glob(os.path.join(data_dir, 'constants', '*.nc'))
-        print(ps)
         all_constants = xr.open_mfdataset(ps, combine='by_coords')
         self.constants = {name: all_constants[NAME_TO_VAR[name]] for name in constant_names}
 
