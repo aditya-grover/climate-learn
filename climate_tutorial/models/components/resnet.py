@@ -108,7 +108,7 @@ class ResNet(nn.Module):
         else:
             return metric(pred, y, out_variables, lat), x
 
-    def rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, lat, log_day):
+    def rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
         """
         Notes from climate_uncertainty repo merge
         Shared function params before merge:
