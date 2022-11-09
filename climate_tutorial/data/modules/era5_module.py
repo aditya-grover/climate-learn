@@ -28,6 +28,7 @@ class ERA5(Dataset):
     def load_from_nc(self, data_dir):
         constant_names = [name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS]
         ps = glob.glob(os.path.join(data_dir, 'constants', '*.nc'))
+        print(ps)
         all_constants = xr.open_mfdataset(ps, combine='by_coords')
         self.constants = {name: all_constants[NAME_TO_VAR[name]] for name in constant_names}
 
@@ -92,8 +93,8 @@ class ERA5Forecasting(ERA5):
 
         inp_data = xr.concat([self.data_dict[k] for k in self.in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in self.out_vars], dim='level')
-
-    self.inp_data = inp_data.to_numpy().astype(np.float32)
+        
+        self.inp_data = inp_data.to_numpy().astype(np.float32)
         self.out_data = out_data.to_numpy().astype(np.float32)
 
         constants_data = [self.constants[k].to_numpy().astype(np.float32) for k in self.constants.keys()]
@@ -114,6 +115,12 @@ class ERA5Forecasting(ERA5):
             self.inp_transform = None
             self.out_transform = None
             self.constant_transform = None
+
+        self.time = self.data_dict[in_vars[0]].time.to_numpy()[:-pred_range:subsample].copy()
+        self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
+        self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
+        self.out_lon = self.data_dict[out_vars[0]].lon.to_numpy().copy()
+        self.out_lat = self.data_dict[out_vars[0]].lat.to_numpy().copy()
 
         del self.data_dict
 
@@ -154,7 +161,7 @@ class ERA5Forecasting(ERA5):
         return len(self.inp_data) - ((self.history - 1) * self.window + self.pred_range)
 
 class ERA5Downscaling(ERA5):
-    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, subsample=1, split='train'):
+    def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, history, window, pred_range, years, subsample=1, split='train'):
         print (f'Creating {split} dataset')
         super().__init__(root_dir, root_highres_dir, in_vars, years, split)
         

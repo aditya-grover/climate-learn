@@ -25,7 +25,7 @@ class DataModule(LightningDataModule):
         test_start_year,
         end_year = Year(2018),
         root_highres_dir=None,
-        history: int = 3,
+        history: int = 1,
         window: int = 6,
         pred_range = Hours(6),
         subsample = Hours(1),
