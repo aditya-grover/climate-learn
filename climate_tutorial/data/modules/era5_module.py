@@ -174,6 +174,12 @@ class ERA5Downscaling(ERA5):
         self.inp_data = inp_data[::subsample].to_numpy().astype(np.float32)
         self.out_data = out_data[::subsample].to_numpy().astype(np.float32)
 
+        constants_data = [self.constants[k].to_numpy().astype(np.float32) for k in self.constants.keys()]
+        if len(constants_data) > 0:
+            self.constants_data = np.stack(constants_data, axis=0) # 3, 32, 64
+        else:
+            self.constants_data = None
+
         assert len(self.inp_data) == len(self.out_data)
 
         self.downscale_ratio = self.out_data.shape[-1] // self.inp_data.shape[-1]
@@ -181,9 +187,11 @@ class ERA5Downscaling(ERA5):
         if split == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
             self.out_transform = self.get_normalize(self.out_data)
+            self.constant_transform = self.get_normalize(np.expand_dims(self.constants_data, axis=0)) if self.constants_data is not None else None
         else:
             self.inp_transform = None
             self.out_transform = None
+            self.constant_transform = None
 
         self.time = self.data_dict[in_vars[0]].time.to_numpy()[::subsample].copy()
         self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
@@ -199,9 +207,10 @@ class ERA5Downscaling(ERA5):
         std = np.std(data, axis=(0, 2, 3))
         return transforms.Normalize(mean, std)
 
-    def set_normalize(self, inp_normalize, out_normalize): # for val and test
+    def set_normalize(self, inp_normalize, out_normalize, constant_normalize): # for val and test
         self.inp_transform = inp_normalize
         self.out_transform = out_normalize
+        self.constant_transform = constant_normalize
 
     def get_climatology(self):
         return torch.from_numpy(self.out_data.mean(axis=0))
