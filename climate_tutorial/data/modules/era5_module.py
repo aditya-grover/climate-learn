@@ -93,7 +93,6 @@ class ERA5Forecasting(ERA5):
 
         inp_data = xr.concat([self.data_dict[k] for k in self.in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in self.out_vars], dim='level')
-        
         self.inp_data = inp_data.to_numpy().astype(np.float32)
         self.out_data = out_data.to_numpy().astype(np.float32)
 
