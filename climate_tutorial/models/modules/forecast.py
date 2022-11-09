@@ -103,7 +103,7 @@ class ForecastLitModule(LightningModule):
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
-        day = int(pred_range / 24)
+        day = int(days_each_step)
 
         all_loss_dicts, _ = self.net.rollout(
             x,
@@ -111,15 +111,15 @@ class ForecastLitModule(LightningModule):
             self.val_clim,
             variables,
             out_variables,
-            pred_steps,
-            [lat_weighted_rmse, lat_weighted_acc],
-            self.denormalization,
-            self.lat,
-            steps,
-            days,
-            self.mean_denormalize,
-            self.std_denormalize,
-            day
+            steps=pred_steps,
+            metric=self.val_loss,
+            transform=self.denormalization,
+            lat=self.lat,
+            log_steps=steps,
+            log_days=days,
+            mean_transform=self.mean_denormalize,
+            std_transform=self.std_denormalize,
+            log_day=day
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -142,13 +142,13 @@ class ForecastLitModule(LightningModule):
         x, y, variables, out_variables = batch
         pred_steps = y.shape[1]
         pred_range = self.pred_range.hours()
-        day = int(pred_range / 24)
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
+        day = int(days_each_step)
 
         all_loss_dicts, _ = self.net.rollout(
             x,
