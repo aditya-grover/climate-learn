@@ -17,7 +17,6 @@ class Trainer:
         self.trainer = LitTrainer(
             logger = logger,
             accelerator = accelerator,
-            devices=devices,
             precision = precision,
             max_epochs = max_epochs,
             devices = devices,

@@ -1,3 +1,12 @@
+NAME_TO_CMIP = {
+    "geopotential": "zg",
+    "u_component_of_wind": "ua",
+    "v_component_of_wind": "va",
+    "temperature": "ta",
+    "relative_humidity": "r",
+    "specific_humidity": "hus",
+}
+
 NAME_TO_VAR = {
     "2m_temperature": "t2m",
     "10m_u_component_of_wind": "u10",
@@ -15,6 +24,8 @@ NAME_TO_VAR = {
     "temperature": "t",
     "relative_humidity": "r",
     "specific_humidity": "q",
+    "geopotential_500": "z",
+    "temperature_850": "t",
 }
 
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
@@ -30,6 +41,8 @@ SINGLE_LEVEL_VARS = [
     "land_sea_mask",
     "orography",
     "lattitude",
+    "geopotential_500",
+    "temperature_850",
 ]
 
 PRESSURE_LEVEL_VARS = [

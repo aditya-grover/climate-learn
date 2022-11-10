@@ -7,7 +7,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from climate_tutorial.data import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
+from ..constants import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
 
 
 class ERA5(Dataset):
@@ -93,7 +93,7 @@ class ERA5Forecasting(ERA5):
         inp_data = xr.concat([self.data_dict[k] for k in self.in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in self.out_vars], dim='level')
 
-    self.inp_data = inp_data.to_numpy().astype(np.float32)
+        self.inp_data = inp_data.to_numpy().astype(np.float32)
         self.out_data = out_data.to_numpy().astype(np.float32)
 
         constants_data = [self.constants[k].to_numpy().astype(np.float32) for k in self.constants.keys()]
