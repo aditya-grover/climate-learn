@@ -42,6 +42,9 @@ class DownscaleLitModule(LightningModule):
 
     def set_pred_range(self, r):
         self.pred_range = r
+        
+    def set_train_climatology(self, clim):
+        self.train_clim = clim
 
     def set_val_climatology(self, clim):
         self.val_clim = clim
