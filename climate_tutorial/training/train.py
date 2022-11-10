@@ -17,14 +17,18 @@ class Trainer:
         self.trainer = LitTrainer(
             logger = logger,
             accelerator = accelerator,
-            devices=devices,
             precision = precision,
             max_epochs = max_epochs,
+            devices = devices,
             callbacks = [checkpoint_callback, summary_callback, progress_callback]
         )
 
     def fit(self, model_module, data_module):
         self.trainer.fit(model_module, data_module)
+    
+    
+    def validate(self, model_module, data_module):
+        self.trainer.validate(model_module, data_module)
     
     def test(self, model_module, data_module):
         self.trainer.test(model_module, data_module)
