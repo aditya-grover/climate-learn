@@ -10,6 +10,7 @@ from pathlib import Path
 
 def regrid(
         ds_in,
+        dataset,
         resolution,
         method='bilinear',
         reuse_weights=True
@@ -22,12 +23,15 @@ def regrid(
     :param reuse_weights: Reuse weights for regridding
     :return: ds_out: Regridded dataset
     """
-    # if 'lon_bnds' in ds_in.coords:
-    ds_in = ds_in.drop_vars(['lon_bnds', 'lat_bnds'])
-
-    print(ds_in.coords)
+    if dataset is "cmip6":
+        print("dropped vars")
+        ds_in = ds_in.drop_vars(['lon_bnds', 'lat_bnds'])
+        if hasattr(ds_in, 'plev_bnds'):
+            ds_in = ds_in.drop(('plev_bnds'))
+        if hasattr(ds_in, 'time_bnds'):
+            ds_in = ds_in.drop(('time_bnds'))
     
-    # Rename to ESMF compatible coordinates
+
     if 'latitude' in ds_in.coords:
         ds_in = ds_in.rename({'latitude': 'lat', 'longitude': 'lon'})
 
@@ -47,11 +51,14 @@ def regrid(
     # Hack to speed up regridding of large files
     ds_list = []
     chunk_size = 500
-    n_chunks = len(ds_in.time) // chunk_size + 1
-    for i in range(n_chunks):
-        ds_small = ds_in.isel(time=slice(i*chunk_size, (i+1)*chunk_size))
-        ds_list.append(regridder(ds_small).astype('float32'))
-    ds_out = xr.concat(ds_list, dim='time')
+    if hasattr(ds_in, 'time'):
+        n_chunks = len(ds_in.time) // chunk_size + 1
+        for i in range(n_chunks+1):
+            ds_small = ds_in.isel(time=slice(i*chunk_size, (i+1)*chunk_size))
+            ds_list.append(regridder(ds_small, keep_attrs=True).astype('float32'))
+        ds_out = xr.concat(ds_list, dim='time')
+    else:
+        ds_out = regridder(ds_in, keep_attrs=True).astype('float32')
 
     # Set attributes since they get lost during regridding
     for var in ds_out:
@@ -83,8 +90,8 @@ def regrider(
     :param custom_fn: If not None, use custom file name. Otherwise infer from parameters.
     :param file_ending: Default = nc
     """
-    input_fns = os.path.join(root, f"data/{source}", dataset, "pre-regrided", variable)
-    output_dir = os.path.join(root, f"data/{source}", dataset, resolution, variable)
+    input_fns = os.path.join(root, dataset, "pre-regrided", variable)
+    output_dir = os.path.join(root, dataset, f"{resolution}deg", variable)
 
     print(f"Regridding {dataset} {variable} data in {input_fns} to {resolution}deg")
 
@@ -93,6 +100,7 @@ def regrider(
     #     return
     # Make sure output directory exists
     os.makedirs(output_dir, exist_ok=True)
+    print(output_dir)
 
     # Get files for starred expressions
     # if '*' in input_fns[0]:
@@ -102,8 +110,7 @@ def regrider(
     # Loop over input files
     files = Path(input_fns).glob('*')
     for fn in files:
-    # for fn in tqdm(input_fns):
-        print(f'Regridding file: {fn}')
+        print("\n hi")
         ds_in = xr.open_dataset(fn, engine='cfgrib') if is_grib else xr.open_dataset(fn)
         
         fn_out = (
@@ -113,7 +120,7 @@ def regrider(
         if os.path.exists(output_dir + '/' + fn_out):
             print(output_dir + '/' + fn_out + " already generated")
             continue
-        ds_out = regrid(ds_in, float(resolution), method, reuse_weights)
+        ds_out = regrid(ds_in, dataset, float(resolution), method, reuse_weights)
 
 
         print(f"Saving file: {output_dir + '/' + fn_out}")

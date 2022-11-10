@@ -3,16 +3,7 @@ import cdsapi
 import argparse
 import subprocess
 from .regrid import *
-
-NAME_TO_CMIP = {
-    "geopotential": "zg",
-    "u_component_of_wind": "ua",
-    "v_component_of_wind": "va",
-    "temperature": "ta",
-    "relative_humidity": "r",
-    "specific_humidity": "hus",
-    "geopotential_500": "z",
-}
+from .constants import NAME_TO_CMIP
 
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
@@ -29,6 +20,7 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
 
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
+    
     if(os.path.exists(path)):
         return
         # maybe not a silent return?
@@ -61,7 +53,7 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
             path,
         )
 
-def _download_esgf(root, dataset, variable, resolution):
+def _download_esgf(root, dataset, variable, resolution, institutionID="MPI-M", sourceID="MPI-ESM1-2-HR", exprID="historical"):
     if (dataset not in ["cmip6"]):
         raise Exception("Dataset not supported")
 
@@ -87,12 +79,14 @@ def _download_esgf(root, dataset, variable, resolution):
 
         else:
             url = (
-                "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/6hrPlevPt/"
+                "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/{institutionID}/{sourceID}/{exprID}/r1i1p1f1/6hrPlevPt/"
                 "{variable}/gn/v20190815/{file}"
-            ).format(yr_string = yr, variable = NAME_TO_CMIP[variable], file=file_name)
+            ).format(yr_string = yr, variable = NAME_TO_CMIP[variable], file=file_name, institutionID=institutionID, sourceID=sourceID, exprID=exprID)
             subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
     
-    regrider(root = path, source = "esgf", variable = variable, dataset = dataset, resolution = resolution)
+        break
+
+    regrider(root = root, source = "esgf", variable = variable, dataset = dataset, resolution = resolution)
     
 
 
