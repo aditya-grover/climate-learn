@@ -162,11 +162,3 @@ class ResNet(nn.Module):
         with torch.no_grad():
             pred = self.predict(x)
         return [m(pred, y, transform, out_vars) for m in metric], pred
-
-
-# # model = ResNet(in_channels=1, out_channels=1, upsampling=2).cuda()
-# # x = torch.randn((64, 1, 32, 64)).cuda()
-# model = ResNet(history=3, in_channels=43, out_channels=3, prob_type='parametric').cuda()
-# x = torch.randn((2, 3, 43, 32, 64)).cuda()
-# y = model.predict(x)
-# print (y.shape)
