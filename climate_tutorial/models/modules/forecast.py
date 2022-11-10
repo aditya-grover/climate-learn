@@ -1,13 +1,17 @@
 from typing import Any
 
+import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import (
+    crps_gaussian,
+    crps_gaussian_val,
     lat_weighted_acc,
     lat_weighted_mse,
+    lat_weighted_nll,
     lat_weighted_rmse,
 )
 
@@ -27,6 +31,17 @@ class ForecastLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        if net.prob_type == 'parametric':
+            self.train_loss = crps_gaussian
+            # self.train_loss = lat_weighted_nll
+            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+        elif net.prob_type == 'mcdropout':
+            self.train_loss = lat_weighted_mse
+            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+        else: # deter
+            self.train_loss = lat_weighted_mse
+            self.val_loss = [lat_weighted_rmse]
+        
         if optimizer == 'adam':
             self.optim_cls = torch.optim.Adam
         elif optimizer == 'adamw':
@@ -40,6 +55,12 @@ class ForecastLitModule(LightningModule):
 
     def set_denormalization(self, mean, std):
         self.denormalization = transforms.Normalize(mean, std)
+
+        mean_mean_denorm, mean_std_denorm = -mean / std, 1 / std
+        self.mean_denormalize = transforms.Normalize(mean_mean_denorm, mean_std_denorm)
+
+        std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
+        self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
 
     def set_lat_lon(self, lat, lon):
         self.lat = lat
@@ -83,6 +104,7 @@ class ForecastLitModule(LightningModule):
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
+        day = int(days_each_step)
 
         all_loss_dicts, _ = self.net.rollout(
             x,
@@ -90,12 +112,15 @@ class ForecastLitModule(LightningModule):
             self.val_clim,
             variables,
             out_variables,
-            pred_steps,
-            [lat_weighted_rmse, lat_weighted_acc],
-            self.denormalization,
+            steps=pred_steps,
+            metric=self.val_loss,
+            transform=self.denormalization,
             lat=self.lat,
             log_steps=steps,
             log_days=days,
+            mean_transform=self.mean_denormalize,
+            std_transform=self.std_denormalize,
+            log_day=day
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -124,6 +149,7 @@ class ForecastLitModule(LightningModule):
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
+        day = int(days_each_step)
 
         all_loss_dicts, _ = self.net.rollout(
             x,
@@ -134,9 +160,12 @@ class ForecastLitModule(LightningModule):
             pred_steps,
             [lat_weighted_rmse, lat_weighted_acc],
             self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
+            self.lat,
+            steps,
+            days,
+            self.mean_denormalize,
+            self.std_denormalize,
+            day
         )
 
         loss_dict = {}

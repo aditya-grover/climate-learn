@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from scipy import stats
+from torch.distributions.normal import Normal
 
 
 def mse(pred, y, vars, lat=None, mask=None):
@@ -77,6 +78,87 @@ def lat_weighted_mse_val(pred, y, clim, transform, vars, lat, log_steps, log_day
     return loss_dict
 
 
+def lat_weighted_nll(pred: Normal, y, vars, lat, mask=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    assert type(pred) == Normal
+
+    error = - pred.log_prob(y)  # [N, C, H, W]
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)  # (1, H, 1)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"w_nll_{var}"] = torch.mean(error[:, i] * w_lat)
+
+    loss_dict["loss"] = torch.mean((error * w_lat.unsqueeze(1)).mean(dim=1))
+    return loss_dict
+
+
+def crps_gaussian(pred: Normal, y, vars, lat, mask=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    mean, std = pred.loc, pred.scale # N, C, H, W
+    assert std is not None
+
+    s = (y - mean) / std
+
+    standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
+    cdf = standard_normal.cdf(s)
+    pdf = torch.exp(standard_normal.log_prob(s))
+
+    crps = std * (s * (2*cdf - 1) + 2*pdf - 1/torch.pi)
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(crps.device)  # (1, H, 1)
+
+    loss_dict = {}
+    for i, var in enumerate(vars):
+        loss_dict[f"crps_{var}"] = torch.mean(crps[:, i] * w_lat)
+    loss_dict["loss"] = torch.mean((crps * w_lat.unsqueeze(1)).mean(dim=1))
+
+    return loss_dict
+
+
+def crps_gaussian_val(pred, y, clim, vars, lat, log_day):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    mean, std = pred.loc, pred.scale # N, C, H, W
+    assert std is not None
+
+    s = (y - mean) / std
+
+    standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
+    cdf = standard_normal.cdf(s)
+    pdf = torch.exp(standard_normal.log_prob(s))
+
+    crps = std * (s * (2*cdf - 1) + 2*pdf - 1/torch.pi)
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(crps.device)  # (1, H, 1)
+
+    loss_dict = {}
+    for i, var in enumerate(vars):
+        loss_dict[f"crps_{var}_day_{log_day}"] = torch.mean(crps[:, i] * w_lat)
+
+    return loss_dict
 ### Forecasting metrics
 
 
