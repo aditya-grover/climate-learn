@@ -7,7 +7,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from climate_tutorial.data import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
+from ..constants import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
 
 
 class ERA5(Dataset):
