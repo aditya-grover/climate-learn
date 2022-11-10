@@ -77,6 +77,7 @@ class Unet(nn.Module):
                         activation=activation,
                         norm=norm,
                         dropout=dropout,
+                        mc_dropout=(self.prob_type == "mcdropout")
                     )
                 )
                 in_channels = out_channels
@@ -88,7 +89,9 @@ class Unet(nn.Module):
         self.down = nn.ModuleList(down)
 
         # Middle block
-        self.middle = MiddleBlock(out_channels, has_attn=mid_attn, activation=activation, norm=norm, dropout=dropout)
+        self.middle = MiddleBlock(
+            out_channels, has_attn=mid_attn, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
 
         # #### Second half of U-Net - increasing resolution
         up = []
@@ -107,13 +110,20 @@ class Unet(nn.Module):
                         activation=activation,
                         norm=norm,
                         dropout=dropout,
+                        mc_dropout=(self.prob_type == "mcdropout")
                     )
                 )
             # Final block to reduce the number of channels
             out_channels = in_channels // ch_mults[i]
             up.append(
                 UpBlock(
-                    in_channels, out_channels, has_attn=is_attn[i], activation=activation, norm=norm, dropout=dropout
+                    in_channels,
+                    out_channels,
+                    has_attn=is_attn[i],
+                    activation=activation,
+                    norm=norm,
+                    dropout=dropout,
+                    mc_dropout=(self.prob_type == "mcdropout")
                 )
             )
             in_channels = out_channels
@@ -147,14 +157,12 @@ class Unet(nn.Module):
             x = x.flatten(1, 2)
         x = self.image_proj(x)
 
-        mcdropout = (self.prob_type == 'mcdropout')
-
         h = [x]
         for m in self.down:
-            x = m(x, mcdropout)
+            x = m(x)
             h.append(x)
 
-        x = self.middle(x, mcdropout)
+        x = self.middle(x)
 
         for m in self.up:
             if isinstance(m, Upsample):
@@ -163,7 +171,7 @@ class Unet(nn.Module):
                 # Get the skip connection from first half of U-Net and concatenate
                 s = h.pop()
                 x = torch.cat((x, s), dim=1)
-                x = m(x, mcdropout)
+                x = m(x)
         
         if self.upsampling > 1:
             for m in self.upsamplers:
@@ -240,11 +248,3 @@ class Unet(nn.Module):
         with torch.no_grad():
             pred = self.predict(x)
         return [m(pred, y, transform, out_vars) for m in metric], pred
-
-
-# # model = Unet(in_channels=1, out_channels=1, upsampling=2).cuda()
-# # x = torch.randn((64, 1, 32, 64)).cuda()
-# model = Unet(in_channels=2, out_channels=2).cuda()
-# x = torch.randn((64, 2, 32, 64)).cuda()
-# y = model.predict(x)
-# print (y.shape)
