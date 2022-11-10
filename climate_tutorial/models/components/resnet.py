@@ -58,7 +58,8 @@ class ResNet(nn.Module):
                     hidden_channels,
                     activation=activation,
                     norm=True,
-                    dropout=dropout
+                    dropout=dropout,
+                    mc_dropout=(self.prob_type == "mcdropout")
                 )
             )
         
@@ -86,10 +87,8 @@ class ResNet(nn.Module):
             x = x.flatten(1, 2)
         x = self.image_proj(x)
 
-        mcdropout = (self.prob_type == 'mcdropout')
-
         for m in self.blocks:
-            x = m(x, mcdropout)
+            x = m(x)
 
         pred = self.final(self.activation(self.norm(x)))
 

@@ -46,6 +46,7 @@ class ResidualBlock(nn.Module):
         norm: bool = False,
         dropout: float = 0.1,
         n_groups: int = 1,
+        mc_dropout: bool = False
     ):
         super().__init__()
         if activation == "gelu":
@@ -76,9 +77,10 @@ class ResidualBlock(nn.Module):
             self.norm2 = nn.Identity()
 
         self.drop = nn.Dropout(dropout)
+        self.mc_dropout = mc_dropout
 
-    def forward(self, x: torch.Tensor, mcdropout):
-        if mcdropout:
+    def forward(self, x: torch.Tensor):
+        if self.mc_dropout:
             # print (self.drop)
             self.drop.train(True)
         # First convolution layer
@@ -161,16 +163,19 @@ class DownBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
-        self.res = ResidualBlock(in_channels, out_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res = ResidualBlock(
+            in_channels, out_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
         else:
             self.attn = nn.Identity()
 
-    def forward(self, x: torch.Tensor, mcdropout=False):
-        x = self.res(x, mcdropout)
+    def forward(self, x: torch.Tensor):
+        x = self.res(x)
         x = self.attn(x)
         return x
 
@@ -189,20 +194,27 @@ class UpBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
         # The input has `in_channels + out_channels` because we concatenate the output of the same resolution
         # from the first half of the U-Net
         self.res = ResidualBlock(
-            in_channels + out_channels, out_channels, activation=activation, norm=norm, dropout=dropout
+            in_channels + out_channels,
+            out_channels,
+            activation=activation,
+            norm=norm,
+            dropout=dropout,
+            mc_dropout=mc_dropout
         )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
         else:
             self.attn = nn.Identity()
+        self.mc_dropout = mc_dropout
 
-    def forward(self, x: torch.Tensor, mcdropout=False):
-        x = self.res(x, mcdropout)
+    def forward(self, x: torch.Tensor):
+        x = self.res(x)
         x = self.attn(x)
         return x
 
@@ -221,16 +233,21 @@ class MiddleBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
-        self.res1 = ResidualBlock(n_channels, n_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res1 = ResidualBlock(
+            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
         self.attn = AttentionBlock(n_channels) if has_attn else nn.Identity()
-        self.res2 = ResidualBlock(n_channels, n_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res2 = ResidualBlock(
+            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
 
-    def forward(self, x: torch.Tensor, mcdropout=False):
-        x = self.res1(x, mcdropout)
+    def forward(self, x: torch.Tensor):
+        x = self.res1(x)
         x = self.attn(x)
-        x = self.res2(x, mcdropout)
+        x = self.res2(x)
         return x
 
 
@@ -241,7 +258,7 @@ class Upsample(nn.Module):
         super().__init__()
         self.conv = nn.ConvTranspose2d(n_channels, n_channels, (4, 4), (2, 2), (1, 1))
 
-    def forward(self, x: torch.Tensor, mcdropout=False):
+    def forward(self, x: torch.Tensor):
         return self.conv(x)
 
 
@@ -252,5 +269,5 @@ class Downsample(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(n_channels, n_channels, (3, 3), (2, 2), (1, 1))
 
-    def forward(self, x: torch.Tensor, mcdropout=False):
+    def forward(self, x: torch.Tensor):
         return self.conv(x)
