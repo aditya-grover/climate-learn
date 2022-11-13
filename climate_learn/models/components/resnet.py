@@ -105,7 +105,7 @@ class ResNet(nn.Module):
         if not self.prob_type:
             return [m(pred, y, out_variables, lat) for m in metric], x
         else:
-            return metric(pred, y, out_variables, lat), x
+            return [m(pred, y, out_variables, lat) for m in metric], x
 
     def rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
         """

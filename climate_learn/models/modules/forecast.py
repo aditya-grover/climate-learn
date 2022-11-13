@@ -34,10 +34,10 @@ class ForecastLitModule(LightningModule):
         if net.prob_type == 'parametric':
             self.train_loss = crps_gaussian
             # self.train_loss = lat_weighted_nll
-            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+            self.val_loss = [crps_gaussian_val]
         elif net.prob_type == 'mcdropout':
             self.train_loss = lat_weighted_mse
-            self.val_loss = [crps_gaussian_val, lat_weighted_rmse]
+            self.val_loss = [crps_gaussian_val]
         else: # deter
             self.train_loss = lat_weighted_mse
             self.val_loss = [lat_weighted_rmse]
@@ -92,7 +92,13 @@ class ForecastLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
-        loss_dict, _ = self.net.forward(x, y, out_variables, [lat_weighted_mse], lat=self.lat)
+        loss_dict, _ = self.net.forward(
+            x,
+            y,
+            out_variables,
+            metric=[self.train_loss],
+            lat=self.lat
+        )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
             self.log(
