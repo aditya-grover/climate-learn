@@ -68,6 +68,12 @@ class ForecastLitModule(LightningModule):
         std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
         self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
 
+        mean_mean_denorm, mean_std_denorm = -mean / std, 1 / std
+        self.mean_denormalize = transforms.Normalize(mean_mean_denorm, mean_std_denorm)
+
+        std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
+        self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
+
     def set_lat_lon(self, lat, lon):
         self.lat = lat
         self.lon = lon
@@ -109,11 +115,7 @@ class ForecastLitModule(LightningModule):
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
-<<<<<<< HEAD
-        day = int(pred_range / 24)
-=======
         day = int(days_each_step)
->>>>>>> fix confliction, need double check
 
         all_loss_dicts, _ = self.net.rollout(
             x,
@@ -121,17 +123,6 @@ class ForecastLitModule(LightningModule):
             self.val_clim,
             variables,
             out_variables,
-<<<<<<< HEAD
-            pred_steps,
-            [lat_weighted_rmse, lat_weighted_acc],
-            self.denormalization,
-            self.lat,
-            steps,
-            days,
-            self.mean_denormalize,
-            self.std_denormalize,
-            day
-=======
             steps=pred_steps,
             metric=self.val_loss,
             transform=self.denormalization,
@@ -141,7 +132,6 @@ class ForecastLitModule(LightningModule):
             mean_transform=self.mean_denormalize,
             std_transform=self.std_denormalize,
             log_day=day
->>>>>>> fix confliction, need double check
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -171,6 +161,7 @@ class ForecastLitModule(LightningModule):
         default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
+        day = int(days_each_step)
 
         all_loss_dicts, _ = self.net.rollout(
             x,
