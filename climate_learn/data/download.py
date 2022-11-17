@@ -109,6 +109,22 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
     subprocess.check_call(["unzip", path + ".zip", "-d", path])
 
+def _download_climatebench(root, dataset):
+    if(dataset not in ["cmip6"]):
+        raise Exception("Dataset not supported")
+
+    path = os.path.join(root, dataset)
+    print(f"Downloading {dataset} climatebench to {path}")
+    if(os.path.exists(path)):
+        print("looks like the path already exists!")
+        return
+    os.makedirs(os.path.dirname(path), exist_ok = True)
+
+    url = "https://zenodo.org/record/7064308/files/CMIP6.zip"
+    
+    subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
+    subprocess.check_call(["unzip", path + ".zip", "-d", root])
+
 def download(source, **kwargs):
     if("root" not in kwargs or kwargs["root"] is None):
         kwargs["root"] = ".climate_tutorial"
@@ -119,6 +135,8 @@ def download(source, **kwargs):
         _download_copernicus(**kwargs)
     elif(source == "weatherbench"):
         _download_weatherbench(**kwargs)
+    elif(source == "climatebench"):
+        _download_climatebench(**kwargs)
     elif(source == "esgf"):
         _download_esgf(**kwargs)
 
@@ -149,6 +167,10 @@ def main():
     subparser.add_argument("--institutionID", type = str, default = "MPI-M")
     subparser.add_argument("--sourceID", type = str, default = "MPI-ESM1-2-HR")
     subparser.add_argument("--exprID", type = str, default = "historical")
+
+    subparser = subparsers.add_parser("climatebench")
+    subparser.add_argument("--root", type = str, default = None)
+    subparser.add_argument("--dataset", type = str, choices = ["cmip6"], required = True)
 
     args = parser.parse_args()
     download(**vars(args))
