@@ -38,6 +38,7 @@ class ForecastLitModule(LightningModule):
         elif net.prob_type == 'mcdropout':
             self.train_loss = lat_weighted_mse
             self.val_loss = [crps_gaussian_val]
+            raise NotImplementedError("Only parametric and deterministic prediction is supported")
         else: # deter
             self.train_loss = lat_weighted_mse
             self.val_loss = [lat_weighted_rmse]
