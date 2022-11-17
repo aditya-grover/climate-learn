@@ -20,7 +20,7 @@ class ResNet(nn.Module):
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
-        prob_type: str = None, # parametric, mcdropout, deter (used for ensembling)
+        prob_type: str = None, # parametric, mcdropout, categorical, deter (used for ensembling)
         n_samples: int = 50 # only used for mcdropout
     ) -> None:
         super().__init__()
@@ -30,7 +30,6 @@ class ResNet(nn.Module):
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
         self.upsampling = upsampling
-        self.categorical = categorical
 
         if activation == "gelu":
             self.activation = nn.GELU()
@@ -43,7 +42,7 @@ class ResNet(nn.Module):
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
         
-        assert not prob_type or prob_type in ['parametric', 'mcdropout', 'deter']
+        assert not prob_type or prob_type in ['parametric', 'mcdropout', 'deter', 'categorical']
         self.prob_type = prob_type
         self.n_samples = n_samples
 
@@ -83,13 +82,24 @@ class ResNet(nn.Module):
         if prob_type == 'parametric':
             self.final_std = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
 
-    def predict(self, x):
+    def predict(self, x, nvars):
         if len(x.shape) == 5: # history
             x = x.flatten(1, 2)
         x = self.image_proj(x)
 
         for m in self.blocks:
             x = m(x)
+
+        if self.categorical:
+            bins = int(self.out_channels / nvars)
+            outputs = []
+            for i in range(self.in_channels):
+                o = nn.Softmax()(x[..., i*bins:(i+1)*bins])
+                outputs.append(o)
+            x = torch.stack(outputs, dim=3)
+            print(x.shape)
+            print(self.activation(x).shape)
+            print(self.final(self.activation(x)).shape)
 
         pred = self.final(self.activation(self.norm(x)))
 
@@ -102,7 +112,7 @@ class ResNet(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x)
+        pred = self.predict(x, len(out_variables))
         if not self.prob_type:
             return [m(pred, y, out_variables, lat) for m in metric], x
         else:
@@ -125,7 +135,7 @@ class ResNet(nn.Module):
             if self.prob_type == 'mcdropout':
                 x = x.unsqueeze(1).repeat(1, self.n_samples, 1, 1, 1, 1).flatten(0, 1) # B x n_samples, C, H, W
 
-            pred = self.predict(x) # Normal if parametric else Tensor
+            pred = self.predict(x, len(out_variables)) # Normal if parametric else Tensor
 
             if self.prob_type == 'mcdropout':
                 pred = mean_transform(pred)
@@ -150,7 +160,7 @@ class ResNet(nn.Module):
 
             preds = []
             for _ in range(steps):
-                x = self.predict(x)
+                x = self.predict(x, len(out_variables))
                 preds.append(x)
             preds = torch.stack(preds, dim=1)
             if len(y.shape) == 4:
