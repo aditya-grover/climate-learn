@@ -25,6 +25,9 @@ class Trainer:
 
     def fit(self, model_module, data_module):
         self.trainer.fit(model_module, data_module)
+
+    def validate(self, model_module, data_module):
+        self.trainer.validate(model_module, data_module)
     
     def test(self, model_module, data_module):
         self.trainer.test(model_module, data_module)
