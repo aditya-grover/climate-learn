@@ -8,30 +8,7 @@ from tqdm.notebook import tqdm
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 
-NAME_TO_VAR = {
-    "2m_temperature": "t2m",
-    "10m_u_component_of_wind": "u10",
-    "10m_v_component_of_wind": "v10",
-    "mean_sea_level_pressure": "msl",
-    "surface_pressure": "sp",
-    "toa_incident_solar_radiation": "tisr",
-    "total_precipitation": "tp",
-    "land_sea_mask": "lsm",
-    "orography": "orography",
-    "lattitude": "lat2d",
-    "geopotential": "z",
-    "u_component_of_wind": "u",
-    "v_component_of_wind": "v",
-    "temperature": "t",
-    "relative_humidity": "r",
-    "specific_humidity": "q",
-    "geopotential_500": "z",
-    "temperature_850": "t"
-}
-
-VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
-
-class ERA5(Dataset):
+class CMIP6(Dataset):
     def __init__(self, root_dir, root_highres_dir, variables, years, data_file, split = 'train'):
         super().__init__()
         self.root_dir = root_dir
@@ -39,37 +16,30 @@ class ERA5(Dataset):
         self.variables = variables
         self.years = years
         self.split = split
+        self.data_file = data_file
 
-        self.data_dict = self.load_from_nc(self.root_dir)
+        self.data_dict = self.load_from_nc(self.data_file)
         if self.root_highres_dir is not None:
-            self.data_highres_dict = self.load_from_nc(self.root_highres_dir)
+            self.data_highres_dict = self.load_from_nc(self.data_file)
 
         self.get_lat_lon()
 
-    def load_from_nc(self, data_dir):
+    def load_from_nc(self, data_file):
         data_dict = {k: [] for k in self.variables}
 
-        for year in tqdm(self.years):
-            for var in self.variables:
-                dir_var = os.path.join(data_dir, var)
-                ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
-                xr_data = xr.open_mfdataset(ps, combine='by_coords')
-                xr_data = xr_data[NAME_TO_VAR[var]]
-                # np_data = xr_data.to_numpy()
-                if len(xr_data.shape) == 3: # 8760, 32, 64
-                    xr_data = xr_data.expand_dims(dim='level', axis=1)
-                data_dict[var].append(xr_data)
+        for var in self.variables:
+            xr_data = data_file.where(data_file['time'].dt.year.isin(self.years), drop=True)
+            
+            if len(xr_data.shape) == 3: # 8760, 32, 64
+                xr_data = xr_data.expand_dims(dim='plev', axis=1)
+            data_dict[var].append(xr_data)
         
         data_dict = {k: xr.concat(data_dict[k], dim='time') for k in self.variables}
         
         return data_dict
 
     def get_lat_lon(self):
-        # lat lon is stored in each of the nc files, just need to load one and extract
-        dir_var = os.path.join(self.root_dir, self.variables[0])
-        year = self.years[0]
-        ps = glob.glob(os.path.join(dir_var, f'*{year}*.nc'))
-        xr_data = xr.open_mfdataset(ps, combine='by_coords')
+        xr_data = self.data_file
         self.lat = xr_data['lat'].to_numpy()
         self.lon = xr_data['lon'].to_numpy()
 
@@ -79,17 +49,19 @@ class ERA5(Dataset):
     def __len__(self):
         pass
 
-class ERA5Forecasting(ERA5):
+class CMIP6Forecasting(CMIP6):
     def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, data_file, subsample=1, split='train'):
         print (f'Creating {split} dataset')
         super().__init__(root_dir, root_highres_dir, in_vars, years, data_file, split)
         
+        print(".1")
         self.in_vars = in_vars
         self.out_vars = out_vars
         self.pred_range = pred_range
+        self.data_file = data_file
 
-        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
-        out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
+        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='plev')
+        out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='plev')
 
         self.inp_data = inp_data[0:-pred_range:subsample].to_numpy().astype(np.float32)
         self.out_data = out_data[pred_range::subsample].to_numpy().astype(np.float32)
@@ -98,6 +70,7 @@ class ERA5Forecasting(ERA5):
 
         self.downscale_ratio = 1
 
+        print(".1")
         if split == 'train':
             self.inp_transform = self.get_normalize(self.inp_data)
             self.out_transform = self.get_normalize(self.out_data)
@@ -105,6 +78,7 @@ class ERA5Forecasting(ERA5):
             self.inp_transform = None
             self.out_transform = None
 
+        print(".1")
         self.time = self.data_dict[in_vars[0]].time.to_numpy()[:-pred_range:subsample].copy()
         self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
         self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
@@ -133,7 +107,7 @@ class ERA5Forecasting(ERA5):
     def __len__(self):
         return len(self.inp_data)
 
-class ERA5Downscaling(ERA5):
+class CMIP6Downscaling(CMIP6):
     def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, pred_range, years, data_file, subsample=1, split='train'):
         print (f'Creating {split} dataset')
         super().__init__(root_dir, root_highres_dir, in_vars, years, data_file, split)
@@ -142,8 +116,8 @@ class ERA5Downscaling(ERA5):
         self.out_vars = out_vars
         self.pred_range = pred_range
 
-        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
-        out_data = xr.concat([self.data_highres_dict[k] for k in out_vars], dim='level')
+        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='plev')
+        out_data = xr.concat([self.data_highres_dict[k] for k in out_vars], dim='plev')
 
         self.inp_data = inp_data[::subsample].to_numpy().astype(np.float32)
         self.out_data = out_data[::subsample].to_numpy().astype(np.float32)

@@ -30,14 +30,15 @@ class DataModule(LightningDataModule):
         batch_size = 64,
         num_workers = 0,
         pin_memory = False,
+        data_file = None
     ):
         super().__init__()
 
         assert end_year >= test_start_year and test_start_year > val_start_year and val_start_year > train_start_year
         self.save_hyperparameters(logger=False)
 
-        if(dataset != "ERA5"):
-            raise NotImplementedError("Only support ERA5")
+        if(dataset != "ERA5" and dataset != "CMIP6"):
+            raise NotImplementedError("Only support ERA5 and CMIP6")
         if task == "downscaling" and root_highres_dir is None:
             raise NotImplementedError("High-resolution data has to be provided for downscaling")
             
@@ -45,14 +46,14 @@ class DataModule(LightningDataModule):
         caller = eval(f"{dataset.upper()}{task_string}")
         
         train_years = range(train_start_year, val_start_year)
-        self.train_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), train_years, subsample.hours(), "train")
+        self.train_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), train_years, data_file, subsample.hours(), "train")
 
         val_years = range(val_start_year, test_start_year)
-        self.val_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), val_years, subsample.hours(), "val")
+        self.val_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), val_years, data_file, subsample.hours(), "val")
         self.val_dataset.set_normalize(self.train_dataset.inp_transform, self.train_dataset.out_transform)
 
         test_years = range(test_start_year, end_year + 1)
-        self.test_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), test_years, subsample.hours(), "test")
+        self.test_dataset = caller(root_dir, root_highres_dir, in_vars, out_vars, pred_range.hours(), test_years, data_file, subsample.hours(), "test")
         self.test_dataset.set_normalize(self.train_dataset.inp_transform, self.train_dataset.out_transform)
 
     def get_lat_lon(self):
