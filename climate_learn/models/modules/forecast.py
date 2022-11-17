@@ -205,7 +205,7 @@ class ForecastLitModule(LightningModule):
         # rmse for climatology baseline
         clim_pred = self.train_clim # C, H, W
         clim_pred = clim_pred.unsqueeze(0).unsqueeze(0).repeat(y.shape[0], y.shape[1], 1, 1, 1).to(y.device)
-        baseline_rmse = lat_weighted_rmse(clim_pred, y, None, self.denormalization, out_variables, self.lat, steps, days, transform_pred=False)
+        baseline_rmse = lat_weighted_rmse(clim_pred, y, out_variables, transform_pred=False, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
         for var in baseline_rmse.keys():
             self.log(
                 "test_climatology_baseline/" + var,
