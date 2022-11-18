@@ -124,7 +124,7 @@ class ForecastLitModule(LightningModule):
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
 
-        all_loss_dicts, _ = self.net.rollout(
+        all_loss_dicts, _ = self.net.val_rollout(
             x,
             y,
             self.val_clim,
@@ -170,7 +170,7 @@ class ForecastLitModule(LightningModule):
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
 
-        all_loss_dicts, _ = self.net.rollout(
+        all_loss_dicts, _ = self.net.test_rollout(
             x,
             y,
             self.test_clim,
