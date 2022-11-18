@@ -182,19 +182,16 @@ def lat_weighted_rmse(pred, y, vars, mask=None, transform_pred=True, transform=N
     y = y.to(torch.float32)
 
     error = (pred - y) ** 2  # [N, T, 3, H, W]
-    print(error.shape)
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
     w_lat = w_lat / w_lat.mean()  # (H, )
     w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)
-    print(w_lat.shape)
 
     loss_dict = {}
     with torch.no_grad():
         for i, var in enumerate(vars):
             for day, step in zip(log_days, log_steps):
-                print(error[:, step-1, i].shape)
                 loss_dict[f"w_rmse_{var}_day_{day}"] = torch.mean(                    
                     torch.sqrt(torch.mean(error[:, step - 1, i] * w_lat, dim=(-2, -1)))
                 )
