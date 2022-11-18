@@ -202,7 +202,7 @@ class ResNet(nn.Module):
             steps, transform, lat, log_steps, log_days
         Unique function params for climate_uncertainty before merge:
             mean_transform, std_transform, lat, log_day
-        """        
+        """
         if steps > 1:
             assert len(variables) == len(out_variables)
 
@@ -215,7 +215,7 @@ class ResNet(nn.Module):
         preds = torch.stack(preds, dim=1)
         if len(y.shape) == 4:
             y = y.unsqueeze(1)
-    
+
         return (
             [
                 m(

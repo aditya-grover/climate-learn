@@ -42,7 +42,7 @@ class ForecastLitModule(LightningModule):
         else: # deter
             self.train_loss = lat_weighted_mse
             self.val_loss = [lat_weighted_rmse]
-        
+
         if optimizer == 'adam':
             self.optim_cls = torch.optim.Adam
         elif optimizer == 'adamw':
