@@ -159,6 +159,8 @@ class ForecastLitModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
+        # print(x.shape)
+        # print(y.shape)
         pred_steps = y.shape[1]
         pred_range = self.pred_range.hours()
         day = int(pred_range / 24)
@@ -209,6 +211,19 @@ class ForecastLitModule(LightningModule):
         for var in baseline_rmse.keys():
             self.log(
                 "test_climatology_baseline/" + var,
+                baseline_rmse[var],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size = len(x)
+            )
+
+        # rmse for persistence baseline
+        pers_pred = x # C, H, W
+        baseline_rmse = lat_weighted_rmse(pers_pred, y, out_variables, transform_pred=False, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
+        for var in baseline_rmse.keys():
+            self.log(
+                "test_persistence_baseline/" + var,
                 baseline_rmse[var],
                 on_step=False,
                 on_epoch=True,
