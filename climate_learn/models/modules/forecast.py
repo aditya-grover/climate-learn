@@ -159,8 +159,6 @@ class ForecastLitModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        # print(x.shape)
-        # print(y.shape)
         pred_steps = y.shape[1]
         pred_range = self.pred_range.hours()
         day = int(pred_range / 24)
