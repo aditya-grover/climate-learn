@@ -90,16 +90,23 @@ class ResNet(nn.Module):
         for m in self.blocks:
             x = m(x)
 
-        if self.categorical:
-            bins = int(self.out_channels / nvars)
+        if self.prob_type == 'categorical':
+            bins = int(x.shape[-1] / nvars)
+            # print('bins size: ', bins) # 64
             outputs = []
-            for i in range(self.in_channels):
-                o = nn.Softmax()(x[..., i*bins:(i+1)*bins])
+            # print('original x shape: ', x.shape) # 128, 128, 32, 64
+            # print('x: ', x)
+            for i in range(nvars):
+                o = nn.Softmax(dim=3)(x[..., i*bins:(i+1)*bins])
+                # print('o shape: ', o.shape) # 128, 128, 32, 64
+                print('example: ', o.shape, ' ', o[0][0][0])
                 outputs.append(o)
+            # print('outputs length: ', len(outputs)) # 1
             x = torch.stack(outputs, dim=3)
-            print(x.shape)
-            print(self.activation(x).shape)
-            print(self.final(self.activation(x)).shape)
+            print('stacked x shape: ', x.shape)
+            print('activated x shape: ', self.activation(x).shape)
+            return
+            # print('final x shape: ', self.final(self.activation(x)).shape)
 
         pred = self.final(self.activation(self.norm(x)))
 
