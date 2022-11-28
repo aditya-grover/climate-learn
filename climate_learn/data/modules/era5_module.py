@@ -7,7 +7,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from climate_tutorial.data import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
+from ..constants import NAME_TO_VAR, DEFAULT_PRESSURE_LEVELS, CONSTANTS, SINGLE_LEVEL_VARS, PRESSURE_LEVEL_VARS
 
 
 class ERA5(Dataset):
@@ -27,9 +27,12 @@ class ERA5(Dataset):
 
     def load_from_nc(self, data_dir):
         constant_names = [name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS]
-        ps = glob.glob(os.path.join(data_dir, 'constants', '*.nc'))
-        all_constants = xr.open_mfdataset(ps, combine='by_coords')
-        self.constants = {name: all_constants[NAME_TO_VAR[name]] for name in constant_names}
+        self.constants = {}
+        if len(constant_names) > 0:
+            ps = glob.glob(os.path.join(data_dir, 'constants', '*.nc'))
+            all_constants = xr.open_mfdataset(ps, combine='by_coords')
+            for name in constant_names:
+                self.constants[name] = all_constants[NAME_TO_VAR[name]]
 
         non_const_names = [name for name in self.variables if name not in constant_names]
         data_dict = {}
@@ -92,7 +95,6 @@ class ERA5Forecasting(ERA5):
 
         inp_data = xr.concat([self.data_dict[k] for k in self.in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in self.out_vars], dim='level')
-
         self.inp_data = inp_data.to_numpy().astype(np.float32)
         self.out_data = out_data.to_numpy().astype(np.float32)
 

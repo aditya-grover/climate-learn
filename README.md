@@ -8,7 +8,7 @@ Next, install **pip** from [here](https://pip.pypa.io/en/stable/installation/).
 Install the library using the following command:
 
 ```go
-pip install git+https://github.com/tung-nd/climate_tutorial.git
+pip install git+https://github.com/tung-nd/climate_learn.git
 ```
 --- 
 
