@@ -112,13 +112,20 @@ class ResNet(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x, len(out_variables))
-        if not self.prob_type:
-            return [m(pred, y, out_variables, lat) for m in metric], x
-        else:
-            return metric(pred, y, out_variables, lat), x
+        pred = self.predict(x)
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_variables,
+                    lat=lat
+                ) for m in metric
+            ],
+            x
+        )
 
-    def rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
+    def val_rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
         """
         Notes from climate_uncertainty repo merge
         Shared function params before merge:
@@ -153,7 +160,22 @@ class ResNet(nn.Module):
 
             y = mean_transform(y)
 
-            return [m(pred, y, clim, out_variables, lat, log_day) for m in metric], pred
+            return (
+                [
+                    m(
+                        pred,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        log_day=log_day,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
         else:
             if steps > 1:
                 assert len(variables) == len(out_variables)
@@ -165,10 +187,74 @@ class ResNet(nn.Module):
             preds = torch.stack(preds, dim=1)
             if len(y.shape) == 4:
                 y = y.unsqueeze(1)
+        
+            return (
+                [
+                    m(
+                        preds,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
 
-            return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+    def test_rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
+        """
+        Notes from climate_uncertainty repo merge
+        Shared function params before merge:
+            x, y, clim, variables, out_variables, metric
+        Unique function params for climate_tutorial before merge:
+            steps, transform, lat, log_steps, log_days
+        Unique function params for climate_uncertainty before merge:
+            mean_transform, std_transform, lat, log_day
+        """
+        if steps > 1:
+            assert len(variables) == len(out_variables)
+
+        preds = []
+        for _ in range(steps):
+            x = self.predict(x)
+            if self.prob_type == 'parametric':
+                x = mean_transform(x.loc)
+            preds.append(x)
+        preds = torch.stack(preds, dim=1)
+        if len(y.shape) == 4:
+            y = y.unsqueeze(1)
+
+        return (
+            [
+                m(
+                    preds,
+                    y,
+                    out_variables,
+                    transform=transform,
+                    lat=lat,
+                    log_steps=log_steps,
+                    log_days=log_days,
+                    log_day=log_day,
+                    clim=clim                    
+                ) for m in metric
+            ],
+            x
+        )
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
-            pred = self.predict(x, len(out_vars))
-        return [m(pred, y, transform, out_vars) for m in metric], pred
+            pred = self.predict(x)
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_vars,
+                    transform=transform
+                ) for m in metric
+            ],
+            x
+        )

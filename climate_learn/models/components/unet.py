@@ -188,11 +188,18 @@ class Unet(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x) # Normal if parametric else Tensor
-        if not self.prob_type:
-            return [m(pred, y, out_variables, lat) for m in metric], x
-        else:
-            return metric(pred, y, out_variables, lat), x
+        pred = self.predict(x)
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_variables,
+                    lat=lat
+                ) for m in metric
+            ],
+            x
+        )
 
     def rollout(self, x: torch.Tensor, y: torch.Tensor, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days, mean_transform, std_transform, log_day):
         """
@@ -229,7 +236,22 @@ class Unet(nn.Module):
 
             y = mean_transform(y)
 
-            return [m(pred, y, clim, out_variables, lat, log_day) for m in metric], pred
+            return (
+                [
+                    m(
+                        pred,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        log_day=log_day,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
         else:
             if steps > 1:
                 assert len(variables) == len(out_variables)
@@ -242,9 +264,33 @@ class Unet(nn.Module):
             if len(y.shape) == 4:
                 y = y.unsqueeze(1)
 
-            return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+            return (
+                [
+                    m(
+                        preds,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
             pred = self.predict(x)
-        return [m(pred, y, transform, out_vars) for m in metric], pred
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_vars,
+                    transform=transform
+                ) for m in metric
+            ],
+            x
+        )
