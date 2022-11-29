@@ -83,8 +83,6 @@ def _download_esgf(root, dataset, variable, resolution = "5.625", institutionID=
                 "{variable}/gn/v20190815/{file}"
             ).format(yr_string = yr, variable = NAME_TO_CMIP[variable], file=file_name, institutionID=institutionID, sourceID=sourceID, exprID=exprID)
             subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
-    
-        break
 
     regrider(root = root, source = "esgf", variable = variable, dataset = dataset, resolution = resolution)
     
