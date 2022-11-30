@@ -105,7 +105,7 @@ def lat_weighted_rmse(pred, y, clim, transform, vars, lat, log_steps, log_days, 
     with torch.no_grad():
         for i, var in enumerate(vars):
             for day, step in zip(log_days, log_steps):
-                print(error[:, step - 1, i].shape)
+                None if i != 0 else print(error[:, step - 1, i].shape)
                 loss_dict[f"w_rmse_{var}_day_{day}"] = torch.mean(
                     torch.sqrt(torch.mean(error[:, step - 1, i] * w_lat, dim=(-2, -1)))
                 )

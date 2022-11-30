@@ -87,6 +87,7 @@ class ERA5Forecasting(ERA5):
         self.in_vars = in_vars
         self.out_vars = out_vars
         self.pred_range = pred_range
+        self.split_lat = np.empty(0)
 
         inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
         out_data = xr.concat([self.data_dict[k] for k in out_vars], dim='level')
@@ -98,12 +99,14 @@ class ERA5Forecasting(ERA5):
             num_examples = input_data.shape[0]
             num_lat = input_data.shape[2]
             num_lon = input_data.shape[3]
-            print(self.lat.shape)
             lat_grid = np.tile(self.lat.reshape(-1, 1), (1, num_lon))
             lon_grid = np.tile(self.lon, (num_lat, 1))
             lat_grid = np.repeat(lat_grid[np.newaxis, np.newaxis, :, :], num_examples, axis=0)
             lon_grid = np.repeat(lon_grid[np.newaxis, np.newaxis, :, :], num_examples, axis=0)
             input_data = np.concatenate((input_data, lat_grid, lon_grid), axis=1)
+            lowlat_tensors = np.repeat(self.lat[np.newaxis, np.newaxis, 0:num_lat//2, np.newaxis], num_examples, axis=0)
+            highlat_tensors = np.repeat(self.lat[np.newaxis, np.newaxis, num_lat//2:, np.newaxis], num_examples, axis=0)
+            self.split_lat = np.concatenate((lowlat_tensors, highlat_tensors)).astype(np.float32)
             if split == 'train':
                 lowlat_lowlong_input_patch = input_data[:,:,0:num_lat//2,0:num_lon//2]
                 highlat_highlong_input_patch = input_data[:,:,num_lat//2:,num_lon//2:]

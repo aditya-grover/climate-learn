@@ -57,7 +57,7 @@ class DataModule(LightningDataModule):
         self.test_dataset.set_normalize(self.train_dataset.inp_transform, self.train_dataset.out_transform)
 
     def get_lat_lon(self):
-        return self.train_dataset.lat, self.train_dataset.lon
+        return self.train_dataset.lat, self.train_dataset.split_lat, self.train_dataset.lon
 
     def get_out_transforms(self):
         return self.train_dataset.out_transform
