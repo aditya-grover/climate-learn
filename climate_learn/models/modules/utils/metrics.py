@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 import torch
 from scipy import stats
 from torch.distributions.normal import Normal
@@ -239,41 +240,24 @@ def lat_weighted_acc(pred, y, vars, mask=None, transform_pred=True, transform=No
     # loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
     return loss_dict
 
-def categorical_loss(pred, y, clim, transform, vars, lat, log_steps, log_days, transform_pred=True):
-    # """
-    # y: [N, T, 3, H, W]
-    # pred: [N, T, 3, H, W]
-    # vars: list of variable names
-    # lat: H
-    # TODO: subtract the climatology
-    # """
-    # if transform_pred:
-    #     pred = transform(pred)
-    # y = transform(y)
-    # pred = pred.to(torch.float32)
-    # y = y.to(torch.float32)
+def categorical_loss(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
 
-    # # lattitude weights
-    # w_lat = np.cos(np.deg2rad(lat))
-    # w_lat = w_lat / w_lat.mean()  # (H, )
-    # w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(pred.device)  # [1, H, 1]
+    loss = torch.nn.CrossEntropyLoss(reduction='none')
+    # get the labels [128, 1, 32, 64]
+    _, labels = y.max(dim=1) # y.shape = pred.shape = [128, 50, 1, 32, 64] 
+    error = loss(pred, labels.to(pred.device)) # error.shape [128, 1, 32, 64]
 
-    # # clim = torch.mean(y, dim=(0, 1), keepdim=True)
-    # clim = clim.to(pred.device)
-    # pred = pred - clim
-    # y = y - clim
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)  # (1, H, 1)
+
     loss_dict = {}
-
-    # with torch.no_grad():
-    #     for i, var in enumerate(vars):
-    #         for day, step in zip(log_days, log_steps):
-    #             pred_prime = pred[:, step - 1, i] - torch.mean(pred[:, step - 1, i])
-    #             y_prime = y[:, step - 1, i] - torch.mean(y[:, step - 1, i])
-    #             loss_dict[f"acc_{var}_day_{day}"] = torch.sum(w_lat * pred_prime * y_prime) / torch.sqrt(
-    #                 torch.sum(w_lat * pred_prime**2) * torch.sum(w_lat * y_prime**2)
-    #             )
-
-    # # loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"w_categorical_{var}"] = torch.mean(error[:, i] * w_lat)
+    
+    loss_dict["loss"] = torch.mean((error * w_lat.unsqueeze(1)).mean(dim=1))
     return loss_dict
 
 ### Downscaling metrics

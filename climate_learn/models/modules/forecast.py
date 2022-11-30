@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
@@ -13,6 +14,7 @@ from .utils.metrics import (
     lat_weighted_mse,
     lat_weighted_nll,
     lat_weighted_rmse,
+    categorical_loss,
 )
 
 
@@ -31,6 +33,7 @@ class ForecastLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
         if net.prob_type == 'parametric':
             self.train_loss = crps_gaussian
             # self.train_loss = lat_weighted_nll
@@ -39,6 +42,16 @@ class ForecastLitModule(LightningModule):
             self.train_loss = lat_weighted_mse
             self.val_loss = [crps_gaussian_val]
             raise NotImplementedError("Only parametric and deterministic prediction is supported")
+        elif net.prob_type == 'categorical':
+            # loss functions need to be determined later (?)
+            self.train_loss = categorical_loss
+            self.val_loss = [categorical_loss]
+            self.test_loss = [categorical_loss]
+            self.num_bins = 50
+            self.bin_min = -5
+            self.bin_max = 5
+            self.bins = np.linspace(self.bin_min, self.bin_max, self.num_bins+1)
+            self.bins[0] = -np.inf; self.bins[-1] = np.inf
         else: # deter
             self.train_loss = lat_weighted_mse
             self.val_loss = [lat_weighted_rmse]
@@ -93,7 +106,18 @@ class ForecastLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
-        print(x.shape, y.shape, out_variables.shape)
+
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
+
         loss_dict, _ = self.net.forward(
             x,
             y,
@@ -124,6 +148,17 @@ class ForecastLitModule(LightningModule):
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
+
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
 
         all_loss_dicts, _ = self.net.val_rollout(
             x,
@@ -171,6 +206,17 @@ class ForecastLitModule(LightningModule):
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
 
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
+
         all_loss_dicts, _ = self.net.test_rollout(
             x,
             y,
@@ -178,7 +224,7 @@ class ForecastLitModule(LightningModule):
             variables,
             out_variables,
             pred_steps,
-            [lat_weighted_rmse, lat_weighted_acc],
+            self.test_loss,
             self.denormalization,
             self.lat,
             steps,

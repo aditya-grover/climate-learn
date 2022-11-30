@@ -82,33 +82,32 @@ class ResNet(nn.Module):
         if prob_type == 'parametric':
             self.final_std = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
 
-    def predict(self, x, nvars):
+        # final layer for categorical, change to be number of bins
+        if self.prob_type == 'categorical':            
+            self.final = PeriodicConv2D(self.hidden_channels, 50, kernel_size=7, padding=3)
+
+
+    # included another parameter nvars because used to calculate bins below
+    def predict(self, x, nvars): 
         if len(x.shape) == 5: # history
             x = x.flatten(1, 2)
-        x = self.image_proj(x)
+        # x.shape [128, 1, 32, 64]
+        x = self.image_proj(x) # [128, 128, 32, 64]
 
         for m in self.blocks:
             x = m(x)
 
-        if self.prob_type == 'categorical':
-            bins = int(x.shape[-1] / nvars)
-            # print('bins size: ', bins) # 64
-            outputs = []
-            # print('original x shape: ', x.shape) # 128, 128, 32, 64
-            # print('x: ', x)
-            for i in range(nvars):
-                o = nn.Softmax(dim=3)(x[..., i*bins:(i+1)*bins])
-                # print('o shape: ', o.shape) # 128, 128, 32, 64
-                print('example: ', o.shape, ' ', o[0][0][0])
-                outputs.append(o)
-            # print('outputs length: ', len(outputs)) # 1
-            x = torch.stack(outputs, dim=3)
-            print('stacked x shape: ', x.shape)
-            print('activated x shape: ', self.activation(x).shape)
-            return
-            # print('final x shape: ', self.final(self.activation(x)).shape)
+        pred = self.final(self.activation(self.norm(x))) # pred.shape [128, 50, 32, 64]
 
-        pred = self.final(self.activation(self.norm(x)))
+        # following the implementation on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/networks.py#L208
+        if self.prob_type == 'categorical':
+            bins = int(x.shape[-1] / nvars) # bins = 64, nvars = 1
+            outputs = []
+            for i in range(nvars):
+                o = nn.Softmax(dim=1)(pred[..., i*bins:(i+1)*bins]) 
+                # o.shape [128, 50, 32, 64]
+                outputs.append(o)
+            pred = torch.stack(outputs, dim=2) # [128, 50, 1, 32, 64]
 
         if self.prob_type == 'parametric':
             std = self.final_std(self.activation(self.norm(x)))
@@ -119,7 +118,7 @@ class ResNet(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x)
+        pred = self.predict(x, len(out_variables))
         return (
             [
                 m(
@@ -165,7 +164,9 @@ class ResNet(nn.Module):
             else:
                 pred = mean_transform(pred)
 
-            y = mean_transform(y)
+            # no normalization on y for categorical
+            if self.prob_type is not 'categorical':
+                y = mean_transform(y)
 
             return (
                 [
@@ -224,15 +225,19 @@ class ResNet(nn.Module):
         if steps > 1:
             assert len(variables) == len(out_variables)
 
-        preds = []
-        for _ in range(steps):
-            x = self.predict(x)
-            if self.prob_type == 'parametric':
-                x = mean_transform(x.loc)
-            preds.append(x)
-        preds = torch.stack(preds, dim=1)
-        if len(y.shape) == 4:
-            y = y.unsqueeze(1)
+        # need debug here!! what to do with categorical and other prob_type?
+        if self.prob_type == 'categorical':
+            preds = self.predict(x, len(out_variables))
+        else:
+            preds = []
+            for _ in range(steps):
+                x = self.predict(x, len(out_variables))
+                if self.prob_type == 'parametric':
+                    x = mean_transform(x.loc)
+                preds.append(x)
+            preds = torch.stack(preds, dim=1)
+            if len(y.shape) == 4:
+                y = y.unsqueeze(1)
 
         return (
             [
@@ -253,7 +258,7 @@ class ResNet(nn.Module):
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
-            pred = self.predict(x)
+            pred = self.predict(x, len(out_variables))
         return (
             [
                 m(
