@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
+from sklearn.linear_model import LinearRegression, Ridge
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import (
@@ -228,6 +229,19 @@ class ForecastLitModule(LightningModule):
                 sync_dist=True,
                 batch_size = len(x)
             )
+
+        # rmse for linear regression baseline
+        lr_pred = self.lr_baseline.predict(x.reshape((x.shape[0], -1))).reshape(y.shape)
+        baseline_rmse = lat_weighted_rmse(pers_pred, y, out_variables, transform_pred=False, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
+        for var in baseline_rmse.keys():
+            self.log(
+                "test_ridge_regression_baseline/" + var,
+                baseline_rmse[var],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size = len(x)
+            )
         
         return loss_dict
 
@@ -260,3 +274,9 @@ class ForecastLitModule(LightningModule):
         )
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
+
+    def fit_lin_reg_baseline(self, train_dataset, reg_hparam=1.0):
+        X_train = train_dataset.inp_data.reshape(train_dataset.inp_data.shape[0], -1)
+        y_train = train_dataset.out_data.reshape(train_dataset.out_data.shape[0], -1)
+        self.lr_baseline = Ridge(alpha=reg_hparam)
+        self.lr_baseline.fit(X_train, y_train)
