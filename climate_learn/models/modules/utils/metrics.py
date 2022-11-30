@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 import torch
 from scipy import stats
 from torch.distributions.normal import Normal
