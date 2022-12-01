@@ -58,7 +58,7 @@ class ERA5(Dataset):
                 else: # pressure level
                     for level in DEFAULT_PRESSURE_LEVELS:
                         xr_data_level = xr_data.sel(level=[level])
-                        data_dict[f'{name}_{level}'].append(xr_data_level)
+                        data_dict[f'{var}_{level}'].append(xr_data_level)
         
         data_dict = {k: xr.concat(data_dict[k], dim='time') for k in data_dict.keys()}
         # precipitation and solar radiation miss a few data points in the beginning
@@ -85,7 +85,7 @@ class ERA5(Dataset):
 class ERA5Forecasting(ERA5):
     def __init__(self, root_dir, root_highres_dir, in_vars, out_vars, history, window, pred_range, years, subsample=1, split='train'):
         print (f'Creating {split} dataset')
-        super().__init__(root_dir, root_highres_dir, in_vars, years, split)
+        super().__init__(root_dir, root_highres_dir, in_vars, years, split)        
         
         self.in_vars = list(self.data_dict.keys())
         self.out_vars = out_vars
@@ -117,11 +117,11 @@ class ERA5Forecasting(ERA5):
             self.out_transform = None
             self.constant_transform = None
 
-        self.time = self.data_dict[in_vars[0]].time.to_numpy()[:-pred_range:subsample].copy()
-        self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
-        self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
-        self.out_lon = self.data_dict[out_vars[0]].lon.to_numpy().copy()
-        self.out_lat = self.data_dict[out_vars[0]].lat.to_numpy().copy()
+        self.time = self.data_dict[self.in_vars[0]].time.to_numpy()[:-pred_range:subsample].copy()
+        self.inp_lon = self.data_dict[self.in_vars[0]].lon.to_numpy().copy()
+        self.inp_lat = self.data_dict[self.in_vars[0]].lat.to_numpy().copy()
+        self.out_lon = self.data_dict[self.out_vars[0]].lon.to_numpy().copy()
+        self.out_lat = self.data_dict[self.out_vars[0]].lat.to_numpy().copy()
 
         del self.data_dict
 
@@ -166,12 +166,12 @@ class ERA5Downscaling(ERA5):
         print (f'Creating {split} dataset')
         super().__init__(root_dir, root_highres_dir, in_vars, years, split)
         
-        self.in_vars = in_vars
-        self.out_vars = out_vars
+        self.in_vars = list(self.data_dict.keys())
+        self.out_vars = list(self.data_highres_dict.keys())
         self.pred_range = pred_range
 
-        inp_data = xr.concat([self.data_dict[k] for k in in_vars], dim='level')
-        out_data = xr.concat([self.data_highres_dict[k] for k in out_vars], dim='level')
+        inp_data = xr.concat([self.data_dict[k] for k in self.in_vars], dim='level')
+        out_data = xr.concat([self.data_highres_dict[k] for k in self.out_vars], dim='level')
 
         self.inp_data = inp_data[::subsample].to_numpy().astype(np.float32)
         self.out_data = out_data[::subsample].to_numpy().astype(np.float32)
@@ -195,11 +195,11 @@ class ERA5Downscaling(ERA5):
             self.out_transform = None
             self.constant_transform = None
 
-        self.time = self.data_dict[in_vars[0]].time.to_numpy()[::subsample].copy()
-        self.inp_lon = self.data_dict[in_vars[0]].lon.to_numpy().copy()
-        self.inp_lat = self.data_dict[in_vars[0]].lat.to_numpy().copy()
-        self.out_lon = self.data_highres_dict[out_vars[0]].lon.to_numpy().copy()
-        self.out_lat = self.data_highres_dict[out_vars[0]].lat.to_numpy().copy()
+        self.time = self.data_dict[self.in_vars[0]].time.to_numpy()[::subsample].copy()
+        self.inp_lon = self.data_dict[self.in_vars[0]].lon.to_numpy().copy()
+        self.inp_lat = self.data_dict[self.in_vars[0]].lat.to_numpy().copy()
+        self.out_lon = self.data_highres_dict[self.out_vars[0]].lon.to_numpy().copy()
+        self.out_lat = self.data_highres_dict[self.out_vars[0]].lat.to_numpy().copy()
 
         del self.data_dict
         del self.data_highres_dict
