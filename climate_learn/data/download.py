@@ -99,13 +99,28 @@ def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
     os.makedirs(os.path.dirname(path), exist_ok = True)
 
     if(dataset == "era5"):
+        if variable != "constants":
+            url = (
+                "https://dataserv.ub.tum.de/s/m1524895"
+                "/download?path=%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
+            ).format(resolution = resolution, variable = variable)
+        elif variable == "constants":
+            url = (
+                "https://dataserv.ub.tum.de/s/m1524895"
+                "/download?path=%2F{resolution}deg%2Fconstants&files=constants_{resolution}deg.nc"
+            ).format(resolution = resolution)
+    elif(dataset == "cmip6"):
         url = (
             "https://dataserv.ub.tum.de/s/m1524895"
-            "/download?path=%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
+            "/download?path=%2FCMIP%2FMPI-ESM%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
         ).format(resolution = resolution, variable = variable)
     
-    subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
-    subprocess.check_call(["unzip", path + ".zip", "-d", path])
+    if variable != "constants":
+        subprocess.check_call(["wget", "--no-check-certificate", url, "-O", path + ".zip"])
+        subprocess.check_call(["unzip", path + ".zip", "-d", path])
+    else:
+        subprocess.check_call(["mkdir", path])
+        subprocess.check_call(["wget", "--no-check-certificate", url, "-O", os.path.join(path, "constants.nc")]) 
 
 def download(source, **kwargs):
     if("root" not in kwargs or kwargs["root"] is None):

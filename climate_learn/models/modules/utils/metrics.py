@@ -1,14 +1,17 @@
 import numpy as np
 import torch
 from scipy import stats
+from torch.distributions.normal import Normal
 
 
-def mse(pred, y, vars, lat=None, mask=None):
+def mse(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, 3, H, W]
     pred: [N, L, p*p*3]
     vars: list of variable names
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     loss = (pred - y) ** 2
 
     if mask is None:
@@ -24,14 +27,15 @@ def mse(pred, y, vars, lat=None, mask=None):
     return loss_dict
 
 
-def lat_weighted_mse(pred, y, vars, lat, mask=None):
+def lat_weighted_mse(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, C, H, W]
     pred: [N, C, H, W]
     vars: list of variable names
     lat: H
     """
-
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     error = (pred - y) ** 2  # [N, C, H, W]
 
     # lattitude weights
@@ -51,14 +55,15 @@ def lat_weighted_mse(pred, y, vars, lat, mask=None):
     return loss_dict
 
 
-def lat_weighted_mse_val(pred, y, clim, transform, vars, lat, log_steps, log_days):
+def lat_weighted_mse_val(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, T, 3, H, W]
     pred: [N, T, 3, H, W]
     vars: list of variable names
     lat: H
     """
-
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     error = (pred - y) ** 2  # [N, T, C, H, W]
 
     # lattitude weights
@@ -77,16 +82,99 @@ def lat_weighted_mse_val(pred, y, clim, transform, vars, lat, log_steps, log_day
     return loss_dict
 
 
+def lat_weighted_nll(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    assert type(pred) == Normal
+
+    error = - pred.log_prob(y)  # [N, C, H, W]
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)  # (1, H, 1)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"w_nll_{var}"] = torch.mean(error[:, i] * w_lat)
+
+    loss_dict["loss"] = torch.mean((error * w_lat.unsqueeze(1)).mean(dim=1))
+    return loss_dict
+
+
+def crps_gaussian(pred, y, vars, mask=None, transform_pred=None, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    mean, std = pred.loc, pred.scale # N, C, H, W
+    assert std is not None
+
+    s = (y - mean) / std
+
+    standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
+    cdf = standard_normal.cdf(s)
+    pdf = torch.exp(standard_normal.log_prob(s))
+
+    crps = std * (s * (2*cdf - 1) + 2*pdf - 1/torch.pi)
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(crps.device)  # (1, H, 1)
+
+    loss_dict = {}
+    for i, var in enumerate(vars):
+        loss_dict[f"crps_{var}"] = torch.mean(crps[:, i] * w_lat)
+    loss_dict["loss"] = torch.mean((crps * w_lat.unsqueeze(1)).mean(dim=1))
+
+    return loss_dict
+
+
+def crps_gaussian_val(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+    """
+    y: [N, C, H, W]
+    pred: [N, C, H, W]
+    vars: list of variable names
+    """
+    mean, std = pred.loc, pred.scale # N, C, H, W
+    assert std is not None
+
+    s = (y - mean) / std
+
+    standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
+    cdf = standard_normal.cdf(s)
+    pdf = torch.exp(standard_normal.log_prob(s))
+
+    crps = std * (s * (2*cdf - 1) + 2*pdf - 1/torch.pi)
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(crps.device)  # (1, H, 1)
+
+    loss_dict = {}
+    for i, var in enumerate(vars):
+        loss_dict[f"crps_{var}_day_{log_day}"] = torch.mean(crps[:, i] * w_lat)
+
+    return loss_dict
 ### Forecasting metrics
 
 
-def lat_weighted_rmse(pred, y, clim, transform, vars, lat, log_steps, log_days, transform_pred=True):
+def lat_weighted_rmse(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, T, 3, H, W]
     pred: [N, T, 3, H, W]
     vars: list of variable names
     lat: H
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     if transform_pred:
         pred = transform(pred)
     y = transform(y)
@@ -104,7 +192,7 @@ def lat_weighted_rmse(pred, y, clim, transform, vars, lat, log_steps, log_days, 
     with torch.no_grad():
         for i, var in enumerate(vars):
             for day, step in zip(log_days, log_steps):
-                loss_dict[f"w_rmse_{var}_day_{day}"] = torch.mean(
+                loss_dict[f"w_rmse_{var}_day_{day}"] = torch.mean(                    
                     torch.sqrt(torch.mean(error[:, step - 1, i] * w_lat, dim=(-2, -1)))
                 )
 
@@ -112,7 +200,38 @@ def lat_weighted_rmse(pred, y, clim, transform, vars, lat, log_steps, log_days, 
     return loss_dict
 
 
-def lat_weighted_acc(pred, y, clim, transform, vars, lat, log_steps, log_days, transform_pred=True):
+def lat_weighted_spread_skill_ratio(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+    """
+    y: [N, 3, H, W]
+    pred: Normal
+    vars: list of variable names
+    lat: H
+    """
+    if type(pred) == Normal:
+        pred, variance = pred.loc, torch.square(pred.scale)
+
+    pred = pred.to(torch.float32)
+    variance = variance.to(torch.float32)
+    y = y.to(torch.float32)
+
+    error = (pred - y) ** 2  # [N, 3, H, W]
+
+    # latitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            spread = torch.mean(torch.sqrt(torch.mean(variance[:, i] * w_lat, dim=(-2, -1))))
+            rmse = torch.mean(torch.sqrt(torch.mean(error[:, i] * w_lat, dim=(-2, -1))))
+            loss_dict[f"w_spread_skill_ratio_{var}_day_{log_day}"] = spread / rmse
+
+    return loss_dict
+
+
+def lat_weighted_acc(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, T, 3, H, W]
     pred: [N, T, 3, H, W]
@@ -120,6 +239,8 @@ def lat_weighted_acc(pred, y, clim, transform, vars, lat, log_steps, log_days, t
     lat: H
     TODO: subtract the climatology
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     if transform_pred:
         pred = transform(pred)
     y = transform(y)
@@ -151,12 +272,14 @@ def lat_weighted_acc(pred, y, clim, transform, vars, lat, log_steps, log_days, t
 
 
 ### Downscaling metrics
-def rmse(pred, y, transform, vars):
+def rmse(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, C, H, W]
     pred: [N, C, H, W]
     vars: list of variable names
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     pred = transform(pred)
     y = transform(y)
     pred = pred.to(torch.float32)
@@ -173,12 +296,14 @@ def rmse(pred, y, transform, vars):
 
     return loss_dict
 
-def pearson(pred, y, transform, vars):
+def pearson(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, C, H, W]
     pred: [N, C, H, W]
     vars: list of variable names
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     pred = transform(pred)
     y = transform(y)
     pred = pred.to(torch.float32)
@@ -194,12 +319,14 @@ def pearson(pred, y, transform, vars):
 
     return loss_dict
 
-def mean_bias(pred, y, transform, vars):
+def mean_bias(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, C, H, W]
     pred: [N, C, H, W]
     vars: list of variable names
     """
+    if type(pred) == Normal:
+        pred, _ = pred.loc, pred.scale
     pred = transform(pred)
     y = transform(y)
     pred = pred.to(torch.float32)
