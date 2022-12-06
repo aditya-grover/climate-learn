@@ -1,0 +1,9 @@
+name: rtd
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - sphinx==5.3.0
+    - sphinx_rtd_theme==1.1.1

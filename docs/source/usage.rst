@@ -6,8 +6,8 @@ Usage
 Installation
 ------------
 
-To use Lumache, first install it using pip:
+To use ClimateLearn, first install it using pip:
 
 .. code-block:: console
 
-   $ pip install git+https://github.com/tung-nd/climate_learn.git
+   $ pip install git+https://github.com/aditya-grover/climate-learn.git
