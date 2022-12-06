@@ -1,35 +1,36 @@
-Welcome to ClimateLearn's documentation!
-========================================
+ClimateLearn
+============
+
+What is ClimateLearn?
+---------------------
 
 **ClimateLearn** is a Python library for accessing state-of-the-art climate 
 data and machine learning models in a standardized, straightforward way. This 
 library provides access to multiple datasets, a zoo of baseline approaches, 
-and a suite of metrics/visualizations for large-scale benchmarking of 
+and a suite of metrics and visualizations for large-scale benchmarking of 
 statistical downscaling and temporal forecasting methods.
 
 .. note::
 
    This project is under active development.
 
-Installation
-------------
-
-.. code-block:: console
-
-   $ pip install git+https://github.com/aditya-grover/climate-learn.git
-
-Getting Started
----------------
-
-See this `Google Colab notebook <https://colab.research.google.com/drive/1GMT_CnxL1o4Za1Uc3Gf7u_tm_M5ECoZo?usp=sharing>`_.
-
-Contents
+About Us
 --------
-.. toctree::
-   :maxdepth: 1
+ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by
+`Professor Aditya Grover <https://aditya-grover.github.io/>`_.
 
-   datasets
-   models
-   metrics
-   visualizations
-   reference/index
+.. toctree::
+   :caption: User Guide
+
+   user-guide/getting_started
+   user-guide/datasets
+   user-guide/models
+   user-guide/metrics
+   user-guide/visualizations
+
+.. toctree::
+   :caption: API Reference
+   :maxdepth: 1
+   :glob:
+
+   reference/*
