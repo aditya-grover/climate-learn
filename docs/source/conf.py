@@ -1,5 +1,10 @@
 # Configuration file for the Sphinx documentation builder.
 import sphinx_rtd_theme
+import os
+import sys
+
+# Point ReadTheDocs to the directory
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 
 extensions = [
     'sphinx_rtd_theme'
