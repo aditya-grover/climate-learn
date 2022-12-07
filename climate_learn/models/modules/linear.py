@@ -8,18 +8,26 @@ from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse
 
 
 class LinearLitModule(LightningModule):
+    """A PyTorch Lightning module to implement linear regression."""
     def __init__(
         self,
         net: torch.nn.Module,
         lr: float = 0.001,
         weight_decay: float = 0.005,
-    ) -> None:
-        super().__init__()
+    ) -> None: 
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
 
     def forward(self, x):
+        """
+        Returns the model prediction on the given input.
+
+        :param x: the input
+        :type x: torch.Tensor
+        :return: the model's prediction
+        :rtype: torch.Tensor
+        """
         return self.net.predict(x)
 
     def set_denormalization(self, mean, std):
