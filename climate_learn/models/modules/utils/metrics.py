@@ -200,6 +200,37 @@ def lat_weighted_rmse(pred, y, vars, mask=None, transform_pred=True, transform=N
     return loss_dict
 
 
+def lat_weighted_spread_skill_ratio(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+    """
+    y: [N, 3, H, W]
+    pred: Normal
+    vars: list of variable names
+    lat: H
+    """
+    if type(pred) == Normal:
+        pred, variance = pred.loc, torch.square(pred.scale)
+
+    pred = pred.to(torch.float32)
+    variance = variance.to(torch.float32)
+    y = y.to(torch.float32)
+
+    error = (pred - y) ** 2  # [N, 3, H, W]
+
+    # latitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            spread = torch.mean(torch.sqrt(torch.mean(variance[:, i] * w_lat, dim=(-2, -1))))
+            rmse = torch.mean(torch.sqrt(torch.mean(error[:, i] * w_lat, dim=(-2, -1))))
+            loss_dict[f"w_spread_skill_ratio_{var}_day_{log_day}"] = spread / rmse
+
+    return loss_dict
+
+
 def lat_weighted_acc(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
     """
     y: [N, T, 3, H, W]

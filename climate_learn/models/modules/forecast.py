@@ -14,6 +14,7 @@ from .utils.metrics import (
     lat_weighted_mse,
     lat_weighted_nll,
     lat_weighted_rmse,
+    lat_weighted_spread_skill_ratio
 )
 
 
@@ -35,7 +36,7 @@ class ForecastLitModule(LightningModule):
         if net.prob_type == 'parametric':
             self.train_loss = crps_gaussian
             # self.train_loss = lat_weighted_nll
-            self.val_loss = [crps_gaussian_val]
+            self.val_loss = [crps_gaussian_val, lat_weighted_spread_skill_ratio]
         elif net.prob_type == 'mcdropout':
             self.train_loss = lat_weighted_mse
             self.val_loss = [crps_gaussian_val]
