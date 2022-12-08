@@ -1,0 +1,27 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: ClimateLearn
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Hritik
+    family-names: Bansal
+    email: hbansal@g.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Shashank
+    family-names: Goel
+    email: shashankgoel@g.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Tung
+    family-names: Nguyen
+    email: tungnd@g.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Aditya
+    family-names: Grover
+    email: adityag@cs.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+license: MIT
