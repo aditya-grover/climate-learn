@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
+from sklearn.linear_model import Ridge
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import (
@@ -202,7 +203,7 @@ class ForecastLitModule(LightningModule):
                 sync_dist=True,
                 batch_size = len(x)
             )
-            
+
         # rmse for climatology baseline
         clim_pred = self.train_clim # C, H, W
         clim_pred = clim_pred.unsqueeze(0).unsqueeze(0).repeat(y.shape[0], y.shape[1], 1, 1, 1).to(y.device)
@@ -210,6 +211,34 @@ class ForecastLitModule(LightningModule):
         for var in baseline_rmse.keys():
             self.log(
                 "test_climatology_baseline/" + var,
+                baseline_rmse[var],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size = len(x)
+            )
+
+        # rmse for persistence baseline
+        pers_pred = x # B, 1, C, H, W
+        baseline_rmse = lat_weighted_rmse(pers_pred, y, out_variables, transform_pred=True, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
+        for var in baseline_rmse.keys():
+            self.log(
+                "test_persistence_baseline/" + var,
+                baseline_rmse[var],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size = len(x)
+            )
+
+        # rmse for linear regression baseline
+        lr_pred = self.lr_baseline.predict(x.cpu().reshape((x.shape[0], -1))).reshape(y.shape)
+        lr_pred = lr_pred[:, np.newaxis, :, :, :] # B, 1, C, H, W
+        lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
+        baseline_rmse = lat_weighted_rmse(lr_pred, y, out_variables, transform_pred=True, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
+        for var in baseline_rmse.keys():
+            self.log(
+                "test_ridge_regression_baseline/" + var,
                 baseline_rmse[var],
                 on_step=False,
                 on_epoch=True,
@@ -248,3 +277,9 @@ class ForecastLitModule(LightningModule):
         )
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
+
+    def fit_lin_reg_baseline(self, train_dataset, reg_hparam=0.0):
+        X_train = train_dataset.inp_data.reshape(train_dataset.inp_data.shape[0], -1)
+        y_train = train_dataset.out_data.reshape(train_dataset.out_data.shape[0], -1)
+        self.lr_baseline = Ridge(alpha=reg_hparam)
+        self.lr_baseline.fit(X_train, y_train)

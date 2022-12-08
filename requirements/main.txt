@@ -8,3 +8,4 @@ matplotlib
 xarray
 ipython
 scipy
+scikit-learn
