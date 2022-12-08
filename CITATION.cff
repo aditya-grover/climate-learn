@@ -16,9 +16,22 @@ authors:
     family-names: Goel
     email: shashankgoel@g.ucla.edu
     affiliation: 'University of California, Los Angeles'
+  - given-names: Jason
+    family-names: Jewik
+    email: jason.jewik@cs.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Siddharth
+    family-names: Nandy
+    affiliation: 'University of California, Los Angeles'
   - given-names: Tung
     family-names: Nguyen
     email: tungnd@g.ucla.edu
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Seongbin
+    family-names: Park
+    affiliation: 'University of California, Los Angeles'
+  - given-names: Jingchen
+    family-names: Tang
     affiliation: 'University of California, Los Angeles'
   - given-names: Aditya
     family-names: Grover
