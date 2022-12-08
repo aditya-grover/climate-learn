@@ -4,3 +4,4 @@ wandb
 cdsapi
 pytorch-lightning
 importlib-metadata==4.13.0
+scikit-learn
