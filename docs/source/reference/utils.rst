@@ -1,3 +1,5 @@
+.. _climate_learn.utils:
+
 climate_learn.utils
 ===================
 
