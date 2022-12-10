@@ -29,7 +29,7 @@ By default, ``visualize`` will pick 2 random dates in the test dataset. You can
 change the number of dates it selects to ``n`` dates by passing ``split=n`` as
 a parameter. Alternatively, you can specify exact dates by passing a list of
 datetime strings formatted as ``YYYY-mm-dd:HH`` (*e.g.*, "2017-06-10:12"). See
-:ref:`climate_learn.utils` for further details. 
+:doc:`climate_learn.utils <../reference/utils>` for further details. 
 
 To produce visualizations of a model's mean bias on the test dataset, do the
 following.
@@ -145,5 +145,5 @@ The following can be run in Google Colab.
         :alt: Mean bias visualization produced by ``utils.visualize_mean_bias``.
 
 *Note:* These visualizations were produced using a trained ResNet model, but
-training is omitted from this example. Please see :ref:`models-reference` for
+training is omitted from this example. Please see :doc:`Models <models>` for
 model training.
