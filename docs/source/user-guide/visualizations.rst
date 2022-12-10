@@ -128,7 +128,7 @@ The following can be run in Google Colab.
 .. nboutput::
     :execution-count: 5
 
-    .. image:: images/visualize.png
+    .. image:: user-guide/images/visualize.png
         :alt: Visualizations produced by ``utils.visualize``.
 
 .. nbinput:: ipython3
@@ -141,7 +141,7 @@ The following can be run in Google Colab.
 .. nboutput::
     :execution-count: 6
 
-    .. image:: images/visualize_mean_bias.png
+    .. image:: user-guide/images/visualize_mean_bias.png
         :alt: Mean bias visualization produced by ``utils.visualize_mean_bias``.
 
 *Note:* These visualizations were produced using a trained ResNet model, but
