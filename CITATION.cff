@@ -22,6 +22,7 @@ authors:
     affiliation: 'University of California, Los Angeles'
   - given-names: Siddharth
     family-names: Nandy
+    email: sidd.nandy@gmail.com
     affiliation: 'University of California, Los Angeles'
   - given-names: Tung
     family-names: Nguyen
@@ -29,9 +30,11 @@ authors:
     affiliation: 'University of California, Los Angeles'
   - given-names: Seongbin
     family-names: Park
+    email: shannonsbpark@gmail.com
     affiliation: 'University of California, Los Angeles'
   - given-names: Jingchen
     family-names: Tang
+    email: tangtang1228@ucla.edu
     affiliation: 'University of California, Los Angeles'
   - given-names: Aditya
     family-names: Grover
