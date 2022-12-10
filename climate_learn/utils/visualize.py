@@ -3,6 +3,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import torch
+from tqdm import tqdm
 
 
 def visualize(model_module, data_module, split = "test", samples = 2, save_dir = None):
