@@ -46,6 +46,7 @@ class ResidualBlock(nn.Module):
         norm: bool = False,
         dropout: float = 0.1,
         n_groups: int = 1,
+        mc_dropout: bool = False
     ):
         super().__init__()
         if activation == "gelu":
@@ -76,8 +77,12 @@ class ResidualBlock(nn.Module):
             self.norm2 = nn.Identity()
 
         self.drop = nn.Dropout(dropout)
+        self.mc_dropout = mc_dropout
 
     def forward(self, x: torch.Tensor):
+        if self.mc_dropout:
+            # print (self.drop)
+            self.drop.train(True)
         # First convolution layer
         # h = self.drop(self.conv1(self.activation(self.norm1(x))))
         h = self.drop(self.norm1(self.activation(self.conv1(x))))
@@ -158,9 +163,12 @@ class DownBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
-        self.res = ResidualBlock(in_channels, out_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res = ResidualBlock(
+            in_channels, out_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
         else:
@@ -186,17 +194,24 @@ class UpBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
         # The input has `in_channels + out_channels` because we concatenate the output of the same resolution
         # from the first half of the U-Net
         self.res = ResidualBlock(
-            in_channels + out_channels, out_channels, activation=activation, norm=norm, dropout=dropout
+            in_channels + out_channels,
+            out_channels,
+            activation=activation,
+            norm=norm,
+            dropout=dropout,
+            mc_dropout=mc_dropout
         )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
         else:
             self.attn = nn.Identity()
+        self.mc_dropout = mc_dropout
 
     def forward(self, x: torch.Tensor):
         x = self.res(x)
@@ -218,11 +233,16 @@ class MiddleBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
+        mc_dropout: bool = False
     ):
         super().__init__()
-        self.res1 = ResidualBlock(n_channels, n_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res1 = ResidualBlock(
+            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
         self.attn = AttentionBlock(n_channels) if has_attn else nn.Identity()
-        self.res2 = ResidualBlock(n_channels, n_channels, activation=activation, norm=norm, dropout=dropout)
+        self.res2 = ResidualBlock(
+            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+        )
 
     def forward(self, x: torch.Tensor):
         x = self.res1(x)

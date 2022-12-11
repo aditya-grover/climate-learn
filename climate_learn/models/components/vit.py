@@ -173,7 +173,17 @@ class VisionTransformer(nn.Module):
         pred: [N, L, p*p*3]
         """
         pred = self.unpatchify(pred)
-        return [m(pred, y, out_variables, lat) for m in metric], pred
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_variables,
+                    lat=lat
+                ) for m in metric
+            ],
+            pred
+        )
 
     def forward(self, x, y, out_variables, metric, lat):
         embeddings = self.forward_encoder(x)  # B, L, D
@@ -196,12 +206,36 @@ class VisionTransformer(nn.Module):
         if len(y.shape) == 4:
             y = y.unsqueeze(1)
 
-        return [m(preds, y, clim, transform, out_variables, lat, log_steps, log_days) for m in metric], preds
+        return (
+                [
+                    m(
+                        preds,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
             pred = self.predict(x)
-        return [m(pred, y, transform, out_vars) for m in metric], pred
+        return (
+            [
+                m(
+                    pred,
+                    y,
+                    out_vars,
+                    transform=transform
+                ) for m in metric
+            ],
+            x
+        )
 
 
 # model = VisionTransformer(img_size=[32, 64], embed_dim=128, patch_size=2, depth=8, upsampling=2).cuda()
