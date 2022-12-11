@@ -2,10 +2,13 @@ import os
 import cdsapi
 import argparse
 import subprocess
+from .regrid import *
+from .constants import NAME_TO_CMIP
 
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
+
 
 def _download_copernicus(root, dataset, variable, year, pressure = False, api_key = None):
     if(dataset not in ["era5"]):
@@ -17,8 +20,11 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
 
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
+    
     if(os.path.exists(path)):
         return
+        # maybe not a silent return?
+
     os.makedirs(os.path.dirname(path), exist_ok = True)
 
     download_args = {
@@ -47,8 +53,43 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
             path,
         )
 
+def _download_esgf(root, dataset, variable, resolution = "5.625", institutionID="MPI-M", sourceID="MPI-ESM1-2-HR", exprID="historical"):
+    if (dataset not in ["cmip6"]):
+        raise Exception("Dataset not supported")
+
+    path = os.path.join(root, dataset, "pre-regrided", variable)
+    print(f"Downloading {dataset} {variable} data from esgf to {path}")
+    # if(os.path.exists(path)):
+    #     raise Exception("Directory already exists")
+    #     return
+
+
+    os.makedirs(os.path.dirname(path), exist_ok = True)
+
+
+    year_strings = [f'{y}01010600-{y+5}01010000' for y in range(1850, 2015, 5)]
+    for yr in year_strings:
+        file_name = (
+            "{var}_6hrPlevPt_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_{yr}.nc"
+        ).format(var = NAME_TO_CMIP[variable], yr = yr)
+
+        file_path = os.path.join(path, file_name)
+        if os.path.exists(file_path):
+            print(file_name, "exists")
+
+        else:
+            url = (
+                "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/{institutionID}/{sourceID}/{exprID}/r1i1p1f1/6hrPlevPt/"
+                "{variable}/gn/v20190815/{file}"
+            ).format(yr_string = yr, variable = NAME_TO_CMIP[variable], file=file_name, institutionID=institutionID, sourceID=sourceID, exprID=exprID)
+            subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
+
+    regrider(root = root, source = "esgf", variable = variable, dataset = dataset, resolution = resolution)
+    
+
+
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
-    if(dataset not in ["era5", "cmip6"]):
+    if(dataset not in ["era5"]):
         raise Exception("Dataset not supported")
 
     path = os.path.join(root, dataset, resolution, variable)
@@ -91,6 +132,8 @@ def download(source, **kwargs):
         _download_copernicus(**kwargs)
     elif(source == "weatherbench"):
         _download_weatherbench(**kwargs)
+    elif(source == "esgf"):
+        _download_esgf(**kwargs)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -109,7 +152,16 @@ def main():
     subparser.add_argument("--root", type = str, default = None)
     subparser.add_argument("--variable", type = str, required = True)
     subparser.add_argument("--dataset", type = str, choices = ["era5", "cmip6"], required = True)
-    subparser.add_argument("--resolution", type = str, default = "1.40625")
+    subparser.add_argument("--resolution", type = str, default = "5.625")
+
+    subparser = subparsers.add_parser("esgf")
+    subparser.add_argument("--root", type = str, default = None)
+    subparser.add_argument("--variable", type = str, required = True)
+    subparser.add_argument("--dataset", type = str, choices = ["era5"], required = True)
+    subparser.add_argument("--resolution", type = str, default = "5.625")
+    subparser.add_argument("--institutionID", type = str, default = "MPI-M")
+    subparser.add_argument("--sourceID", type = str, default = "MPI-ESM1-2-HR")
+    subparser.add_argument("--exprID", type = str, default = "historical")
 
     args = parser.parse_args()
     download(**vars(args))
