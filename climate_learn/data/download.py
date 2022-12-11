@@ -2,13 +2,10 @@ import os
 import cdsapi
 import argparse
 import subprocess
-from .regrid import *
-from .constants import NAME_TO_CMIP
 
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
-
 
 def _download_copernicus(root, dataset, variable, year, pressure = False, api_key = None):
     if(dataset not in ["era5"]):
@@ -20,11 +17,8 @@ def _download_copernicus(root, dataset, variable, year, pressure = False, api_ke
 
     path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
     print(f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}")
-    
     if(os.path.exists(path)):
         return
-        # maybe not a silent return?
-
     os.makedirs(os.path.dirname(path), exist_ok = True)
 
     download_args = {
@@ -84,7 +78,7 @@ def _download_esgf(root, dataset, variable, resolution = "5.625", institutionID=
 
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
-    if(dataset not in ["era5", "cmip6"]):
+    if(dataset not in ["era5", "cmip6", "cmip6"]):
         raise Exception("Dataset not supported")
 
     path = os.path.join(root, dataset, resolution, variable)
@@ -127,8 +121,6 @@ def download(source, **kwargs):
         _download_copernicus(**kwargs)
     elif(source == "weatherbench"):
         _download_weatherbench(**kwargs)
-    elif(source == "esgf"):
-        _download_esgf(**kwargs)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -147,16 +139,7 @@ def main():
     subparser.add_argument("--root", type = str, default = None)
     subparser.add_argument("--variable", type = str, required = True)
     subparser.add_argument("--dataset", type = str, choices = ["era5", "cmip6"], required = True)
-    subparser.add_argument("--resolution", type = str, default = "5.625")
-
-    subparser = subparsers.add_parser("esgf")
-    subparser.add_argument("--root", type = str, default = None)
-    subparser.add_argument("--variable", type = str, required = True)
-    subparser.add_argument("--dataset", type = str, choices = ["era5"], required = True)
-    subparser.add_argument("--resolution", type = str, default = "5.625")
-    subparser.add_argument("--institutionID", type = str, default = "MPI-M")
-    subparser.add_argument("--sourceID", type = str, default = "MPI-ESM1-2-HR")
-    subparser.add_argument("--exprID", type = str, default = "historical")
+    subparser.add_argument("--resolution", type = str, default = "1.40625")
 
     args = parser.parse_args()
     download(**vars(args))

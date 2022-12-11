@@ -30,3 +30,6 @@ def set_climatology(model_module, data_module):
     model_module.set_train_climatology(data_module.get_climatology(split = "train"))
     model_module.set_val_climatology(data_module.get_climatology(split = "val"))
     model_module.set_test_climatology(data_module.get_climatology(split = "test"))
+
+def fit_lin_reg_baseline(model_module, data_module, reg_hparam=1.0):
+    model_module.fit_lin_reg_baseline(data_module.train_dataset, reg_hparam)

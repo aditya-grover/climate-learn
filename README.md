@@ -1,20 +1,23 @@
-<h1 align="center">Machine Learning for Predicting Climate Extremes</h1>
+<h1 align="center">ClimateLearn</h1>
 
-## ⚡️ Setup
-First, [download](https://www.python.org/downloads/) and install **Python**. Version `3.0` or higher is required.
-> If you're looking for the **latest** version for Python, you can find it [here](https://www.python.org/ftp/python/3.10.2).
+[![Documentation Status](https://readthedocs.org/projects/climatelearn/badge/?version=latest)](https://climatelearn.readthedocs.io/en/latest/?badge=latest)
 
-Next, install **pip** from [here](https://pip.pypa.io/en/stable/installation/).
-Install the library using the following command:
+**ClimateLearn** is a Python library for accessing state-of-the-art climate data and machine learning models in a standardized, straightforward way. This library provides access to multiple datasets, a zoo of baseline approaches, and a suite of metrics and visualizations for large-scale benchmarking of statistical downscaling and temporal forecasting methods.
 
-```go
-pip install git+https://github.com/tung-nd/climate_learn.git
+## Getting Started
+
+### Installation
+
+**Python3** is required. The library can then be installed with **pip**.
+```console
+$ pip install git+https://github.com/aditya-grover/climate-learn.git
 ```
---- 
 
-## ⚡Usage
+### Quickstart
+Please refer to this [Google Colab notebook](https://colab.research.google.com/drive/1GMT_CnxL1o4Za1Uc3Gf7u_tm_M5ECoZo?usp=sharing).
 
-Please refer to this [notebook]().
+## About Us
+ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
 
-## Licensing ⚠️
-This package is free and open-source under the MIT License.
+## Citing ClimateLearn
+If you use ClimateLearn, please see the `CITATION.cff` file or use the citation prompt provided by GitHub in the sidebar.
