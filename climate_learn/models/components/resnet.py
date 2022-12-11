@@ -20,8 +20,9 @@ class ResNet(nn.Module):
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
-        prob_type: str = None, # parametric, mcdropout, categorical, deter (used for ensembling)
-        n_samples: int = 50 # only used for mcdropout
+        prob_type: str = None, # parametric, mcdropout, categorical
+        n_samples: int = 50, # only used for mcdropout
+        num_output_bins: int = 50 # only used for categorical
     ) -> None:
         super().__init__()
         self.in_channels = in_channels
@@ -42,7 +43,7 @@ class ResNet(nn.Module):
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
         
-        assert not prob_type or prob_type in ['parametric', 'mcdropout', 'deter', 'categorical']
+        assert not prob_type or prob_type in ['parametric', 'mcdropout', 'categorical']
         self.prob_type = prob_type
         self.n_samples = n_samples
 
@@ -83,12 +84,12 @@ class ResNet(nn.Module):
             self.final_std = PeriodicConv2D(hidden_channels, out_channels, kernel_size=7, padding=3)
 
         # final layer for categorical, change to be number of bins
-        if self.prob_type == 'categorical':            
-            self.final = PeriodicConv2D(self.hidden_channels, 50, kernel_size=7, padding=3)
+        if self.prob_type == 'categorical':
+            self.num_output_bins = num_output_bins
+            self.final = PeriodicConv2D(self.hidden_channels, self.num_output_bins, kernel_size=7, padding=3)
 
 
-    # included another parameter nvars because used to calculate bins below
-    def predict(self, x, nvars): 
+    def predict(self, x): 
         if len(x.shape) == 5: # history
             x = x.flatten(1, 2)
         # x.shape [128, 1, 32, 64]
@@ -101,9 +102,9 @@ class ResNet(nn.Module):
 
         # following the implementation on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/networks.py#L208
         if self.prob_type == 'categorical':
-            bins = int(x.shape[-1] / nvars) # bins = 64, nvars = 1
+            bins = int(x.shape[-1] / self.n_vars) # bins = 64, self.n_vars = 1
             outputs = []
-            for i in range(nvars):
+            for i in range(self.n_vars):
                 o = nn.Softmax(dim=1)(pred[..., i*bins:(i+1)*bins]) 
                 # o.shape [128, 50, 32, 64]
                 outputs.append(o)
@@ -118,7 +119,10 @@ class ResNet(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
         # B, C, H, W
-        pred = self.predict(x, len(out_variables))
+        if self.prob_type == 'categorical':
+            self.n_vars = len(out_variables)
+
+        pred = self.predict(x)
         return (
             [
                 m(
@@ -148,7 +152,10 @@ class ResNet(nn.Module):
             if self.prob_type == 'mcdropout':
                 x = x.unsqueeze(1).repeat(1, self.n_samples, 1, 1, 1, 1).flatten(0, 1) # B x n_samples, C, H, W
 
-            pred = self.predict(x, len(out_variables)) # Normal if parametric else Tensor
+            if self.prob_type == 'categorical':
+                self.n_vars = len(out_variables)
+
+            pred = self.predict(x) # Normal if parametric else Tensor
 
             if self.prob_type == 'mcdropout':
                 pred = mean_transform(pred)
@@ -190,7 +197,7 @@ class ResNet(nn.Module):
 
             preds = []
             for _ in range(steps):
-                x = self.predict(x, len(out_variables))
+                x = self.predict(x)
                 preds.append(x)
             preds = torch.stack(preds, dim=1)
             if len(y.shape) == 4:
@@ -222,43 +229,83 @@ class ResNet(nn.Module):
         Unique function params for climate_uncertainty before merge:
             mean_transform, std_transform, lat, log_day
         """
-        if steps > 1:
-            assert len(variables) == len(out_variables)
+        if self.prob_type:
+            # x: B, C, H, W
+            b = x.shape[0]
 
-        # need debug here!! what to do with categorical and other prob_type?
-        if self.prob_type == 'categorical':
-            preds = self.predict(x, len(out_variables))
+            if self.prob_type == 'mcdropout':
+                x = x.unsqueeze(1).repeat(1, self.n_samples, 1, 1, 1, 1).flatten(0, 1) # B x n_samples, C, H, W
+
+            if self.prob_type == 'categorical':
+                self.n_vars = len(out_variables)
+
+            pred = self.predict(x) # Normal if parametric else Tensor
+
+            if self.prob_type == 'mcdropout':
+                pred = mean_transform(pred)
+                pred = pred.unflatten(dim=0, sizes=(b, self.n_samples)) # B, n_samples, C, H, W
+                mean = torch.mean(pred, dim=1)
+                std = torch.std(pred, dim=1)
+                pred = Normal(mean, std)
+            elif self.prob_type == 'parametric':
+                mean, std = pred.loc, pred.scale
+                mean = mean_transform(mean)
+                std = std_transform(std)
+                pred = Normal(mean, std)
+            else:
+                pred = mean_transform(pred)
+
+            # no normalization on y for categorical
+            if self.prob_type is not 'categorical':
+                y = mean_transform(y)
+
+            return (
+                [
+                    m(
+                        pred,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        log_day=log_day,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
         else:
+            if steps > 1:
+                assert len(variables) == len(out_variables)
+
             preds = []
             for _ in range(steps):
-                x = self.predict(x, len(out_variables))
-                if self.prob_type == 'parametric':
-                    x = mean_transform(x.loc)
+                x = self.predict(x)
                 preds.append(x)
             preds = torch.stack(preds, dim=1)
             if len(y.shape) == 4:
                 y = y.unsqueeze(1)
-
-        return (
-            [
-                m(
-                    preds,
-                    y,
-                    out_variables,
-                    transform=transform,
-                    lat=lat,
-                    log_steps=log_steps,
-                    log_days=log_days,
-                    log_day=log_day,
-                    clim=clim                    
-                ) for m in metric
-            ],
-            x
-        )
+        
+            return (
+                [
+                    m(
+                        preds,
+                        y,
+                        out_variables,
+                        transform=transform,
+                        lat=lat,
+                        log_steps=log_steps,
+                        log_days=log_days,
+                        clim=clim
+                    ) for m in metric
+                ],
+                x
+            )
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
-            pred = self.predict(x, len(out_variables))
+            pred = self.predict(x)
         return (
             [
                 m(

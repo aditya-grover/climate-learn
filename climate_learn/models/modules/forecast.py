@@ -15,6 +15,7 @@ from .utils.metrics import (
     lat_weighted_nll,
     lat_weighted_rmse,
     categorical_loss,
+    lat_weighted_spread_skill_ratio
 )
 
 
@@ -35,16 +36,16 @@ class ForecastLitModule(LightningModule):
         self.net = net
         self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
         if net.prob_type == 'parametric':
-            self.train_loss = crps_gaussian
+            self.train_loss = [crps_gaussian]
             # self.train_loss = lat_weighted_nll
             self.val_loss = [crps_gaussian_val]
         elif net.prob_type == 'mcdropout':
-            self.train_loss = lat_weighted_mse
+            self.train_loss = [lat_weighted_mse]
             self.val_loss = [crps_gaussian_val]
             raise NotImplementedError("Only parametric and deterministic prediction is supported")
         elif net.prob_type == 'categorical':
             # loss functions need to be determined later (?)
-            self.train_loss = categorical_loss
+            self.train_loss = [categorical_loss]
             self.val_loss = [categorical_loss]
             self.test_loss = [categorical_loss]
             self.num_bins = 50
@@ -53,7 +54,7 @@ class ForecastLitModule(LightningModule):
             self.bins = np.linspace(self.bin_min, self.bin_max, self.num_bins+1)
             self.bins[0] = -np.inf; self.bins[-1] = np.inf
         else: # deter
-            self.train_loss = lat_weighted_mse
+            self.train_loss = [lat_weighted_mse]
             self.val_loss = [lat_weighted_rmse]
 
         if optimizer == 'adam':
@@ -122,7 +123,7 @@ class ForecastLitModule(LightningModule):
             x,
             y,
             out_variables,
-            metric=[self.train_loss],
+            metric=self.train_loss,
             lat=self.lat
         )
         loss_dict = loss_dict[0]
@@ -223,15 +224,15 @@ class ForecastLitModule(LightningModule):
             self.test_clim,
             variables,
             out_variables,
-            pred_steps,
-            self.test_loss,
-            self.denormalization,
-            self.lat,
-            steps,
-            days,
-            self.mean_denormalize,
-            self.std_denormalize,
-            day
+            steps=pred_steps,
+            metric=self.test_loss,
+            transform=self.denormalization,
+            lat=self.lat,
+            log_steps=steps,
+            log_days=days,
+            mean_transform=self.mean_denormalize,
+            std_transform=self.std_denormalize,
+            log_day=day
         )
 
         loss_dict = {}
