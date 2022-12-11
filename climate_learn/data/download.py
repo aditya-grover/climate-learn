@@ -59,19 +59,14 @@ def _download_esgf(root, dataset, variable, resolution = "5.625", institutionID=
 
     path = os.path.join(root, dataset, "pre-regrided", variable)
     print(f"Downloading {dataset} {variable} data from esgf to {path}")
-    # if(os.path.exists(path)):
-    #     raise Exception("Directory already exists")
-    #     return
-
 
     os.makedirs(os.path.dirname(path), exist_ok = True)
-
 
     year_strings = [f'{y}01010600-{y+5}01010000' for y in range(1850, 2015, 5)]
     for yr in year_strings:
         file_name = (
-            "{var}_6hrPlevPt_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_{yr}.nc"
-        ).format(var = NAME_TO_CMIP[variable], yr = yr)
+            "{var}_6hrPlevPt_{sourceID}_{exprID}_r1i1p1f1_gn_{yr}.nc"
+        ).format(var=NAME_TO_CMIP[variable], yr=yr, sourceID=sourceID, exprID=exprID)
 
         file_path = os.path.join(path, file_name)
         if os.path.exists(file_path):
@@ -89,7 +84,7 @@ def _download_esgf(root, dataset, variable, resolution = "5.625", institutionID=
 
 
 def _download_weatherbench(root, dataset, variable, resolution = "1.40625"):
-    if(dataset not in ["era5"]):
+    if(dataset not in ["era5", "cmip6"]):
         raise Exception("Dataset not supported")
 
     path = os.path.join(root, dataset, resolution, variable)
