@@ -2,5 +2,6 @@ rich
 timm
 wandb
 cdsapi
+xesmf
 pytorch-lightning
 importlib-metadata==4.13.0
