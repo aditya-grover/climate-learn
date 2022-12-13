@@ -9,7 +9,7 @@ Currently, three deep neural network architectures are supported:
 
     a. ResNet: ResNets are a popular variant of CNNs [#]_ that have been used to achieve weather forecasting for variables such as temperature and geopotential [#]_.
     
-    b. U-Net: U-Nets are a CNN variant that entails both downsampling and upsampling convolutions. Their popularity in the biomedical space [#]_ paved the way for ClimateLearn's implementation to allow users to benchmark U-Net for climate modeling tasks.
+    b. U-Net: U-Nets are a CNN variant that entails both downsampling and upsampling convolutions. Their development and popularity in the biomedical space [#]_ paved the way for ClimateLearn's implementation, allowing users to benchmark U-Nets for climate modeling tasks.
 
 #. Vision transformers: ViTs are the latest contemporary to CNNs for visual recognition [#]_. The utility of ViTs for representing climate variables is largely under-explored, but has been used for short-range temperature forecasting [#]_. 
 
