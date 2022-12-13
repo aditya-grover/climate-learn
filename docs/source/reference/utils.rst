@@ -1,6 +1,8 @@
 climate_learn.utils
 ===================
 
-.. autofunction:: climate_learn.utils.data.load_dataset
+Coming soon!
 
-.. autofunction:: climate_learn.utils.data.view
+.. .. autofunction:: climate_learn.utils.data.load_dataset
+
+.. .. autofunction:: climate_learn.utils.data.view
