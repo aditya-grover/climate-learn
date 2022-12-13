@@ -7,11 +7,18 @@ Currently, three deep neural network architectures are supported:
 
 #. Convolutional neural networks: the CNN is a widely used architecture for visual recognition tasks. A constrained version of the standard neural network, CNNs capitalize on knowledge of the input's structure as an image. ClimateLearn suports two popular variants of CNNs:
 
-    #. ResNet: ResNets are a popular variant of CNNs that have been used to achieve weather forecasting for variables such as temperature and geopotential.
+    a. ResNet: ResNets are a popular variant of CNNs [#]_ that have been used to achieve weather forecasting for variables such as temperature and geopotential [#]_.
+    
+    b. U-Net: U-Nets are a CNN variant that entails both downsampling and upsampling convolutions. Their popularity in the biomedical space [#]_ paved the way for ClimateLearn's implementation to allow users to benchmark U-Net for climate modeling tasks.
 
-    #. U-Net: U-Nets are a CNN varriant that entails both downsampling and upsampling convolutions. Their implementationin ClimateLearn allows users to benchmark U-Net for climate modeling tasks.
+#. Vision transformers: ViTs are the latest contemporary to CNNs for visual recognition [#]_. The utility of ViTs for representing climate variables is largely under-explored, but has been used for short-range temperature forecasting [#]_. 
 
-#. Vision transformers: the utility of ViTs for representing climate variables is largely under-explored, so ClimateLearn provides an implementation for benchmarking transformers.
+.. [#] `Deep Residual Learning for Image Recognition <https://arxiv.org/abs/1512.03385/>`_
+.. [#] `Data-driven medium-range weather prediction with a Resnet pretrained on climate simulations: A new model for WeatherBench <https://arxiv.org/abs/2008.08626/>`_
+.. [#] `U-Net: Convolutional Networks for Biomedical Image Segmentation <https://arxiv.org/abs/1505.04597/>`_
+.. [#] `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929/>`_
+.. [#] `TENT: Tensorized Encoder Transformer for Temperature Forecasting <https://arxiv.org/abs/2106.14742/>`_
+
 
 Initialization
 --------------
@@ -168,5 +175,3 @@ The following can be run in Google Colab.
 .. nbinput:: ipython3
     :execution-count: 7
     trainer.test(model_module, data_module)
-
-    
