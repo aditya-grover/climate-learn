@@ -47,10 +47,6 @@ The ``climate_learn.training`` module provides a ``Trainer`` class for
 fitting and testing models. The trainer is initialized with parameters
 such as the seed, the accelerator, and the maximimum number of epochs.
 
-The module also provides a function for optionally using `Weights and
-Biases <https://docs.wandb.ai/>`_ to monitor the models training and
-validation curves. Using it requires logging into a Wandb account once.
-
 The trainer has two functions, ``fit`` and ``test``, used for fitting
 and testing the argument model on the argument data module. Each
 function assumes ``model_module`` and ``data_module`` are initialized
@@ -63,14 +59,13 @@ Below is an example of fitting and testing a model with a given data module.
 .. code-block:: python
     :linenos:
 
-    from climate_learn.training import Trainer, WandbLogger
+    from climate_learn.training import Trainer
 
     trainer = Trainer(
         seed = 0,
         accelerator = "gpu",
         precision = 16,
         max_epochs = 5,
-        logger = WandbLogger(project = "climate-learn-test", name = "forecast-vit"),
     )
 
     trainer.fit(model_module, data_module)
@@ -156,7 +151,7 @@ The following can be run in Google Colab.
 .. nbinput:: ipython3
     :execution-count: 5
 
-    from climate_learn.training import Trainer, WandbLogger
+    from climate_learn.training import Trainer
 
     # Initialize model trainer
     trainer = Trainer(
@@ -164,7 +159,6 @@ The following can be run in Google Colab.
         accelerator = "gpu",
         precision = 16,
         max_epochs = 5,
-        # logger = WandbLogger(project = "climate-learn-test", name = "forecast-unet"),
     )
 
 .. nbinput:: ipython3
