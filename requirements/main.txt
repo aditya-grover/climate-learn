@@ -9,3 +9,5 @@ xarray
 ipython
 scipy
 scikit-learn
+netcdf4
+dask
