@@ -1,6 +1,7 @@
 from typing import Any
-
+import sys
 import numpy as np
+import pandas as pd
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
@@ -14,6 +15,7 @@ from .utils.metrics import (
     lat_weighted_mse,
     lat_weighted_nll,
     lat_weighted_rmse,
+    categorical_loss,
     lat_weighted_spread_skill_ratio
 )
 
@@ -33,16 +35,27 @@ class ForecastLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
         if net.prob_type == 'parametric':
-            self.train_loss = crps_gaussian
+            self.train_loss = [crps_gaussian]
             # self.train_loss = lat_weighted_nll
             self.val_loss = [crps_gaussian_val, lat_weighted_spread_skill_ratio]
         elif net.prob_type == 'mcdropout':
-            self.train_loss = lat_weighted_mse
+            self.train_loss = [lat_weighted_mse]
             self.val_loss = [crps_gaussian_val]
             raise NotImplementedError("Only parametric and deterministic prediction is supported")
+        elif net.prob_type == 'categorical':
+            # loss functions need to be determined later (?)
+            self.train_loss = [categorical_loss]
+            self.val_loss = [categorical_loss]
+            self.test_loss = [categorical_loss]
+            self.num_bins = 50
+            self.bin_min = -5
+            self.bin_max = 5
+            self.bins = np.linspace(self.bin_min, self.bin_max, self.num_bins+1)
+            self.bins[0] = -np.inf; self.bins[-1] = np.inf
         else: # deter
-            self.train_loss = lat_weighted_mse
+            self.train_loss = [lat_weighted_mse]
             self.val_loss = [lat_weighted_rmse]
 
         if optimizer == 'adam':
@@ -95,11 +108,23 @@ class ForecastLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
+
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
+
         loss_dict, _ = self.net.forward(
             x,
             y,
             out_variables,
-            metric=[self.train_loss],
+            metric=self.train_loss,
             lat=self.lat
         )
         loss_dict = loss_dict[0]
@@ -125,6 +150,17 @@ class ForecastLitModule(LightningModule):
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
+
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
 
         all_loss_dicts, _ = self.net.val_rollout(
             x,
@@ -172,38 +208,6 @@ class ForecastLitModule(LightningModule):
         days = [int(s * pred_range / 24) for s in steps]
         day = int(days_each_step)
 
-        all_loss_dicts, _ = self.net.test_rollout(
-            x,
-            y,
-            self.test_clim,
-            variables,
-            out_variables,
-            pred_steps,
-            [lat_weighted_rmse, lat_weighted_acc],
-            self.denormalization,
-            self.lat,
-            steps,
-            days,
-            self.mean_denormalize,
-            self.std_denormalize,
-            day
-        )
-
-        loss_dict = {}
-        for d in all_loss_dicts:
-            for k in d.keys():
-                loss_dict[k] = d[k]
-
-        for var in loss_dict.keys():
-            self.log(
-                "test/" + var,
-                loss_dict[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size = len(x)
-            )
-
         # rmse for climatology baseline
         clim_pred = self.train_clim # C, H, W
         clim_pred = clim_pred.unsqueeze(0).unsqueeze(0).repeat(y.shape[0], y.shape[1], 1, 1, 1).to(y.device)
@@ -232,7 +236,12 @@ class ForecastLitModule(LightningModule):
             )
 
         # rmse for linear regression baseline
-        lr_pred = self.lr_baseline.predict(x.cpu().reshape((x.shape[0], -1))).reshape(y.shape)
+        # check if fit_lin_reg_baseline is called by checking whether self.lr_baseline is initialized
+        try:
+            lr_pred = self.lr_baseline.predict(x.cpu().reshape((x.shape[0], -1))).reshape(y.shape)
+        except AttributeError as e:
+            raise NotImplementedError('Expect climate_learn.models.fit_lin_reg_baseline be implemented before test steps.') from None
+
         lr_pred = lr_pred[:, np.newaxis, :, :, :] # B, 1, C, H, W
         lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
         baseline_rmse = lat_weighted_rmse(lr_pred, y, out_variables, transform_pred=True, transform=self.denormalization, lat=self.lat, log_steps=steps, log_days=days)
@@ -246,6 +255,49 @@ class ForecastLitModule(LightningModule):
                 batch_size = len(x)
             )
         
+        # transform y into one-hot format for categorical
+        # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
+        if self.net.prob_type == 'categorical':
+            y_shape = y.shape # [128, 1, 32, 64]
+            y = pd.cut(y.cpu().reshape(-1), self.bins, labels=False).reshape(y_shape)
+            # get one-hot encoded tensors. [128, 1, 32, 64, 50]
+            # equivalent to tf.keras.utils.to_categorical(y, num_classes=self.num_bins) in original implementation
+            y = np.eye(self.num_bins, dtype='float')[y]
+            y = y.reshape((*y_shape, self.num_bins))
+            y = torch.from_numpy(y).view(y.shape[0], 50, 1, 32, 64) # [128, 1, 32, 64, 50]
+
+        all_loss_dicts, _ = self.net.test_rollout(
+            x,
+            y,
+            self.test_clim,
+            variables,
+            out_variables,
+            steps=pred_steps,
+            metric=self.test_loss,
+            transform=self.denormalization,
+            lat=self.lat,
+            log_steps=steps,
+            log_days=days,
+            mean_transform=self.mean_denormalize,
+            std_transform=self.std_denormalize,
+            log_day=day
+        )
+
+        loss_dict = {}
+        for d in all_loss_dicts:
+            for k in d.keys():
+                loss_dict[k] = d[k]
+
+        for var in loss_dict.keys():
+            self.log(
+                "test/" + var,
+                loss_dict[var],
+                on_step=False,
+                on_epoch=True,
+                sync_dist=True,
+                batch_size = len(x)
+            )
+
         return loss_dict
 
     def configure_optimizers(self):
