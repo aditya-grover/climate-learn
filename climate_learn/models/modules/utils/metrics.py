@@ -270,6 +270,24 @@ def lat_weighted_acc(pred, y, vars, mask=None, transform_pred=True, transform=No
     # loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
     return loss_dict
 
+def categorical_loss(pred, y, vars, mask=None, transform_pred=True, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
+
+    loss = torch.nn.CrossEntropyLoss(reduction='none')
+    # get the labels [128, 1, 32, 64]
+    _, labels = y.max(dim=1) # y.shape = pred.shape = [128, 50, 1, 32, 64] 
+    error = loss(pred, labels.to(pred.device)) # error.shape [128, 1, 32, 64]
+
+    # lattitude weights
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)  # (1, H, 1)
+
+    loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            loss_dict[f"w_categorical_{var}"] = torch.mean(error[:, i] * w_lat)
+    
+    return loss_dict
 
 ### Downscaling metrics
 def rmse(pred, y, vars, mask=None, transform_pred=False, transform=None, lat=None, log_steps=None, log_days=None, log_day=None, clim=None):
