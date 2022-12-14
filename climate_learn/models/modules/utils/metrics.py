@@ -287,7 +287,6 @@ def categorical_loss(pred, y, vars, mask=None, transform_pred=True, transform=No
         for i, var in enumerate(vars):
             loss_dict[f"w_categorical_{var}"] = torch.mean(error[:, i] * w_lat)
     
-    loss_dict["loss"] = torch.mean((error * w_lat.unsqueeze(1)).mean(dim=1))
     return loss_dict
 
 ### Downscaling metrics
