@@ -11,3 +11,4 @@ scipy
 scikit-learn
 netcdf4
 dask
+xesmf==0.3.0
