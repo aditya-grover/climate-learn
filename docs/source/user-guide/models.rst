@@ -170,8 +170,10 @@ The following can be run in Google Colab.
 
 .. nbinput:: ipython3
     :execution-count: 6
+
     trainer.fit(model_module, data_module)
 
 .. nbinput:: ipython3
     :execution-count: 7
+    
     trainer.test(model_module, data_module)
