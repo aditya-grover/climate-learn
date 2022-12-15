@@ -173,7 +173,94 @@ The following can be run in Google Colab.
 
     trainer.fit(model_module, data_module)
 
+.. nboutput::
+    :execution-count: 6
+
+    ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+    ┃    ┃ Name                       ┃ Type              ┃ Params ┃
+    ┡━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+    │ 0  │ net                        │ ResNet            │  1.2 M │
+    │ 1  │ net.activation             │ LeakyReLU         │      0 │
+    │ 2  │ net.image_proj             │ PeriodicConv2D    │  6.4 K │
+    │ 3  │ net.image_proj.padding     │ PeriodicPadding2D │      0 │
+    │ 4  │ net.image_proj.conv        │ Conv2d            │  6.4 K │
+    │ 5  │ net.blocks                 │ ModuleList        │  1.2 M │
+    │ 6  │ net.blocks.0               │ ResidualBlock     │  295 K │
+    │ 7  │ net.blocks.0.activation    │ LeakyReLU         │      0 │
+    │ 8  │ net.blocks.0.conv1         │ PeriodicConv2D    │  147 K │
+    │ 9  │ net.blocks.0.conv1.padding │ PeriodicPadding2D │      0 │
+    │ 10 │ net.blocks.0.conv1.conv    │ Conv2d            │  147 K │
+    │ 11 │ net.blocks.0.conv2         │ PeriodicConv2D    │  147 K │
+    │ 12 │ net.blocks.0.conv2.padding │ PeriodicPadding2D │      0 │
+    │ 13 │ net.blocks.0.conv2.conv    │ Conv2d            │  147 K │
+    │ 14 │ net.blocks.0.shortcut      │ Identity          │      0 │
+    │ 15 │ net.blocks.0.norm1         │ BatchNorm2d       │    256 │
+    │ 16 │ net.blocks.0.norm2         │ BatchNorm2d       │    256 │
+    │ 17 │ net.blocks.0.drop          │ Dropout           │      0 │
+    │ 18 │ net.blocks.1               │ ResidualBlock     │  295 K │
+    │ 19 │ net.blocks.1.activation    │ LeakyReLU         │      0 │
+    │ 20 │ net.blocks.1.conv1         │ PeriodicConv2D    │  147 K │
+    │ 21 │ net.blocks.1.conv1.padding │ PeriodicPadding2D │      0 │
+    │ 22 │ net.blocks.1.conv1.conv    │ Conv2d            │  147 K │
+    │ 23 │ net.blocks.1.conv2         │ PeriodicConv2D    │  147 K │
+    │ 24 │ net.blocks.1.conv2.padding │ PeriodicPadding2D │      0 │
+    │ 25 │ net.blocks.1.conv2.conv    │ Conv2d            │  147 K │
+    │ 26 │ net.blocks.1.shortcut      │ Identity          │      0 │
+    │ 27 │ net.blocks.1.norm1         │ BatchNorm2d       │    256 │
+    │ 28 │ net.blocks.1.norm2         │ BatchNorm2d       │    256 │
+    │ 29 │ net.blocks.1.drop          │ Dropout           │      0 │
+    │ 30 │ net.blocks.2               │ ResidualBlock     │  295 K │
+    │ 31 │ net.blocks.2.activation    │ LeakyReLU         │      0 │
+    │ 32 │ net.blocks.2.conv1         │ PeriodicConv2D    │  147 K │
+    │ 33 │ net.blocks.2.conv1.padding │ PeriodicPadding2D │      0 │
+    │ 34 │ net.blocks.2.conv1.conv    │ Conv2d            │  147 K │
+    │ 35 │ net.blocks.2.conv2         │ PeriodicConv2D    │  147 K │
+    │ 36 │ net.blocks.2.conv2.padding │ PeriodicPadding2D │      0 │
+    │ 37 │ net.blocks.2.conv2.conv    │ Conv2d            │  147 K │
+    │ 38 │ net.blocks.2.shortcut      │ Identity          │      0 │
+    │ 39 │ net.blocks.2.norm1         │ BatchNorm2d       │    256 │
+    │ 40 │ net.blocks.2.norm2         │ BatchNorm2d       │    256 │
+    │ 41 │ net.blocks.2.drop          │ Dropout           │      0 │
+    │ 42 │ net.blocks.3               │ ResidualBlock     │  295 K │
+    │ 43 │ net.blocks.3.activation    │ LeakyReLU         │      0 │
+    │ 44 │ net.blocks.3.conv1         │ PeriodicConv2D    │  147 K │
+    │ 45 │ net.blocks.3.conv1.padding │ PeriodicPadding2D │      0 │
+    │ 46 │ net.blocks.3.conv1.conv    │ Conv2d            │  147 K │
+    │ 47 │ net.blocks.3.conv2         │ PeriodicConv2D    │  147 K │
+    │ 48 │ net.blocks.3.conv2.padding │ PeriodicPadding2D │      0 │
+    │ 49 │ net.blocks.3.conv2.conv    │ Conv2d            │  147 K │
+    │ 50 │ net.blocks.3.shortcut      │ Identity          │      0 │
+    │ 51 │ net.blocks.3.norm1         │ BatchNorm2d       │    256 │
+    │ 52 │ net.blocks.3.norm2         │ BatchNorm2d       │    256 │
+    │ 53 │ net.blocks.3.drop          │ Dropout           │      0 │
+    │ 54 │ net.norm                   │ BatchNorm2d       │    256 │
+    │ 55 │ net.final                  │ PeriodicConv2D    │  6.3 K │
+    │ 56 │ net.final.padding          │ PeriodicPadding2D │      0 │
+    │ 57 │ net.final.conv             │ Conv2d            │  6.3 K │
+    │ 58 │ denormalization            │ Normalize         │      0 │
+    │ 59 │ mean_denormalize           │ Normalize         │      0 │
+    │ 60 │ std_denormalize            │ Normalize         │      0 │
+    └────┴────────────────────────────┴───────────────────┴────────┘
+    Trainable params: 1.2 M
+    Non-trainable params: 0
+    Total params: 1.2 M
+    Total estimated model params size (MB): 2
+    Epoch 4/4  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2602/2602 0:14:01 • 0:00:00 5.81it/s loss: 0.016 train/2m_temperature:
+    0.016 train/loss: 0.016
+
 .. nbinput:: ipython3
     :execution-count: 7
     
     trainer.test(model_module, data_module)
+
+.. nboutput::
+    :execution-count: 7
+
+    Testing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137/137 0:00:17 • 0:00:00 8.03it/s  
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃                      Test metric                      ┃                     DataLoader 0                      ┃
+    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+    │             test/acc_2m_temperature_day_3             │                  0.8710094217778567                   │
+    │           test/w_rmse_2m_temperature_day_3            │                   2.530231507389152                   │
+    │ test_climatology_baseline/w_rmse_2m_temperature_day_3 │                   5.88424715407195                    │
+    └───────────────────────────────────────────────────────┴───────────────────────────────────────────────────────┘
