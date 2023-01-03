@@ -8,7 +8,14 @@
 
 ### Installation
 
-**Python3** is required. The library can then be installed with **pip**.
+**conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
+
+First, create a conda environment and install Python3 and the conda-only dependencies.
+```console
+$ conda create -n cl_env -c conda-forge xesmf python=3.10
+```
+
+Then install the rest of the library with **pip**.
 ```console
 $ pip install git+https://github.com/aditya-grover/climate-learn.git
 ```
