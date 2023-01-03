@@ -1,14 +1,10 @@
 cdsapi
 dask
 importlib-metadata==4.13.0
-ipython
 matplotlib
 netcdf4
 pytorch-lightning
 rich
 scikit-learn
-scipy
 timm
 wandb
-xarray
-xesmf==0.3.0
