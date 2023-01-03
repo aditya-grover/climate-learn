@@ -11,3 +11,4 @@ scipy
 timm
 wandb
 xarray
+xesmf==0.3.0
