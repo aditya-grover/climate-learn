@@ -14,17 +14,23 @@ setuptools.setup(
     url = "https://github.com/aditya-grover/climate-learn",
     packages = setuptools.find_packages(),
     install_requires = [
-        str(r)
-        for r in pkg_resources.parse_requirements(
-            open(os.path.join(os.path.dirname(__file__), "requirements", "main.txt"))
-        )
+        "cdsapi",
+        "dask",
+        "importlib-metadata==4.13.0",
+        "lightning",
+        "matplotlib",
+        "netcdf4",
+        "rich",
+        "scikit-learn",
+        "timm",
+        "torch",
+        "wandb"
     ],
     extras_require = {
         "docs": [
-            str(r)
-            for r in pkg_resources.parse_requirements(
-                open(os.path.join(os.path.dirname(__file__), "requirements", "docs.txt"))
-            )
+            "nbsphinx",
+            "sphinx==5.3.0",
+            "sphinx_rtd_theme==1.1.1"
         ]
     },
     classifiers = [

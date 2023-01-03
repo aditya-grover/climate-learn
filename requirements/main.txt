@@ -1,10 +1,15 @@
 cdsapi
 dask
-importlib-metadata==4.13.0
+importlib-metadata
+lightning
 matplotlib
 netcdf4
-pytorch-lightning
 rich
 scikit-learn
 timm
+torch 
+torchvision
 wandb
+
+# CUDA 11.7 for PyTorch
+-i https://download.pytorch.org/whl/cu117
