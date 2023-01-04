@@ -6,15 +6,28 @@
 
 ## Getting Started
 
-### Installation
-
-**Python3** is required. The library can then be installed with **pip**.
-```console
-$ pip install git+https://github.com/aditya-grover/climate-learn.git
-```
-
 ### Quickstart
 Please refer to this [Google Colab notebook](https://colab.research.google.com/drive/1GMT_CnxL1o4Za1Uc3Gf7u_tm_M5ECoZo?usp=sharing).
+
+### Local Installation
+
+**conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
+
+First, create a conda environment.
+```console
+$ conda create -n cl_env python=3.8 -y
+```
+
+Then, install the conda-only dependencies.
+```console
+$ conda install -n cl_env xesmf=0.7.0 -c conda-forge -y
+``` 
+
+Then, install the rest of the library with pip.
+```console
+$ conda activate cl_env
+$ pip install -e .
+```
 
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
