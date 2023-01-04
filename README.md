@@ -26,7 +26,7 @@ $ conda install -n cl_env xesmf=0.7.0 -c conda-forge -y
 Then, install the rest of the library with pip.
 ```console
 $ conda activate cl_env
-$ pip install git+https://github.com/aditya-grover/climate-learn.git
+$ pip install -e .
 ```
 
 ## About Us
