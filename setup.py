@@ -17,7 +17,7 @@ setuptools.setup(
         "cdsapi",
         "dask",
         "importlib-metadata==4.13.0",
-        "lightning",
+        "pytorch-lightning",  # this name wille eventually be deprecated
         "matplotlib",
         "netcdf4",
         "rich",
