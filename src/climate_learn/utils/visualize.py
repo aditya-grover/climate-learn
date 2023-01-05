@@ -6,8 +6,26 @@ from datetime import datetime
 import torch
 from tqdm import tqdm
 
+# TODO: include exceptions in docstrings
 
 def visualize(model_module, data_module, split="test", samples=2, save_dir=None):
+    """Visualizes model bias.
+
+    :param model_module: A ClimateLearn model.
+    :type model_module: LightningModule
+    :param data_module: A ClimateLearn dataset.
+    :type data_module: LightningDataModule
+    :param split: "train", "val", or "test".
+    :type split: str, optional
+    :param samples: The exact days or the number of days to visualize. If provided as
+        exact days, this should be a list of datetime strings, each formatted as 
+        "YYYY-mm-dd:HH". If provided as the number of days, it must be an int n. In
+        this case, n days are randomly sampled from the given split.
+    :type samples: List[str]|int, optional
+    :param save_dir: The directory to save the visualization to. Defaults to `None`,
+        meaning the visualization is not saved.
+    :type save_dir: str, optional
+    """
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
 
@@ -67,6 +85,16 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
 
 def visualize_mean_bias(model_module, data_module, save_dir=None):
+    """Visualizes mean model bias on the test set.
+
+    :param model_module: A ClimateLearn model.
+    :type model_module: LightningModule
+    :param data_module: A ClimateLearn dataset.
+    :type data_module: LightningDataModule
+    :param save_dir: The directory to save the visualization to. Defaults to `None`,
+        meaning the visualization is not saved.
+    :type save_dir: str, optional
+    """
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
 
