@@ -5,4 +5,4 @@ dependencies:
   - xesmf=0.7.0
   - pip=22.3.1
   - pip:
-    - -e .
+    - -e ..
