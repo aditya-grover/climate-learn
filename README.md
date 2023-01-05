@@ -13,15 +13,10 @@ Please refer to this [Google Colab notebook](https://colab.research.google.com/d
 
 **conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
 
-First, create a conda environment.
+First, create a conda environment and install the conda-only dependencies.
 ```console
-$ conda create -n cl_env python=3.8 -y
+$ conda create -n cl_env xesmf==0.7.0 -c conda-forge -y
 ```
-
-Then, install the conda-only dependencies.
-```console
-$ conda install -n cl_env xesmf=0.7.0 -c conda-forge -y
-``` 
 
 Then, install the rest of the library with pip.
 ```console
