@@ -1,13 +1,14 @@
 <h1 align="center">ClimateLearn</h1>
 
 [![Documentation Status](https://readthedocs.org/projects/climatelearn/badge/?version=latest)](https://climatelearn.readthedocs.io/en/latest/?badge=latest)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jasonjewik/climate-learn/new-install?labpath=%2Fdocs%2Fnotebooks%2FNeurIPS2022_CCAI_Tutorial.ipynb)
 
 **ClimateLearn** is a Python library for accessing state-of-the-art climate data and machine learning models in a standardized, straightforward way. This library provides access to multiple datasets, a zoo of baseline approaches, and a suite of metrics and visualizations for large-scale benchmarking of statistical downscaling and temporal forecasting methods.
 
 ## Getting Started
 
 ### Quickstart
-Please refer to this [Google Colab notebook](https://colab.research.google.com/drive/1GMT_CnxL1o4Za1Uc3Gf7u_tm_M5ECoZo?usp=sharing).
+Please refer to this [Binder notebook](https://mybinder.org/v2/gh/jasonjewik/climate-learn/new-install?labpath=docs%2Fnotebooks%2FNeurIPS2022_CCAI_Tutorial.ipynb).
 
 ### Local Installation
 
