@@ -25,6 +25,11 @@ $ conda activate cl_env
 $ pip install -e .
 ```
 
+Alternatively, these two steps can be combined into a single command.
+```console
+$ conda env create -n cl_env -f binder/environment.yml
+```
+
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
 
