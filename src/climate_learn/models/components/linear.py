@@ -38,7 +38,19 @@ class Linear(nn.Module):
         pred = self.predict(x)
         return [m(pred, y, out_variables, lat) for m in metric], pred
 
-    def rollout(self, x, y, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
+    def rollout(
+        self,
+        x,
+        y,
+        variables,
+        out_variables,
+        steps,
+        metric,
+        transform,
+        lat,
+        log_steps,
+        log_days,
+    ):
         # transform: get back to the original range
         if steps > 1:
             # can only rollout for more than 1 step if input variables and output variables are the same
@@ -53,7 +65,9 @@ class Linear(nn.Module):
         preds = transform(preds)
         y = transform(y)
 
-        return [m(preds, y, out_variables, lat, log_steps, log_days) for m in metric], preds
+        return [
+            m(preds, y, out_variables, lat, log_steps, log_days) for m in metric
+        ], preds
 
 
 # model = TokenizedMAE(depth=4, decoder_depth=2).cuda()

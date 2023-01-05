@@ -41,7 +41,7 @@ class VisionTransformer(nn.Module):
 
         self.img_size = img_size
         self.upsampling = upsampling
-        self.img_out_size = [img_size[0]*upsampling, img_size[1]*upsampling]
+        self.img_out_size = [img_size[0] * upsampling, img_size[1] * upsampling]
         self.n_channels = len(in_vars)
         self.patch_size = patch_size
 
@@ -50,7 +50,9 @@ class VisionTransformer(nn.Module):
 
         # --------------------------------------------------------------------------
         # ViT encoder
-        self.patch_embed = PatchEmbed(img_size, patch_size, len(self.in_vars), embed_dim)
+        self.patch_embed = PatchEmbed(
+            img_size, patch_size, len(self.in_vars), embed_dim
+        )
         self.num_patches = self.patch_embed.num_patches  # 128
 
         self.pos_embed = nn.Parameter(
@@ -58,7 +60,9 @@ class VisionTransformer(nn.Module):
         )  # fixed sin-cos embedding
         self.pos_drop = nn.Dropout(p=drop_rate)
 
-        dpr = [x.item() for x in torch.linspace(0, drop_path, depth)]  # stochastic depth decay rule
+        dpr = [
+            x.item() for x in torch.linspace(0, drop_path, depth)
+        ]  # stochastic depth decay rule
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -82,7 +86,9 @@ class VisionTransformer(nn.Module):
         for i in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
             self.head.append(nn.GELU())
-        self.head.append(nn.Linear(embed_dim, len(self.out_vars) * patch_size**2 * upsampling**2))
+        self.head.append(
+            nn.Linear(embed_dim, len(self.out_vars) * patch_size**2 * upsampling**2)
+        )
         self.head = nn.Sequential(*self.head)
         # --------------------------------------------------------------------------
 
@@ -152,7 +158,7 @@ class VisionTransformer(nn.Module):
         x: B, C, H, W
         """
         # embed patches
-        x = self.patch_embed(x) # B, L, D
+        x = self.patch_embed(x)  # B, L, D
 
         # add pos embed
         x = x + self.pos_embed
@@ -173,17 +179,7 @@ class VisionTransformer(nn.Module):
         pred: [N, L, p*p*3]
         """
         pred = self.unpatchify(pred)
-        return (
-            [
-                m(
-                    pred,
-                    y,
-                    out_variables,
-                    lat=lat
-                ) for m in metric
-            ],
-            pred
-        )
+        return ([m(pred, y, out_variables, lat=lat) for m in metric], pred)
 
     def forward(self, x, y, out_variables, metric, lat):
         embeddings = self.forward_encoder(x)  # B, L, D
@@ -197,7 +193,20 @@ class VisionTransformer(nn.Module):
             pred = self.head(embeddings)
         return self.unpatchify(pred)
 
-    def rollout(self, x, y, clim, variables, out_variables, steps, metric, transform, lat, log_steps, log_days):
+    def rollout(
+        self,
+        x,
+        y,
+        clim,
+        variables,
+        out_variables,
+        steps,
+        metric,
+        transform,
+        lat,
+        log_steps,
+        log_days,
+    ):
         preds = []
         for _ in range(steps):
             x = self.predict(x)
@@ -207,35 +216,26 @@ class VisionTransformer(nn.Module):
             y = y.unsqueeze(1)
 
         return (
-                [
-                    m(
-                        preds,
-                        y,
-                        out_variables,
-                        transform=transform,
-                        lat=lat,
-                        log_steps=log_steps,
-                        log_days=log_days,
-                        clim=clim
-                    ) for m in metric
-                ],
-                x
-            )
+            [
+                m(
+                    preds,
+                    y,
+                    out_variables,
+                    transform=transform,
+                    lat=lat,
+                    log_steps=log_steps,
+                    log_days=log_days,
+                    clim=clim,
+                )
+                for m in metric
+            ],
+            x,
+        )
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
             pred = self.predict(x)
-        return (
-            [
-                m(
-                    pred,
-                    y,
-                    out_vars,
-                    transform=transform
-                ) for m in metric
-            ],
-            x
-        )
+        return ([m(pred, y, out_vars, transform=transform) for m in metric], x)
 
 
 # model = VisionTransformer(img_size=[32, 64], embed_dim=128, patch_size=2, depth=8, upsampling=2).cuda()

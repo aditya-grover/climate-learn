@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class PeriodicPadding2D(nn.Module):
     def __init__(self, pad_width, **kwargs):
         super().__init__(**kwargs)
@@ -9,29 +10,44 @@ class PeriodicPadding2D(nn.Module):
     def forward(self, inputs, **kwargs):
         if self.pad_width == 0:
             return inputs
-        inputs_padded = torch.cat((
-            inputs[:, :, :, -self.pad_width:], inputs, inputs[:, :, :, :self.pad_width]
-        ), dim=-1)
+        inputs_padded = torch.cat(
+            (
+                inputs[:, :, :, -self.pad_width :],
+                inputs,
+                inputs[:, :, :, : self.pad_width],
+            ),
+            dim=-1,
+        )
         # Zero padding in the lat direction
-        inputs_padded = nn.functional.pad(inputs_padded, (0, 0, self.pad_width, self.pad_width))
+        inputs_padded = nn.functional.pad(
+            inputs_padded, (0, 0, self.pad_width, self.pad_width)
+        )
         return inputs_padded
 
 
 class PeriodicConv2D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, **kwargs):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride=1, padding=0, **kwargs
+    ):
         super().__init__(**kwargs)
         self.padding = PeriodicPadding2D(padding)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=0)
+        self.conv = nn.Conv2d(
+            in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=0
+        )
 
     def forward(self, inputs):
         return self.conv(self.padding(inputs))
 
 
 class PeriodicConvTranspose2D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, **kwargs):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride=1, padding=0, **kwargs
+    ):
         super().__init__(**kwargs)
         self.padding = PeriodicPadding2D(padding)
-        self.conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=0)
+        self.conv = nn.ConvTranspose2d(
+            in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=0
+        )
 
     def forward(self, inputs):
         return self.conv(self.padding(inputs))
@@ -46,7 +62,7 @@ class ResidualBlock(nn.Module):
         norm: bool = False,
         dropout: float = 0.1,
         n_groups: int = 1,
-        mc_dropout: bool = False
+        mc_dropout: bool = False,
     ):
         super().__init__()
         if activation == "gelu":
@@ -61,7 +77,9 @@ class ResidualBlock(nn.Module):
             raise NotImplementedError(f"Activation {activation} not implemented")
 
         self.conv1 = PeriodicConv2D(in_channels, out_channels, kernel_size=3, padding=1)
-        self.conv2 = PeriodicConv2D(out_channels, out_channels, kernel_size=3, padding=1)
+        self.conv2 = PeriodicConv2D(
+            out_channels, out_channels, kernel_size=3, padding=1
+        )
         # If the number of input channels is not equal to the number of output channels we have to
         # project the shortcut connection
         if in_channels != out_channels:
@@ -97,7 +115,9 @@ class AttentionBlock(nn.Module):
     """### Attention block This is similar to [transformer multi-head
     attention](../../transformers/mha.html)."""
 
-    def __init__(self, n_channels: int, n_heads: int = 1, d_k: int = None, n_groups: int = 1):
+    def __init__(
+        self, n_channels: int, n_heads: int = 1, d_k: int = None, n_groups: int = 1
+    ):
         """
         * `n_channels` is the number of channels in the input
         * `n_heads` is the number of heads in multi-head attention
@@ -163,11 +183,16 @@ class DownBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
-        mc_dropout: bool = False
+        mc_dropout: bool = False,
     ):
         super().__init__()
         self.res = ResidualBlock(
-            in_channels, out_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+            in_channels,
+            out_channels,
+            activation=activation,
+            norm=norm,
+            dropout=dropout,
+            mc_dropout=mc_dropout,
         )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
@@ -194,7 +219,7 @@ class UpBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
-        mc_dropout: bool = False
+        mc_dropout: bool = False,
     ):
         super().__init__()
         # The input has `in_channels + out_channels` because we concatenate the output of the same resolution
@@ -205,7 +230,7 @@ class UpBlock(nn.Module):
             activation=activation,
             norm=norm,
             dropout=dropout,
-            mc_dropout=mc_dropout
+            mc_dropout=mc_dropout,
         )
         if has_attn:
             self.attn = AttentionBlock(out_channels)
@@ -233,15 +258,25 @@ class MiddleBlock(nn.Module):
         activation: str = "leaky",
         norm: bool = False,
         dropout: float = 0.1,
-        mc_dropout: bool = False
+        mc_dropout: bool = False,
     ):
         super().__init__()
         self.res1 = ResidualBlock(
-            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+            n_channels,
+            n_channels,
+            activation=activation,
+            norm=norm,
+            dropout=dropout,
+            mc_dropout=mc_dropout,
         )
         self.attn = AttentionBlock(n_channels) if has_attn else nn.Identity()
         self.res2 = ResidualBlock(
-            n_channels, n_channels, activation=activation, norm=norm, dropout=dropout, mc_dropout=mc_dropout
+            n_channels,
+            n_channels,
+            activation=activation,
+            norm=norm,
+            dropout=dropout,
+            mc_dropout=mc_dropout,
         )
 
     def forward(self, x: torch.Tensor):
