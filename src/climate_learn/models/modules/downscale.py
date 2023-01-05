@@ -12,7 +12,7 @@ class DownscaleLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: str = 'adam',
+        optimizer: str = "adam",
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -23,12 +23,12 @@ class DownscaleLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
-        if optimizer == 'adam':
+        if optimizer == "adam":
             self.optim_cls = torch.optim.Adam
-        elif optimizer == 'adamw':
+        elif optimizer == "adamw":
             self.optim_cls = torch.optim.AdamW
         else:
-            raise NotImplementedError('Only support Adam and AdamW')
+            raise NotImplementedError("Only support Adam and AdamW")
 
     def forward(self, x):
         return self.net.predict(x)
@@ -42,7 +42,7 @@ class DownscaleLitModule(LightningModule):
 
     def set_pred_range(self, r):
         self.pred_range = r
-        
+
     def set_train_climatology(self, clim):
         self.train_clim = clim
 
@@ -63,7 +63,7 @@ class DownscaleLitModule(LightningModule):
                 on_step=True,
                 on_epoch=False,
                 prog_bar=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 
@@ -86,13 +86,13 @@ class DownscaleLitModule(LightningModule):
                 on_epoch=True,
                 prog_bar=False,
                 sync_dist=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        
+
         all_loss_dicts, _ = self.net.upsample(
             x, y, out_variables, self.denormalization, [rmse, pearson, mean_bias]
         )
@@ -108,7 +108,7 @@ class DownscaleLitModule(LightningModule):
                 on_step=False,
                 on_epoch=True,
                 sync_dist=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 

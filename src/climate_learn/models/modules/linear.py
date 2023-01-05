@@ -9,12 +9,13 @@ from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse
 
 class LinearLitModule(LightningModule):
     """A PyTorch Lightning module to implement linear regression."""
+
     def __init__(
         self,
         net: torch.nn.Module,
         lr: float = 0.001,
         weight_decay: float = 0.005,
-    ) -> None: 
+    ) -> None:
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
@@ -42,7 +43,9 @@ class LinearLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
-        loss_dict, _ = self.net.forward(x, y, out_variables, [lat_weighted_mse], lat=self.lat)
+        loss_dict, _ = self.net.forward(
+            x, y, out_variables, [lat_weighted_mse], lat=self.lat
+        )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
             self.log(
@@ -51,7 +54,7 @@ class LinearLitModule(LightningModule):
                 on_step=True,
                 on_epoch=False,
                 prog_bar=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 
@@ -62,7 +65,9 @@ class LinearLitModule(LightningModule):
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
-        default_steps = [d / days_each_step for d in default_days if d % days_each_step == 0]
+        default_steps = [
+            d / days_each_step for d in default_days if d % days_each_step == 0
+        ]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
 
@@ -91,7 +96,7 @@ class LinearLitModule(LightningModule):
                 on_epoch=True,
                 prog_bar=False,
                 sync_dist=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 
@@ -131,9 +136,13 @@ class LinearLitModule(LightningModule):
                 on_step=False,
                 on_epoch=True,
                 sync_dist=True,
-                batch_size = len(x)
+                batch_size=len(x),
             )
         return loss_dict
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
+        return torch.optim.AdamW(
+            self.parameters(),
+            lr=self.hparams.lr,
+            weight_decay=self.hparams.weight_decay,
+        )

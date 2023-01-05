@@ -25,6 +25,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "black",
     "cdsapi",
     "dask",
     "importlib-metadata==4.13.0",
