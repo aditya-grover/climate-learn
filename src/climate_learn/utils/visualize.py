@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 # TODO: include exceptions in docstrings
 
+
 def visualize(model_module, data_module, split="test", samples=2, save_dir=None):
     """Visualizes model bias.
 
@@ -18,7 +19,7 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
     :param split: "train", "val", or "test".
     :type split: str, optional
     :param samples: The exact days or the number of days to visualize. If provided as
-        exact days, this should be a list of datetime strings, each formatted as 
+        exact days, this should be a list of datetime strings, each formatted as
         "YYYY-mm-dd:HH". If provided as the number of days, it must be an int n. In
         this case, n days are randomly sampled from the given split.
     :type samples: List[str]|int, optional
