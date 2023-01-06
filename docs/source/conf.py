@@ -46,6 +46,10 @@ intersphinx_disabled_domains = ["std"]
 
 templates_path = ["_templates"]
 
+autodoc_mock_imports = [
+    "xarray",
+]
+
 # How to represents typehints
 autodoc_typehints = "signature"
 
