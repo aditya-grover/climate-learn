@@ -10,6 +10,9 @@
 ### Quickstart
 Please refer to this [Binder notebook](https://mybinder.org/v2/gh/jasonjewik/climate-learn/HEAD?labpath=%2Fdocs%2Fnotebooks%2FNeurIPS2022_CCAI_Tutorial.ipynb).
 
+### Documentation
+Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
+
 ### Local Installation
 
 **conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
@@ -29,6 +32,10 @@ Alternatively, these two steps can be combined into a single command.
 ```console
 $ conda env create -n cl_env -f binder/environment.yml
 ```
+
+### Integrations
+
+- [Weights & Biases](https://wandb.ai/site)
 
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
