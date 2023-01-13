@@ -1,20 +1,41 @@
 <h1 align="center">ClimateLearn</h1>
 
 [![Documentation Status](https://readthedocs.org/projects/climatelearn/badge/?version=latest)](https://climatelearn.readthedocs.io/en/latest/?badge=latest)
+[![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa)
 
 **ClimateLearn** is a Python library for accessing state-of-the-art climate data and machine learning models in a standardized, straightforward way. This library provides access to multiple datasets, a zoo of baseline approaches, and a suite of metrics and visualizations for large-scale benchmarking of statistical downscaling and temporal forecasting methods.
 
 ## Getting Started
 
-### Installation
+### Quickstart
+Please refer to this [Google Colab](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa).
 
-**Python3** is required. The library can then be installed with **pip**.
+### Documentation
+Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
+
+### Local Installation
+
+**conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
+
+First, create a conda environment and install the conda-only dependencies.
 ```console
-$ pip install git+https://github.com/aditya-grover/climate-learn.git
+$ conda create -n cl_env xesmf==0.7.0 -c conda-forge -y
 ```
 
-### Quickstart
-Please refer to this [Google Colab notebook](https://colab.research.google.com/drive/1GMT_CnxL1o4Za1Uc3Gf7u_tm_M5ECoZo?usp=sharing).
+Then, install the rest of the library with pip.
+```console
+$ conda activate cl_env
+$ pip install -e .
+```
+
+Alternatively, these two steps can be combined into a single command.
+```console
+$ conda env create -n cl_env -f binder/environment.yml
+```
+
+### Integrations
+
+- [Weights & Biases](https://wandb.ai/site)
 
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
