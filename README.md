@@ -20,21 +20,21 @@ Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
 **conda** is required. We recommend installing [**miniconda**](https://docs.conda.io/en/latest/miniconda.html). 
 
 1. Clone the repository from GitHub. 
-```
-$ git clone https://github.com/aditya-grover/climate-learn.git
-```
+    ```
+    $ git clone https://github.com/aditya-grover/climate-learn.git
+    ```
 
 2. Create a conda environment `cl_env` and install the conda-only dependencies.
-```console
-$ conda create -n cl_env xesmf==0.7.0 -c conda-forge -y
-$ conda activate cl_env
-```
+    ```console
+    $ conda create -n cl_env xesmf==0.7.0 -c conda-forge -y
+    $ conda activate cl_env
+    ```
 
 3. Install the rest of the dependencies with pip.
-```console
-$ cd climate-learn
-$ pip install -e .
-```
+    ```console
+    $ cd climate-learn
+    $ pip install -e .
+    ```
 
 ### Integrations
 
