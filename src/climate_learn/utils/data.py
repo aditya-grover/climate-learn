@@ -1,6 +1,9 @@
+# Standard library
 import os
-import xarray as xr
+
+# Third party
 from IPython.display import display
+import xarray as xr
 
 
 def load_dataset(dir):
