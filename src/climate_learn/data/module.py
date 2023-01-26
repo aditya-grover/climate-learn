@@ -1,12 +1,24 @@
+# Standard library
+from typing import List, Tuple
+
+# Local application
+from .modules import *
+from ..utils.datetime import Year, Hours
+
+# Third party
 import torch
 from torch.utils.data import DataLoader
 from pytorch_lightning import LightningDataModule
 
-from .modules import *
-from ..utils.datetime import Year, Hours
 
+def collate_fn(batch: List[Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]]):
+    r"""Collate function for DataLoaders.
 
-def collate_fn(batch):
+    :param batch: A batch of data samples.
+    :type batch: Tuple
+    :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
+    :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
+    """
     inp = torch.stack([batch[i][0] for i in range(len(batch))])
     out = torch.stack([batch[i][1] for i in range(len(batch))])
     variables = batch[0][2]
