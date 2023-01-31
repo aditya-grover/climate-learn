@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import xarray as xr
 
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 from ..constants import (
