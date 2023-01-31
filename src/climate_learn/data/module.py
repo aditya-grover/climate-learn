@@ -41,7 +41,7 @@ class DataModule(LightningDataModule):
         val_start_year,
         test_start_year,
         end_year=Year(2018),
-        aux_dirs=[],
+        root_highres_dir=None,
         history: int = 1,
         window: int = 6,
         pred_range=Hours(6),
@@ -85,9 +85,9 @@ class DataModule(LightningDataModule):
         :param end_year: The last year of the testing set, inclusive.
             Default is :python:`Year(2018)`.
         :type end_year: Year, optional
-        :param aux_dirs: The names of auxilliary dataset directories, which
-            need to be provided for some tasks. Default is the empty list.
-        :type aux_dirs: List[str], optional
+        :param root_highres_dir: The name of the high-res data directory, which
+            is needed for downsclaing task. Default is `None`.
+        :type root_highres_dir: str, optional
         """
         super().__init__()
 
