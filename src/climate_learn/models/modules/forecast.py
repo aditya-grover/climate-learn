@@ -36,6 +36,7 @@ class ForecastLitModule(LightningModule):
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
         self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
+        self.lr_baseline = None
         if net.prob_type == "parametric":
             self.train_loss = [crps_gaussian]
             # self.train_loss = lat_weighted_nll
