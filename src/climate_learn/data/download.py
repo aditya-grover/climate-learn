@@ -1,16 +1,48 @@
-import os
-import cdsapi
+# Standard library
 import argparse
+import os
 import subprocess
+
+# Local application
 from .regrid import *
 from .constants import NAME_TO_CMIP
+
+# Third party
+import cdsapi
+
 
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
 days = [str(i).rjust(2, "0") for i in range(1, 32)]
 times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
 
+# TODO: write exceptions in the docstrings
+# TODO: figure out how to better specify legal args for dataset, variable,
+#   and resolution
+# TODO: for download ESGF, do we have to download all the years?
+# TODO: can main even be run without runtime warning? maybe we should get rid of it
+
 
 def _download_copernicus(root, dataset, variable, year, pressure=False, api_key=None):
+    """Downloads data from the Copernicus Climate Data Store (CDS).
+        Data is stored at `root/dataset/variable/` as NetCDF4 (`.nc`) files.
+        Skips the download if a file of the expected naming convention already
+        exists at the download destination. More info:
+        https://cds.climate.copernicus.eu/cdsapp#!/home
+
+    :param root: The root data directory.
+    :type root: str
+    :param dataset: The dataset to download. Currently, only "era5" is
+        supported.
+    :type dataset: str
+    :param variable: The variable to download from the specified dataset.
+    :type variable: str
+    :param pressure: Whether to download data from different pressure levels
+        instead of single-level. Defaults to `False`.
+    :type pressure: bool, optional
+    :param api_key: An API key for accessing CDS. Defaults to `None`. See here
+        for more info: https://cds.climate.copernicus.eu/api-how-to.
+    :type api_key: str, optional
+    """
     if dataset not in ["era5"]:
         raise Exception("Dataset not supported")
 
@@ -64,6 +96,29 @@ def _download_esgf(
     sourceID="MPI-ESM1-2-HR",
     exprID="historical",
 ):
+    """Downloads data from the Earth System Grid Federation (ESGF).
+        Data is stored at `root/dataset/pre-regrided/variable/` as a NetCDF4
+        (`.nc`) file. Skips the download if a file of the expected naming
+        convention already exists at the download destination. More info:
+        https://esgf-node.llnl.gov/projects/cmip6/
+
+    :param root: The root data directory.
+    :type root: str
+    :param dataset: The dataset to download. Currently, only "cmip6" is
+        supported.
+    :type dataset: str
+    :param variable: The variable to download from the specified dataset.
+    :type variable: str
+    :param resolution: The desired data resolution in degrees. Default is
+        5.625.
+    :type resolution: str, optional
+    :param instituionID: TODO
+    :type institutionID: str, optional
+    :param sourceID: TODO
+    :type sourceID: str, optional
+    :param exprID: TODO
+    :type exprID: str, optional
+    """
     if dataset not in ["cmip6"]:
         raise Exception("Dataset not supported")
 
@@ -106,6 +161,23 @@ def _download_esgf(
 
 
 def _download_weatherbench(root, dataset, variable, resolution="1.40625"):
+    """Downloads data from WeatherBench.
+        Data is stored at `root/dataset/resolution/variable/` as NetCDF4
+        (`.nc`) files. Skips the download if a file of the expected naming
+        convention already exists at the download destination. More info:
+        https://mediatum.ub.tum.de/1524895
+
+    :param root: The root data directory
+    :type root: str
+    :param dataset: The dataset to download. Currently, "era5" and "cmip6" are
+        supported.
+    :type dataset: str
+    :param variable: The variable to download from the specified dataset.
+    :type variable: str
+    :param resolution:  The desired data resolution in degrees. Can be
+        "1.40625", "2.8125", and "5.625". Default is "1.40625".
+    :type resolution: str, optional
+    """
     if dataset not in ["era5", "cmip6"]:
         raise Exception("Dataset not supported")
 
@@ -153,6 +225,18 @@ def _download_weatherbench(root, dataset, variable, resolution="1.40625"):
 
 
 def download(source, **kwargs):
+    r"""Download interface.
+
+    :param source: The data source to download from: "copernicus",
+        "weatherbench", or "esgf".
+    :param type: str
+    :param \**kwargs: arguments to pass to the source-specific download
+        function: :py:func:`_download_copernicus`,
+        :py:func:`_download_weatherbench`, :py:func:`_download_esgf`
+    """
+
+    # TODO: this was appropriate for the Colab tutorial, but should we
+    # keep it for future releases?
     if "root" not in kwargs or kwargs["root"] is None:
         kwargs["root"] = ".climate_tutorial"
 

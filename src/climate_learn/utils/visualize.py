@@ -1,8 +1,11 @@
+# Standard library
+from datetime import datetime
 import os
 import random
-import numpy as np
+
+# Third party
 import matplotlib.pyplot as plt
-from datetime import datetime
+import numpy as np
 import torch
 from tqdm import tqdm
 

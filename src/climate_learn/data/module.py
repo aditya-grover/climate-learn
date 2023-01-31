@@ -1,12 +1,24 @@
+# Local application
+from .modules import *
+from ..utils.datetime import Year, Hours
+
+# Third party
 import torch
 from torch.utils.data import DataLoader
 from pytorch_lightning import LightningDataModule
 
-from .modules import *
-from ..utils.datetime import Year, Hours
+# TODO: include exceptions in docstrings
+# TODO: document legal input/output variables for each dataset
 
 
 def collate_fn(batch):
+    r"""Collate function for DataLoaders.
+
+    :param batch: A batch of data samples.
+    :type batch: List[Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]]
+    :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
+    :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
+    """
     inp = torch.stack([batch[i][0] for i in range(len(batch))])
     out = torch.stack([batch[i][1] for i in range(len(batch))])
     variables = batch[0][2]
@@ -15,6 +27,9 @@ def collate_fn(batch):
 
 
 class DataModule(LightningDataModule):
+    """ClimateLearn's data module interface. Encapsulates dataset/task-specific
+    data modules."""
+
     def __init__(
         self,
         dataset,
@@ -26,7 +41,7 @@ class DataModule(LightningDataModule):
         val_start_year,
         test_start_year,
         end_year=Year(2018),
-        root_highres_dir=None,
+        aux_dirs=[],
         history: int = 1,
         window: int = 6,
         pred_range=Hours(6),
@@ -35,6 +50,45 @@ class DataModule(LightningDataModule):
         num_workers=0,
         pin_memory=False,
     ):
+        r"""
+        .. highlight:: python
+
+        :param dataset: The name of the dataset to use. Currently supported
+            options are: "ERA5".
+        :type dataset: str
+        :param task: The name of the task to use. Currently supported options
+            are: "forecasting", "downscaling".
+        :type task: str
+        :param root_dir: The name of the local directory containing the
+            specified dataset.
+        :type root_dir: str
+        :param in_vars: A list of input variables to use.
+        :type in_vars: List[str]
+        :param out_vars: A list of output variables to use.
+        :type out_vars: List[str]
+        :param train_start_year: The first year of the training set, inclusive.
+        :type train_start_year: Year
+        :param val_start_year: The first year of the validation set, inclusive.
+            :python:`val_start_year` must be at least
+            :python:`train_start_year+1` since the training set ends the year
+            before :python:`val_start_year`. E.g., if
+            :python:`train_start_year` is 1970, then
+            :python:`val_start_year` must be 1971 or later.
+        :type val_start_year: Year
+        :param test_start_year: The first year of the testing set, inclusive.
+            :python:`test_start_year` must be at least
+            :python:`val_start_year+1` since the validation set ends the year
+            before :python:`test_start_year`. E.g., if
+            :python:`val_start_year` is 2015, then
+            :python:`test_start_year` must be 2016 or later.
+        :type test_start_year: Year
+        :param end_year: The last year of the testing set, inclusive.
+            Default is :python:`Year(2018)`.
+        :type end_year: Year, optional
+        :param aux_dirs: The names of auxilliary dataset directories, which
+            need to be provided for some tasks. Default is the empty list.
+        :type aux_dirs: List[str], optional
+        """
         super().__init__()
 
         assert (
