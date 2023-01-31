@@ -267,36 +267,32 @@ class ForecastLitModule(LightningModule):
 
         # rmse for linear regression baseline
         # check if fit_lin_reg_baseline is called by checking whether self.lr_baseline is initialized
-        try:
+        if self.lr_baseline:
             lr_pred = self.lr_baseline.predict(
                 x.cpu().reshape((x.shape[0], -1))
             ).reshape(y.shape)
-        except AttributeError as e:
-            raise NotImplementedError(
-                "Expect climate_learn.models.fit_lin_reg_baseline be implemented before test steps."
-            ) from None
 
-        lr_pred = lr_pred[:, np.newaxis, :, :, :]  # B, 1, C, H, W
-        lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
-        baseline_rmse = lat_weighted_rmse(
-            lr_pred,
-            y,
-            out_variables,
-            transform_pred=True,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
-        )
-        for var in baseline_rmse.keys():
-            self.log(
-                "test_ridge_regression_baseline/" + var,
-                baseline_rmse[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
+            lr_pred = lr_pred[:, np.newaxis, :, :, :]  # B, 1, C, H, W
+            lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
+            baseline_rmse = lat_weighted_rmse(
+                lr_pred,
+                y,
+                out_variables,
+                transform_pred=True,
+                transform=self.denormalization,
+                lat=self.lat,
+                log_steps=steps,
+                log_days=days,
             )
+            for var in baseline_rmse.keys():
+                self.log(
+                    "test_ridge_regression_baseline/" + var,
+                    baseline_rmse[var],
+                    on_step=False,
+                    on_epoch=True,
+                    sync_dist=True,
+                    batch_size=len(x),
+                )
 
         # transform y into one-hot format for categorical
         # following the implemention on https://github.com/sagar-garg/WeatherBench/blob/f41f497ac45377d363dc30bfa77daf50d7b28afd/src/data_generator.py#L335
