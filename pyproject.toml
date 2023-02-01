@@ -36,6 +36,7 @@ dependencies = [
     "scikit-learn",
     "timm",
     "wandb",
+    "xarray",
 ]
 # TODO: update code to use `lightning` intsead of `pytorch-lightning` since
 # pip install pytorch-lightning has been deprecated and will stop being updated June 2023
