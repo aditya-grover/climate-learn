@@ -414,7 +414,6 @@ def categorical_loss(
     log_day=None,
     clim=None,
 ):
-
     loss = torch.nn.CrossEntropyLoss(reduction="none")
     # get the labels [128, 1, 32, 64]
     _, labels = y.max(dim=1)  # y.shape = pred.shape = [128, 50, 1, 32, 64]

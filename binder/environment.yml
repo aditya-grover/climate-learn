@@ -2,7 +2,6 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10
-  - xesmf=0.7.0
   - pip=22.3.1
   - pip:
     - -e ..

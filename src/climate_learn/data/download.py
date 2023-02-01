@@ -4,7 +4,6 @@ import os
 import subprocess
 
 # Local application
-from .regrid import *
 from .constants import NAME_TO_CMIP
 
 # Third party
@@ -91,7 +90,6 @@ def _download_esgf(
     root,
     dataset,
     variable,
-    resolution="5.625",
     institutionID="MPI-M",
     sourceID="MPI-ESM1-2-HR",
     exprID="historical",
@@ -109,9 +107,6 @@ def _download_esgf(
     :type dataset: str
     :param variable: The variable to download from the specified dataset.
     :type variable: str
-    :param resolution: The desired data resolution in degrees. Default is
-        5.625.
-    :type resolution: str, optional
     :param instituionID: TODO
     :type institutionID: str, optional
     :param sourceID: TODO
@@ -150,14 +145,6 @@ def _download_esgf(
                 exprID=exprID,
             )
             subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
-
-    regrider(
-        root=root,
-        source="esgf",
-        variable=variable,
-        dataset=dataset,
-        resolution=resolution,
-    )
 
 
 def _download_weatherbench(root, dataset, variable, resolution="1.40625"):
