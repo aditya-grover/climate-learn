@@ -40,8 +40,9 @@ class Linear(nn.Module):
 
     def rollout(
         self,
-        x,
-        y,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        clim,
         variables,
         out_variables,
         steps,
@@ -50,6 +51,9 @@ class Linear(nn.Module):
         lat,
         log_steps,
         log_days,
+        mean_transform,
+        std_transform,
+        log_day,
     ):
         # transform: get back to the original range
         if steps > 1:

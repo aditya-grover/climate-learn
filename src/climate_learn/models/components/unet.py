@@ -36,6 +36,7 @@ class Unet(nn.Module):
         n_samples: int = 50,  # only used for mcdropout
     ) -> None:
         super().__init__()
+        self.prob_type = None
         self.in_channels = in_channels
         if out_channels is None:
             out_channels = in_channels
@@ -102,7 +103,7 @@ class Unet(nn.Module):
             activation=activation,
             norm=norm,
             dropout=dropout,
-            mc_dropout=mc_dropout,
+            mc_dropout=(self.prob_type == "mcdropout"),
         )
 
         # #### Second half of U-Net - increasing resolution
@@ -305,6 +306,12 @@ class Unet(nn.Module):
                 ],
                 x,
             )
+
+    def val_rollout(self, *args, **kwargs):
+        return self.rollout(*args, **kwargs)
+
+    def test_rollout(self, *args, **kwargs):
+        return self.rollout(*args, **kwargs)
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
