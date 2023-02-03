@@ -89,7 +89,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                             
                     clim_yearly = np_vars[f"{var}_{level}"].mean(axis=0)
                     if f"{var}_{level}" not in climatology:
-                        climatology[f"{var}_{level}"] = clim_yearly
+                        climatology[f"{var}_{level}"] = [clim_yearly]
                     else:
                         climatology[f"{var}_{level}"].append(clim_yearly)
 
@@ -159,7 +159,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
     ],
 )
 @click.option("--start_train_year", type=int, default=1979)
-@click.option("--start_val_year", type=int, default=2015)
+@click.option("--start_val_year", type=int, default=2016)
 @click.option("--start_test_year", type=int, default=2017)
 @click.option("--end_year", type=int, default=2019)
 @click.option("--num_shards", type=int, default=16)
