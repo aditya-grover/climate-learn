@@ -8,6 +8,13 @@ from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import mse, rmse, pearson, mean_bias
 
 
+def interpolate_input(x: torch.Tensor, y: torch.Tensor):
+    # interpolate input to match output size
+    out_h, out_w = y.shape[-2], y.shape[-1]
+    x = torch.nn.functional.interpolate(x, (out_h, out_w), mode="bilinear")
+    return x
+
+
 class DownscaleLitModule(LightningModule):
     def __init__(
         self,
@@ -54,6 +61,8 @@ class DownscaleLitModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
+        x = interpolate_input(x, y)
+
         loss_dict, _ = self.net.forward(x, y, out_variables, [mse], lat=self.lat)
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
@@ -69,6 +78,7 @@ class DownscaleLitModule(LightningModule):
 
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
+        x = interpolate_input(x, y)
 
         all_loss_dicts, _ = self.net.upsample(
             x, y, out_variables, self.denormalization, [rmse, pearson, mean_bias]
@@ -92,6 +102,7 @@ class DownscaleLitModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
+        x = interpolate_input(x, y)
 
         all_loss_dicts, _ = self.net.upsample(
             x, y, out_variables, self.denormalization, [rmse, pearson, mean_bias]

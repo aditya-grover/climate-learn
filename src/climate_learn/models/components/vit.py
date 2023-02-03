@@ -30,7 +30,6 @@ class VisionTransformer(nn.Module):
             "10m_v_component_of_wind",
         ],
         out_vars=["2m_temperature"],
-        upsampling=1,
         embed_dim=1024,
         depth=24,
         decoder_depth=8,
@@ -40,8 +39,6 @@ class VisionTransformer(nn.Module):
         super().__init__()
 
         self.img_size = img_size
-        self.upsampling = upsampling
-        self.img_out_size = [img_size[0] * upsampling, img_size[1] * upsampling]
         self.n_channels = len(in_vars)
         self.patch_size = patch_size
 
@@ -86,9 +83,6 @@ class VisionTransformer(nn.Module):
         for i in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
             self.head.append(nn.GELU())
-        self.head.append(
-            nn.Linear(embed_dim, len(self.out_vars) * patch_size**2 * upsampling**2)
-        )
         self.head = nn.Sequential(*self.head)
         # --------------------------------------------------------------------------
 
@@ -142,10 +136,10 @@ class VisionTransformer(nn.Module):
         x: (N, L, patch_size**2 *3)
         imgs: (N, 3, H, W)
         """
-        p = self.patch_size * self.upsampling
+        p = self.patch_size
         c = len(self.out_vars)
-        h = self.img_out_size[0] // p
-        w = self.img_out_size[1] // p
+        h = self.img_size[0] // p
+        w = self.img_size[1] // p
         assert h * w == x.shape[1]
 
         x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
