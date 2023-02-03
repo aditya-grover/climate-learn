@@ -30,8 +30,8 @@ class NpyReader(IterableDataset):
     ) -> None:
         super().__init__()
         assert len(inp_file_list) == len(out_file_list)
-        self.inp_file_list = inp_file_list
-        self.out_file_list = out_file_list
+        self.inp_file_list = [f for f in inp_file_list if 'climatology' not in f]
+        self.out_file_list = [f for f in out_file_list if 'climatology' not in f]
         self.variables = variables
         self.out_variables = out_variables if out_variables is not None else variables
         self.shuffle = shuffle
