@@ -39,6 +39,8 @@ class VisionTransformer(nn.Module):
     ):
         super().__init__()
 
+        self.prob_type = None
+
         self.img_size = img_size
         self.upsampling = upsampling
         self.img_out_size = [img_size[0] * upsampling, img_size[1] * upsampling]
@@ -182,12 +184,16 @@ class VisionTransformer(nn.Module):
         return ([m(pred, y, out_variables, lat=lat) for m in metric], pred)
 
     def forward(self, x, y, out_variables, metric, lat):
+        if len(x.shape) == 5:  # history
+            x = x.flatten(1, 2)
         embeddings = self.forward_encoder(x)  # B, L, D
         preds = self.head(embeddings)
         loss, preds = self.forward_loss(y, preds, out_variables, metric, lat)
         return loss, preds
 
     def predict(self, x):
+        if len(x.shape) == 5:  # history
+            x = x.flatten(1, 2)
         with torch.no_grad():
             embeddings = self.forward_encoder(x)
             pred = self.head(embeddings)
@@ -195,8 +201,8 @@ class VisionTransformer(nn.Module):
 
     def rollout(
         self,
-        x,
-        y,
+        x: torch.Tensor,
+        y: torch.Tensor,
         clim,
         variables,
         out_variables,
@@ -206,6 +212,9 @@ class VisionTransformer(nn.Module):
         lat,
         log_steps,
         log_days,
+        mean_transform,
+        std_transform,
+        log_day,
     ):
         preds = []
         for _ in range(steps):
@@ -231,6 +240,12 @@ class VisionTransformer(nn.Module):
             ],
             x,
         )
+
+    def val_rollout(self, *args, **kwargs):
+        return self.rollout(*args, **kwargs)
+
+    def test_rollout(self, *args, **kwargs):
+        return self.rollout(*args, **kwargs)
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
