@@ -26,7 +26,7 @@ NAME_TO_VAR = {
     "specific_humidity": "q",
     "vorticity": "vo",
     "potential_vorticity": "pv",
-    "total_cloud_cover": "tcc"
+    "total_cloud_cover": "tcc",
 }
 
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}

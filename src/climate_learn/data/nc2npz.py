@@ -8,7 +8,12 @@ import netCDF4 as nc
 from tqdm import tqdm
 
 # from .constants import DEFAULT_PRESSURE_LEVELS, NAME_TO_VAR, VAR_TO_NAME, CONSTANTS
-from src.climate_learn.data.constants import DEFAULT_PRESSURE_LEVELS, NAME_TO_VAR, VAR_TO_NAME, CONSTANTS
+from src.climate_learn.data.constants import (
+    DEFAULT_PRESSURE_LEVELS,
+    NAME_TO_VAR,
+    VAR_TO_NAME,
+    CONSTANTS,
+)
 
 HOURS_PER_YEAR = 8736  # 8760 --> 8736 which is dividable by 16
 
@@ -20,15 +25,17 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
         normalize_mean = {}
         normalize_std = {}
     climatology = {}
-    
-    constants = xr.open_mfdataset(os.path.join(path, "constants.nc"), combine="by_coords", parallel=True)
+
+    constants = xr.open_mfdataset(
+        os.path.join(path, "constants.nc"), combine="by_coords", parallel=True
+    )
     # constant_fields = ["land_sea_mask", "orography", "lattitude"]
     constant_fields = [VAR_TO_NAME[v] for v in CONSTANTS if v in VAR_TO_NAME.keys()]
     constant_values = {}
     for f in constant_fields:
-        constant_values[f] = np.expand_dims(constants[NAME_TO_VAR[f]].to_numpy(), axis=(0, 1)).repeat(
-            HOURS_PER_YEAR, axis=0
-        )
+        constant_values[f] = np.expand_dims(
+            constants[NAME_TO_VAR[f]].to_numpy(), axis=(0, 1)
+        ).repeat(HOURS_PER_YEAR, axis=0)
         if partition == "train":
             normalize_mean[f] = constant_values[f].mean(axis=(0, 2, 3))
             normalize_std[f] = constant_values[f].std(axis=(0, 2, 3))
@@ -43,7 +50,9 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
         # non-constant fields
         for var in variables:
             ps = glob.glob(os.path.join(path, var, f"*{year}*.nc"))
-            ds = xr.open_mfdataset(ps, combine="by_coords", parallel=True)  # dataset for a single variable
+            ds = xr.open_mfdataset(
+                ps, combine="by_coords", parallel=True
+            )  # dataset for a single variable
             code = NAME_TO_VAR[var]
 
             if len(ds[code].shape) == 3:  # surface level variables
@@ -51,7 +60,9 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                 # remove the last 24 hours if this year has 366 days
                 np_vars[var] = ds[code].to_numpy()[-HOURS_PER_YEAR:]
 
-                if partition == "train":  # compute mean and std of each var in each year
+                if (
+                    partition == "train"
+                ):  # compute mean and std of each var in each year
                     var_mean_yearly = np_vars[var].mean(axis=(0, 2, 3))
                     var_std_yearly = np_vars[var].std(axis=(0, 2, 3))
                     if var not in normalize_mean:
@@ -60,7 +71,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                     else:
                         normalize_mean[var].append(var_mean_yearly)
                         normalize_std[var].append(var_std_yearly)
-                
+
                 clim_yearly = np_vars[var].mean(axis=0)
                 if var not in climatology:
                     climatology[var] = [clim_yearly]
@@ -75,9 +86,13 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                     ds_level = ds.sel(level=[level])
                     level = int(level)
                     # remove the last 24 hours if this year has 366 days
-                    np_vars[f"{var}_{level}"] = ds_level[code].to_numpy()[-HOURS_PER_YEAR:]
+                    np_vars[f"{var}_{level}"] = ds_level[code].to_numpy()[
+                        -HOURS_PER_YEAR:
+                    ]
 
-                    if partition == "train":  # compute mean and std of each var in each year
+                    if (
+                        partition == "train"
+                    ):  # compute mean and std of each var in each year
                         var_mean_yearly = np_vars[f"{var}_{level}"].mean(axis=(0, 2, 3))
                         var_std_yearly = np_vars[f"{var}_{level}"].std(axis=(0, 2, 3))
                         if f"{var}_{level}" not in normalize_mean:
@@ -86,7 +101,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                         else:
                             normalize_mean[f"{var}_{level}"].append(var_mean_yearly)
                             normalize_std[f"{var}_{level}"].append(var_std_yearly)
-                            
+
                     clim_yearly = np_vars[f"{var}_{level}"].mean(axis=0)
                     if f"{var}_{level}" not in climatology:
                         climatology[f"{var}_{level}"] = [clim_yearly]
@@ -114,7 +129,11 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
             if var not in constant_fields:
                 mean, std = normalize_mean[var], normalize_std[var]
                 # var(X) = E[var(X|Y)] + var(E[X|Y])
-                variance = (std**2).mean(axis=0) + (mean**2).mean(axis=0) - mean.mean(axis=0) ** 2
+                variance = (
+                    (std**2).mean(axis=0)
+                    + (mean**2).mean(axis=0)
+                    - mean.mean(axis=0) ** 2
+                )
                 std = np.sqrt(variance)
                 # E[X] = E[E[X|Y]]
                 mean = mean.mean(axis=0)
@@ -123,7 +142,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
 
         np.savez(os.path.join(save_dir, "normalize_mean.npz"), **normalize_mean)
         np.savez(os.path.join(save_dir, "normalize_std.npz"), **normalize_std)
-    
+
     for var in climatology.keys():
         climatology[var] = np.stack(climatology[var], axis=0)
     climatology = {k: np.mean(v, axis=0) for k, v in climatology.items()}
@@ -155,7 +174,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
         "relative_humidity",
         "specific_humidity",
         "vorticity",
-        "potential_vorticity"
+        "potential_vorticity",
     ],
 )
 @click.option("--start_train_year", type=int, default=1979)
@@ -173,7 +192,11 @@ def main(
     end_year,
     num_shards,
 ):
-    assert start_val_year > start_train_year and start_test_year > start_val_year and end_year > start_test_year
+    assert (
+        start_val_year > start_train_year
+        and start_test_year > start_val_year
+        and end_year > start_test_year
+    )
     train_years = range(start_train_year, start_val_year)
     val_years = range(start_val_year, start_test_year)
     test_years = range(start_test_year, end_year)
@@ -183,14 +206,14 @@ def main(
     nc2np(root_dir, variables, train_years, save_dir, "train", num_shards)
     nc2np(root_dir, variables, val_years, save_dir, "val", num_shards)
     nc2np(root_dir, variables, test_years, save_dir, "test", num_shards)
-    
+
     # save lat and lon data
     ps = glob.glob(os.path.join(root_dir, variables[0], f"*{train_years[0]}*.nc"))
     x = nc.Dataset(ps[0])
-    lat = np.array(x['lat'])
-    lon = np.array(x['lon'])
-    np.save(os.path.join(save_dir, 'lat.npy'), lat)
-    np.save(os.path.join(save_dir, 'lon.npy'), lon)
+    lat = np.array(x["lat"])
+    lon = np.array(x["lon"])
+    np.save(os.path.join(save_dir, "lat.npy"), lat)
+    np.save(os.path.join(save_dir, "lon.npy"), lon)
 
 
 if __name__ == "__main__":

@@ -53,42 +53,54 @@ class IterDataModule(LightningDataModule):
         :type out_vars: List[str]
         """
         super().__init__()
-        
+
         self.save_hyperparameters(logger=False)
-        
-        if task == 'forecasting':
+
+        if task == "forecasting":
             assert inp_root_dir == out_root_dir
             self.dataset_caller = Forecast
             self.dataset_arg = {
                 "pred_range": pred_range.hours(),
                 "history": history,
-                "window": window
+                "window": window,
             }
-        else: # downscaling
+        else:  # downscaling
             self.dataset_caller = Downscale
             self.dataset_arg = {}
-        
-        self.inp_lister_train = list(dp.iter.FileLister(os.path.join(inp_root_dir, "train")))
-        self.out_lister_train = list(dp.iter.FileLister(os.path.join(out_root_dir, "train")))
-        
-        self.inp_lister_val = list(dp.iter.FileLister(os.path.join(inp_root_dir, "val")))
-        self.out_lister_val = list(dp.iter.FileLister(os.path.join(out_root_dir, "val")))
-        
-        self.inp_lister_test = list(dp.iter.FileLister(os.path.join(inp_root_dir, "test")))
-        self.out_lister_test = list(dp.iter.FileLister(os.path.join(out_root_dir, "test")))
-        
+
+        self.inp_lister_train = list(
+            dp.iter.FileLister(os.path.join(inp_root_dir, "train"))
+        )
+        self.out_lister_train = list(
+            dp.iter.FileLister(os.path.join(out_root_dir, "train"))
+        )
+
+        self.inp_lister_val = list(
+            dp.iter.FileLister(os.path.join(inp_root_dir, "val"))
+        )
+        self.out_lister_val = list(
+            dp.iter.FileLister(os.path.join(out_root_dir, "val"))
+        )
+
+        self.inp_lister_test = list(
+            dp.iter.FileLister(os.path.join(inp_root_dir, "test"))
+        )
+        self.out_lister_test = list(
+            dp.iter.FileLister(os.path.join(out_root_dir, "test"))
+        )
+
         self.transforms = self.get_normalize(inp_root_dir, in_vars)
         self.output_transforms = self.get_normalize(out_root_dir, out_vars)
-        
+
         self.data_train: Optional[IterableDataset] = None
         self.data_val: Optional[IterableDataset] = None
         self.data_test: Optional[IterableDataset] = None
-        
+
     def get_lat_lon(self):
         lat = np.load(os.path.join(self.hparams.out_root_dir, "lat.npy"))
         lon = np.load(os.path.join(self.hparams.out_root_dir, "lon.npy"))
         return lat, lon
-    
+
     def get_normalize(self, root_dir, variables):
         normalize_mean = dict(np.load(os.path.join(root_dir, "normalize_mean.npz")))
         mean = []
@@ -99,21 +111,19 @@ class IterDataModule(LightningDataModule):
                 mean.append(np.array([0.0]))
         normalize_mean = np.concatenate(mean)
         normalize_std = dict(np.load(os.path.join(root_dir, "normalize_std.npz")))
-        normalize_std = np.concatenate(
-            [normalize_std[var] for var in variables]
-        )
+        normalize_std = np.concatenate([normalize_std[var] for var in variables])
         return transforms.Normalize(normalize_mean, normalize_std)
 
     def get_out_transforms(self):
         return self.output_transforms
 
-    def get_climatology(self, split='val'):
-        path = os.path.join(self.hparams.out_root_dir, split, 'climatology.npz')
+    def get_climatology(self, split="val"):
+        path = os.path.join(self.hparams.out_root_dir, split, "climatology.npz")
         clim_dict = np.load(path)
         clim = np.concatenate([clim_dict[var] for var in self.hparams.out_vars])
         clim = torch.from_numpy(clim)
         return clim
-    
+
     def setup(self, stage: Optional[str] = None):
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
@@ -127,7 +137,7 @@ class IterDataModule(LightningDataModule):
                             out_variables=self.hparams.out_vars,
                             shuffle=True,
                         ),
-                        **self.dataset_arg
+                        **self.dataset_arg,
                     ),
                     transforms=self.transforms,
                     output_transforms=self.output_transforms,
@@ -144,7 +154,7 @@ class IterDataModule(LightningDataModule):
                         out_variables=self.hparams.out_vars,
                         shuffle=False,
                     ),
-                    **self.dataset_arg
+                    **self.dataset_arg,
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
@@ -159,12 +169,12 @@ class IterDataModule(LightningDataModule):
                         out_variables=self.hparams.out_vars,
                         shuffle=False,
                     ),
-                    **self.dataset_arg
+                    **self.dataset_arg,
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
             )
-    
+
     def train_dataloader(self):
         return DataLoader(
             self.data_train,

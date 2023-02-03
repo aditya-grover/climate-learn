@@ -20,7 +20,14 @@ def shuffle_two_list(list1, list2):
 
 
 class NpyReader(IterableDataset):
-    def __init__(self, inp_file_list, out_file_list, variables, out_variables, shuffle: bool = False) -> None:
+    def __init__(
+        self,
+        inp_file_list,
+        out_file_list,
+        variables,
+        out_variables,
+        shuffle: bool = False,
+    ) -> None:
         super().__init__()
         assert len(inp_file_list) == len(out_file_list)
         self.inp_file_list = inp_file_list
@@ -31,10 +38,12 @@ class NpyReader(IterableDataset):
 
     def __iter__(self):
         if self.shuffle:
-            self.inp_file_list, self.out_file_list = shuffle_two_list(self.inp_file_list, self.out_file_list)
-            
+            self.inp_file_list, self.out_file_list = shuffle_two_list(
+                self.inp_file_list, self.out_file_list
+            )
+
         n_files = len(self.inp_file_list)
-            
+
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
             iter_start = 0
@@ -58,11 +67,15 @@ class NpyReader(IterableDataset):
             path_out = self.out_file_list[idx]
             inp = np.load(path_inp)
             out = np.load(path_out)
-            yield {k: inp[k] for k in self.variables}, {k: out[k] for k in self.out_variables}, self.variables, self.out_variables
-            
+            yield {k: inp[k] for k in self.variables}, {
+                k: out[k] for k in self.out_variables
+            }, self.variables, self.out_variables
+
 
 class Forecast(IterableDataset):
-    def __init__(self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6) -> None:
+    def __init__(
+        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6
+    ) -> None:
         super().__init__()
         self.dataset = dataset
         self.pred_range = pred_range
@@ -71,9 +84,13 @@ class Forecast(IterableDataset):
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
-            x = np.concatenate([inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1)
+            x = np.concatenate(
+                [inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1
+            )
             x = torch.from_numpy(x)
-            y = np.concatenate([out_data[k].astype(np.float32) for k in out_data.keys()], axis=1)
+            y = np.concatenate(
+                [out_data[k].astype(np.float32) for k in out_data.keys()], axis=1
+            )
             y = torch.from_numpy(y)
 
             inputs = x.unsqueeze(0).repeat_interleave(self.history, dim=0)
@@ -84,12 +101,18 @@ class Forecast(IterableDataset):
 
             inputs = inputs[:, :last_idx].transpose(0, 1)  # N, T, C, H, W
 
-            predict_ranges = torch.ones(inputs.shape[0]).to(torch.long) * self.pred_range
-            output_ids = torch.arange(inputs.shape[0]) + (self.history - 1) * self.window + predict_ranges
+            predict_ranges = (
+                torch.ones(inputs.shape[0]).to(torch.long) * self.pred_range
+            )
+            output_ids = (
+                torch.arange(inputs.shape[0])
+                + (self.history - 1) * self.window
+                + predict_ranges
+            )
             outputs = y[output_ids]
 
             yield inputs, outputs, variables, out_variables
-            
+
 
 class Downscale(IterableDataset):
     def __init__(self, dataset: NpyReader) -> None:
@@ -98,16 +121,25 @@ class Downscale(IterableDataset):
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
-            x = np.concatenate([inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1)
+            x = np.concatenate(
+                [inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1
+            )
             x = torch.from_numpy(x)
-            y = np.concatenate([out_data[k].astype(np.float32) for k in out_data.keys()], axis=1)
+            y = np.concatenate(
+                [out_data[k].astype(np.float32) for k in out_data.keys()], axis=1
+            )
             y = torch.from_numpy(y)
 
             yield x, y, variables, out_variables
-            
+
 
 class IndividualDataIter(IterableDataset):
-    def __init__(self, dataset: Union[Forecast, Downscale], transforms: torch.nn.Module, output_transforms: torch.nn.Module):
+    def __init__(
+        self,
+        dataset: Union[Forecast, Downscale],
+        transforms: torch.nn.Module,
+        output_transforms: torch.nn.Module,
+    ):
         super().__init__()
         self.dataset = dataset
         self.transforms = transforms
@@ -118,7 +150,9 @@ class IndividualDataIter(IterableDataset):
             assert inp.shape[0] == out.shape[0]
             for i in range(inp.shape[0]):
                 if self.transforms is not None:
-                    yield self.transforms(inp[i]), self.output_transforms(out[i]), variables, out_variables
+                    yield self.transforms(inp[i]), self.output_transforms(
+                        out[i]
+                    ), variables, out_variables
                 else:
                     yield inp[i], out[i], variables, out_variables
 
