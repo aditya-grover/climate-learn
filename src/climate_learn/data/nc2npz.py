@@ -177,7 +177,7 @@ def convert_nc2npz(
 
     # save lat and lon data
     ps = glob.glob(os.path.join(root_dir, variables[0], f"*{train_years[0]}*.nc"))
-    x = nc.Dataset(ps[0])
+    x = xr.open_mfdataset(ps[0], parallel=True)
     lat = np.array(x["lat"])
     lon = np.array(x["lon"])
     np.save(os.path.join(save_dir, "lat.npy"), lat)
