@@ -1,3 +1,7 @@
+# Standard library
+import glob
+from typing import Optional
+
 # Local application
 from .modules import *
 from ..utils.datetime import Hours
@@ -7,9 +11,7 @@ from .module import collate_fn
 import torch
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
-import torchdata.datapipes as dp
 from pytorch_lightning import LightningDataModule
-from typing import Optional
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
@@ -68,26 +70,12 @@ class IterDataModule(LightningDataModule):
             self.dataset_caller = Downscale
             self.dataset_arg = {}
 
-        self.inp_lister_train = list(
-            dp.iter.FileLister(os.path.join(inp_root_dir, "train"))
-        )
-        self.out_lister_train = list(
-            dp.iter.FileLister(os.path.join(out_root_dir, "train"))
-        )
-
-        self.inp_lister_val = list(
-            dp.iter.FileLister(os.path.join(inp_root_dir, "val"))
-        )
-        self.out_lister_val = list(
-            dp.iter.FileLister(os.path.join(out_root_dir, "val"))
-        )
-
-        self.inp_lister_test = list(
-            dp.iter.FileLister(os.path.join(inp_root_dir, "test"))
-        )
-        self.out_lister_test = list(
-            dp.iter.FileLister(os.path.join(out_root_dir, "test"))
-        )
+        self.inp_lister_train = glob.glob(os.path.join(inp_root_dir, "train"))
+        self.out_lister_train = glob.glob(os.path.join(out_root_dir, "train"))
+        self.inp_lister_val = glob.glob(os.path.join(inp_root_dir, "val"))
+        self.out_lister_val = glob.glob(os.path.join(out_root_dir, "val"))
+        self.inp_lister_test = glob.glob(os.path.join(inp_root_dir, "test"))
+        self.out_lister_test = glob.glob(os.path.join(out_root_dir, "test"))
 
         self.transforms = self.get_normalize(inp_root_dir, in_vars)
         self.output_transforms = self.get_normalize(out_root_dir, out_vars)

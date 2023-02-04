@@ -1,6 +1,8 @@
+# Standard library
 import glob
 import os
 
+# Third party
 import click
 import numpy as np
 import xarray as xr

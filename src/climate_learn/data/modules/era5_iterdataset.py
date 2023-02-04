@@ -1,11 +1,13 @@
+# Standard library
 import math
 import os
 import random
+from typing import Union
 
+# Third party
 import numpy as np
 import torch
 from torch.utils.data import IterableDataset
-from typing import Union
 
 
 def shuffle_two_list(list1, list2):
