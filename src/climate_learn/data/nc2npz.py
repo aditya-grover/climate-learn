@@ -3,12 +3,7 @@ import glob
 import os
 
 # Local application
-from .constants import (
-    DEFAULT_PRESSURE_LEVELS,
-    NAME_TO_VAR,
-    VAR_TO_NAME,
-    CONSTANTS
-)
+from .constants import DEFAULT_PRESSURE_LEVELS, NAME_TO_VAR, VAR_TO_NAME, CONSTANTS
 
 # Third party
 import numpy as np
@@ -65,7 +60,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                 # remove the last 24 hours if this year has 366 days
                 np_vars[var] = ds[code].to_numpy()[-HOURS_PER_YEAR:]
 
-                if (partition == "train"):
+                if partition == "train":
                     # compute mean and std of each var in each year
                     var_mean_yearly = np_vars[var].mean(axis=(0, 2, 3))
                     var_std_yearly = np_vars[var].std(axis=(0, 2, 3))
@@ -94,7 +89,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                         -HOURS_PER_YEAR:
                     ]
 
-                    if (partition == "train"):
+                    if partition == "train":
                         # compute mean and std of each var in each year
                         var_mean_yearly = np_vars[f"{var}_{level}"].mean(axis=(0, 2, 3))
                         var_std_yearly = np_vars[f"{var}_{level}"].std(axis=(0, 2, 3))
@@ -153,6 +148,7 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
         os.path.join(save_dir, partition, "climatology.npz"),
         **climatology,
     )
+
 
 def convert_nc2npz(
     root_dir,
