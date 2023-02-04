@@ -1,6 +1,6 @@
 # Contributing to ClimateLearn
 
-Thank you for wanting to contribute to ClimateLearn. Let's build the future of AI-driven climate science together!
+Thank you for wanting to contribute to ClimateLearn. Let's build the future of data-driven climate science together!
 
 ## Issues
 
@@ -8,4 +8,4 @@ If you discover a bug, want to modify the documentation, or have an idea for a n
 
 ## Pull requests
 
-If you have resolved an issue or want to contribute new tests, please open a [pull request](https://github.com/aditya-grover/climate-learn/pulls). Code changes must be compliant with [Black](https://black.readthedocs.io/en/stable/) and be accompanied with instructions to check the effect(s) of the changes. After submitting your pull request, please wait for one or more of the ClimateLearn maintainers to review it.
+If you have resolved an issue or want to contribute new tests, please open a [pull request](https://github.com/aditya-grover/climate-learn/pulls). Code changes must be compliant with [Black](https://black.readthedocs.io/en/stable/) and be accompanied with instructions to check the effect(s) of the changes. After submitting your pull request, please wait for one or more of the ClimateLearn maintainers to review it. For maintainers, pull requests are squashed and merged.
