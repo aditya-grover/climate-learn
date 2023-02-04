@@ -24,6 +24,9 @@ NAME_TO_VAR = {
     "temperature": "t",
     "relative_humidity": "r",
     "specific_humidity": "q",
+    "vorticity": "vo",
+    "potential_vorticity": "pv",
+    "total_cloud_cover": "tcc",
 }
 
 VAR_TO_NAME = {v: k for k, v in NAME_TO_VAR.items()}
@@ -36,6 +39,7 @@ SINGLE_LEVEL_VARS = [
     "surface_pressure",
     "toa_incident_solar_radiation",
     "total_precipitation",
+    "total_cloud_cover",
     "land_sea_mask",
     "orography",
     "lattitude",
@@ -48,6 +52,8 @@ PRESSURE_LEVEL_VARS = [
     "temperature",
     "relative_humidity",
     "specific_humidity",
+    "vorticity",
+    "potential_vorticity",
 ]
 
 DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925]
