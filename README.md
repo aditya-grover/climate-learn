@@ -6,15 +6,12 @@
 
 **ClimateLearn** is a Python library for accessing state-of-the-art climate data and machine learning models in a standardized, straightforward way. This library provides access to multiple datasets, a zoo of baseline approaches, and a suite of metrics and visualizations for large-scale benchmarking of statistical downscaling and temporal forecasting methods. 
 
-## Getting Started
-
-### Quickstart
+## Quickstart
 Please refer to this [Google Colab](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa).
 
 For additional information, some key features of ClimateLearn were previewed at a spotlight tutorial in the "Tackling Climate Change with Machine Learning" Workshop at the Neural Information Processing Systems 2022 Conference. The slides and recorded talk can be found here: https://www.climatechange.ai/papers/neurips2022/114.
 
-### Documentation
-Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
+## Usage
 
 ### Local Installation
 
@@ -26,6 +23,9 @@ $ cd climate-learn
 $ pip install -e .
 ```
 
+### Documentation
+Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
+
 ### Integrations
 
 - [Weights & Biases](https://wandb.ai/site)
@@ -33,5 +33,8 @@ $ pip install -e .
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
 
+## Contributing
+See our [contributing guide](CONTRIBUTING.md).
+
 ## Citing ClimateLearn
-If you use ClimateLearn, please see the `CITATION.cff` file or use the citation prompt provided by GitHub in the sidebar.
+If you use ClimateLearn, please see the [`CITATION.cff`](CITATION.cff) file or use the citation prompt provided by GitHub in the sidebar.
