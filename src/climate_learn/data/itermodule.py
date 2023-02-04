@@ -70,12 +70,12 @@ class IterDataModule(LightningDataModule):
             self.dataset_caller = Downscale
             self.dataset_arg = {}
 
-        self.inp_lister_train = glob.glob(os.path.join(inp_root_dir, "train"))
-        self.out_lister_train = glob.glob(os.path.join(out_root_dir, "train"))
-        self.inp_lister_val = glob.glob(os.path.join(inp_root_dir, "val"))
-        self.out_lister_val = glob.glob(os.path.join(out_root_dir, "val"))
-        self.inp_lister_test = glob.glob(os.path.join(inp_root_dir, "test"))
-        self.out_lister_test = glob.glob(os.path.join(out_root_dir, "test"))
+        self.inp_lister_train = glob.glob(os.path.join(inp_root_dir, "train", "*.npz"))
+        self.out_lister_train = glob.glob(os.path.join(out_root_dir, "train", "*.npz"))
+        self.inp_lister_val = glob.glob(os.path.join(inp_root_dir, "val", "*.npz"))
+        self.out_lister_val = glob.glob(os.path.join(out_root_dir, "val", "*.npz"))
+        self.inp_lister_test = glob.glob(os.path.join(inp_root_dir, "test", "*.npz"))
+        self.out_lister_test = glob.glob(os.path.join(out_root_dir, "test", "*.npz"))
 
         self.transforms = self.get_normalize(inp_root_dir, in_vars)
         self.output_transforms = self.get_normalize(out_root_dir, out_vars)
