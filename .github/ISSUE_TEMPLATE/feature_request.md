@@ -1,5 +1,5 @@
 ---
-name: ":rocket: Feature request"
+name: "Feature request"
 about: Do you have suggestions for improving this project?
 title: ''
 labels: enhancement
