@@ -1,5 +1,5 @@
 ---
-name: ":pencil: Report a docs issue"
+name: "Report a docs issue"
 about: Is something wrong, confusing, or missing in the docs?
 title: ''
 labels: documentation
