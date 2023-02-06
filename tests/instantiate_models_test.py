@@ -1,7 +1,7 @@
 from climate_learn.models.components import *
 
-class TestModelInstantiation:
 
+class TestModelInstantiation:
     def test_vit(self):
         VisionTransformer()
 
