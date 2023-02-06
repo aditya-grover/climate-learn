@@ -1,7 +1,7 @@
 <h1 align="center">ClimateLearn</h1>
 
 [![Documentation Status](https://readthedocs.org/projects/climatelearn/badge/?version=latest)](https://climatelearn.readthedocs.io/en/latest/?badge=latest)
-![CI Status](https://github.com/aditya-grover/climate-learn/actions/workflows/ci.yml/badge.svg?branch=ci)
+[![CI Build Status](https://github.com/aditya-grover/climate-learn/actions/workflows/ci.yaml/badge.svg)](https://github.com/aditya-grover/climate-learn/actions/workflows/ci.yaml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa)
 
