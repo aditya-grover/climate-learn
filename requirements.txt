@@ -1,0 +1,15 @@
+# requirements.txt file needed for CI build
+# https://github.com/actions/setup-python/issues/529
+
+black
+cdsapi
+dask
+importlib-metadata==4.13.0
+pytorch-lightning 
+matplotlib
+netcdf4
+rich
+scikit-learn
+timm
+wandb
+xarray
