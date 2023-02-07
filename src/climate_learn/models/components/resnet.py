@@ -179,7 +179,7 @@ class ResNet(nn.Module):
                 pred = mean_transform(pred)
 
             # no normalization on y for categorical
-            if self.prob_type is not "categorical":
+            if self.prob_type != "categorical":
                 y = mean_transform(y)
 
             return (
@@ -285,7 +285,7 @@ class ResNet(nn.Module):
                 pred = mean_transform(pred)
 
             # no normalization on y for categorical
-            if self.prob_type is not "categorical":
+            if self.prob_type != "categorical":
                 y = mean_transform(y)
 
             return (
