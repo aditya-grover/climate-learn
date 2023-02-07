@@ -28,6 +28,7 @@ dependencies = [
     "black",
     "cdsapi",
     "dask",
+    "flake8",
     "importlib-metadata==4.13.0",
     "pytorch-lightning", 
     "matplotlib",
