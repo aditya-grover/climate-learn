@@ -82,18 +82,6 @@ class ForecastLitModule(LightningModule):
         std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
         self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
 
-        mean_mean_denorm, mean_std_denorm = -mean / std, 1 / std
-        self.mean_denormalize = transforms.Normalize(mean_mean_denorm, mean_std_denorm)
-
-        std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
-        self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
-
-        mean_mean_denorm, mean_std_denorm = -mean / std, 1 / std
-        self.mean_denormalize = transforms.Normalize(mean_mean_denorm, mean_std_denorm)
-
-        std_mean_denorm, std_std_denorm = np.zeros_like(std), 1 / std
-        self.std_denormalize = transforms.Normalize(std_mean_denorm, std_std_denorm)
-
     def set_lat_lon(self, lat, lon):
         self.lat = lat
         self.lon = lon
