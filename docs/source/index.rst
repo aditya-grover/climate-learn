@@ -21,6 +21,7 @@ ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by
 
 .. toctree::
    :caption: User Guide
+   :maxdepth: 2
 
    user-guide/getting_started
    user-guide/datasets
@@ -34,3 +35,10 @@ ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by
    :glob:
 
    reference/*
+
+.. toctree::
+   :caption: Development Guide
+   :maxdepth: 1
+
+   development-guide/for-developers
+   development-guide/for-maintainers
