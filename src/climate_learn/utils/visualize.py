@@ -60,8 +60,9 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
     for index, idx in enumerate(idxs):
         x, y, _, _ = dataset[idx]  # 1, 1, 32, 64
-        x = interpolate_input(x.unsqueeze(0), y)
-        pred = model_module.forward(x)  # 1, 1, 32, 64
+        print(x.shape, y.shape)
+        x = interpolate_input(x, y)
+        pred = model_module.forward(x.unsqueeze(0))  # 1, 1, 32, 64
 
         inv_normalize = model_module.denormalization
         init_condition, gt = inv_normalize(x), inv_normalize(y)
