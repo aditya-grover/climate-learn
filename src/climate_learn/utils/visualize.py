@@ -118,11 +118,11 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
         x, y, _, _ = batch  # B, 1, 32, 64
         x = x.to(model_module.device)
         y = y.to(model_module.device)
-        print(x.shape, y.shape)
+        # print(x.shape, y.shape)
         if len(x.shape) == 5: 
             x = x.squeeze(1)
         x = interpolate_input(x, y)
-        print(x.shape)
+        # print(x.shape)
         pred = model_module.forward(x)  # B, 1, 32, 64
 
         inv_normalize = model_module.denormalization
