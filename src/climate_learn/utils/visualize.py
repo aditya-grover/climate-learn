@@ -60,11 +60,9 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
     for index, idx in enumerate(idxs):
         x, y, _, _ = dataset[idx]  # 1, 1, 32, 64
-        print(x.shape, y.shape)
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = interpolate_input(x, y)
-        print(x.shape)
         pred = model_module.forward(x.unsqueeze(0))  # 1, 1, 32, 64
 
         inv_normalize = model_module.denormalization
@@ -120,6 +118,9 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
         x, y, _, _ = batch  # B, 1, 32, 64
         x = x.to(model_module.device)
         y = y.to(model_module.device)
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)
+        x = interpolate_input(x, y)
         pred = model_module.forward(x)  # B, 1, 32, 64
 
         inv_normalize = model_module.denormalization
