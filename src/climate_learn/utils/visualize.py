@@ -119,8 +119,8 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
         x = x.to(model_module.device)
         y = y.to(model_module.device)
         print(x.shape, y.shape)
-        # if len(x.shape) == 3:
-        #     x = x.unsqueeze(0)
+        if len(x.shape) == 5: 
+            x = x.squeeze(1)
         x = interpolate_input(x, y)
         print(x.shape)
         pred = model_module.forward(x)  # B, 1, 32, 64
