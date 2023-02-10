@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable, Iterable
 import sys
 import numpy as np
 import pandas as pd
@@ -19,12 +19,14 @@ from .utils.metrics import (
     lat_weighted_spread_skill_ratio,
 )
 
+OptimizerCallable = Callable[[Iterable], torch.optim.Optimizer]
+
 
 class ForecastLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: str = "adam",
+        optimizer: OptimizerCallable = torch.optim.Adam,
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -61,13 +63,7 @@ class ForecastLitModule(LightningModule):
         else:  # deter
             self.train_loss = [lat_weighted_mse]
             self.val_loss = [lat_weighted_rmse]
-
-        if optimizer == "adam":
-            self.optim_cls = torch.optim.Adam
-        elif optimizer == "adamw":
-            self.optim_cls = torch.optim.AdamW
-        else:
-            raise NotImplementedError("Only support Adam and AdamW")
+        self.optim_cls = optimizer
 
     def forward(self, x):
         with torch.no_grad():

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable, Iterable
 
 import torch
 from pytorch_lightning import LightningModule
@@ -15,11 +15,14 @@ def interpolate_input(x: torch.Tensor, y: torch.Tensor):
     return x
 
 
+OptimizerCallable = Callable[[Iterable], torch.optim.Optimizer]
+
+
 class DownscaleLitModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: str = "adam",
+        optimizer: OptimizerCallable = torch.optim.Adam,
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -30,12 +33,7 @@ class DownscaleLitModule(LightningModule):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
-        if optimizer == "adam":
-            self.optim_cls = torch.optim.Adam
-        elif optimizer == "adamw":
-            self.optim_cls = torch.optim.AdamW
-        else:
-            raise NotImplementedError("Only support Adam and AdamW")
+        self.optim_cls = optimizer
 
     def forward(self, x):
         return self.net.predict(x)
