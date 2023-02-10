@@ -177,7 +177,9 @@ class ForecastLitModule(LightningModule):
             for k in d.keys():
                 loss_dict[k] = d[k]
 
+        total_loss = 0
         for var in loss_dict.keys():
+            total_loss += loss_dict[var]
             self.log(
                 "val/" + var,
                 loss_dict[var],
@@ -187,6 +189,9 @@ class ForecastLitModule(LightningModule):
                 sync_dist=True,
                 batch_size=len(x),
             )
+
+        self.log("val_loss", total_loss, batch_size=len(x))
+        
         return loss_dict
 
     def test_step(self, batch: Any, batch_idx: int):
