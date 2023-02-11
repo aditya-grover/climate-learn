@@ -8,11 +8,7 @@ from torchvision.transforms import transforms
 from sklearn.linear_model import Ridge
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .utils.metrics import (
-    lat_weighted_acc,
-    lat_weighted_mse,
-    lat_weighted_rmse
-)
+from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse
 
 
 class ForecastLitModule(LightningModule):
@@ -107,7 +103,7 @@ class ForecastLitModule(LightningModule):
             transform=self.denormalization,
             lat=self.lat,
             log_steps=steps,
-            log_days=days
+            log_days=days,
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -150,7 +146,7 @@ class ForecastLitModule(LightningModule):
             transform=self.denormalization,
             lat=self.lat,
             log_steps=steps,
-            log_days=days
+            log_days=days,
         )
 
         loss_dict = {}

@@ -203,7 +203,7 @@ class VisionTransformer(nn.Module):
         transform,
         lat,
         log_steps,
-        log_days
+        log_days,
     ):
         preds = []
         for _ in range(steps):

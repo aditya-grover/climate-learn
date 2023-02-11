@@ -95,7 +95,7 @@ class ResNet(nn.Module):
         transform,
         lat,
         log_steps,
-        log_days
+        log_days,
     ):
         if steps > 1:
             assert len(variables) == len(out_variables)
