@@ -130,7 +130,6 @@ class ForecastLitModule(LightningModule):
         x, y, variables, out_variables = batch
         pred_steps = y.shape[1]
         pred_range = self.pred_range.hours()
-        day = int(pred_range / 24)
 
         default_days = [1, 3, 5]
         days_each_step = pred_range / 24
@@ -139,86 +138,6 @@ class ForecastLitModule(LightningModule):
         ]
         steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
         days = [int(s * pred_range / 24) for s in steps]
-        day = int(days_each_step)
-
-        # rmse for climatology baseline
-        clim_pred = self.train_clim  # C, H, W
-        clim_pred = (
-            clim_pred.unsqueeze(0)
-            .unsqueeze(0)
-            .repeat(y.shape[0], y.shape[1], 1, 1, 1)
-            .to(y.device)
-        )
-        baseline_rmse = lat_weighted_rmse(
-            clim_pred,
-            y,
-            out_variables,
-            transform_pred=False,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
-        )
-        for var in baseline_rmse.keys():
-            self.log(
-                "test_climatology_baseline/" + var,
-                baseline_rmse[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-
-        # rmse for persistence baseline
-        pers_pred = x  # B, 1, C, H, W
-        baseline_rmse = lat_weighted_rmse(
-            pers_pred,
-            y,
-            out_variables,
-            transform_pred=True,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
-        )
-        for var in baseline_rmse.keys():
-            self.log(
-                "test_persistence_baseline/" + var,
-                baseline_rmse[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-
-        # rmse for linear regression baseline
-        # check if fit_lin_reg_baseline is called by checking whether self.lr_baseline is initialized
-        if self.lr_baseline:
-            lr_pred = self.lr_baseline.predict(
-                x.cpu().reshape((x.shape[0], -1))
-            ).reshape(y.shape)
-
-            lr_pred = lr_pred[:, np.newaxis, :, :, :]  # B, 1, C, H, W
-            lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
-            baseline_rmse = lat_weighted_rmse(
-                lr_pred,
-                y,
-                out_variables,
-                transform_pred=True,
-                transform=self.denormalization,
-                lat=self.lat,
-                log_steps=steps,
-                log_days=days,
-            )
-            for var in baseline_rmse.keys():
-                self.log(
-                    "test_ridge_regression_baseline/" + var,
-                    baseline_rmse[var],
-                    on_step=False,
-                    on_epoch=True,
-                    sync_dist=True,
-                    batch_size=len(x),
-                )
 
         all_loss_dicts, _ = self.net.rollout(
             x,
@@ -299,7 +218,8 @@ class ForecastLitModule(LightningModule):
                 batch_size=len(x),
             )
 
-        # rmse for linear regression baseline, if trained
+        # rmse for linear regression baseline
+        # check if fit_lin_reg_baseline is called by checking whether self.lr_baseline is initialized
         if self.lr_baseline:
             lr_pred = self.lr_baseline.predict(
                 x.cpu().reshape((x.shape[0], -1))
