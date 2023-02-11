@@ -38,8 +38,6 @@ class VisionTransformer(nn.Module):
     ):
         super().__init__()
 
-        self.prob_type = None
-
         self.img_size = img_size
         self.n_channels = len(in_vars)
         self.patch_size = patch_size
@@ -205,10 +203,7 @@ class VisionTransformer(nn.Module):
         transform,
         lat,
         log_steps,
-        log_days,
-        mean_transform,
-        std_transform,
-        log_day,
+        log_days
     ):
         preds = []
         for _ in range(steps):
@@ -234,12 +229,6 @@ class VisionTransformer(nn.Module):
             ],
             x,
         )
-
-    def val_rollout(self, *args, **kwargs):
-        return self.rollout(*args, **kwargs)
-
-    def test_rollout(self, *args, **kwargs):
-        return self.rollout(*args, **kwargs)
 
     def upsample(self, x, y, out_vars, transform, metric):
         with torch.no_grad():
