@@ -12,6 +12,7 @@ from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse
 
 OptimizerCallable = Callable[[Iterable], torch.optim.Optimizer]
 
+
 class ForecastLitModule(LightningModule):
     def __init__(
         self,
