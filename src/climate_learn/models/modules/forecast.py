@@ -81,7 +81,7 @@ class ForecastLitModule(LightningModule):
 
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        pred_steps = y.shape[1]
+        pred_steps = 1
         pred_range = self.pred_range.hours()
 
         default_days = [1, 3, 5]
@@ -124,7 +124,7 @@ class ForecastLitModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        pred_steps = y.shape[1]
+        pred_steps = 1
         pred_range = self.pred_range.hours()
 
         default_days = [1, 3, 5]
@@ -174,7 +174,7 @@ class ForecastLitModule(LightningModule):
         )
         baseline_rmse = lat_weighted_rmse(
             clim_pred,
-            y,
+            y.unsqueeze(1),
             out_variables,
             transform_pred=False,
             transform=self.denormalization,
@@ -196,7 +196,7 @@ class ForecastLitModule(LightningModule):
         pers_pred = x  # B, 1, C, H, W
         baseline_rmse = lat_weighted_rmse(
             pers_pred,
-            y,
+            y.unsqueeze(1),
             out_variables,
             transform_pred=True,
             transform=self.denormalization,
