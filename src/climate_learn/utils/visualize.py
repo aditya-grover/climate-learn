@@ -12,6 +12,13 @@ from tqdm import tqdm
 # TODO: include exceptions in docstrings
 
 
+def interpolate_input(x: torch.Tensor, y: torch.Tensor):
+    # interpolate input to match output size
+    out_h, out_w = y.shape[-2], y.shape[-1]
+    x = torch.nn.functional.interpolate(x, (out_h, out_w), mode="bilinear")
+    return x
+
+
 def visualize(model_module, data_module, split="test", samples=2, save_dir=None):
     """Visualizes model bias.
 
@@ -54,6 +61,9 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
     for index, idx in enumerate(idxs):
         x, y, _, _ = dataset[idx]  # 1, 1, 32, 64
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)
+        x = interpolate_input(x, y)
         pred = model_module.forward(x.unsqueeze(0))  # 1, 1, 32, 64
 
         inv_normalize = model_module.denormalization
@@ -109,6 +119,9 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
         x, y, _, _ = batch  # B, 1, 32, 64
         x = x.to(model_module.device)
         y = y.to(model_module.device)
+        if len(x.shape) == 5:
+            x = x.squeeze(1)
+        x = interpolate_input(x, y)
         pred = model_module.forward(x)  # B, 1, 32, 64
 
         inv_normalize = model_module.denormalization
