@@ -1,7 +1,7 @@
 from typing import Any
 
 import torch
-from pytorch_lightning import LightningModule
+from lightning import LightningModule
 from torchvision.transforms import transforms
 
 from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse

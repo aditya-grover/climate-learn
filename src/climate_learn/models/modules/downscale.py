@@ -1,7 +1,7 @@
 from typing import Any, Callable, Iterable
 
 import torch
-from pytorch_lightning import LightningModule
+from lightning import LightningModule
 from torchvision.transforms import transforms
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR

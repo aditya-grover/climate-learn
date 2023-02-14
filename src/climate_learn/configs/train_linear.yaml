@@ -23,7 +23,7 @@ trainer:
   fast_dev_run: false
 
   logger:
-    class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+    class_path: lightning.loggers.tensorboard.TensorBoardLogger
     init_args:
       save_dir: ${trainer.default_root_dir}/logs
       name: null
@@ -33,11 +33,11 @@ trainer:
       prefix: ""
 
   callbacks:
-    - class_path: pytorch_lightning.callbacks.LearningRateMonitor
+    - class_path: lightning.callbacks.LearningRateMonitor
       init_args:
         logging_interval: "step"
 
-    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+    - class_path: lightning.callbacks.ModelCheckpoint
       init_args:
         dirpath: "${trainer.default_root_dir}/checkpoints"
         monitor: "val/w_rmse" # name of the logged metric which determines when model is improving
@@ -48,18 +48,18 @@ trainer:
         filename: "epoch_{epoch:03d}"
         auto_insert_metric_name: False
 
-    - class_path: pytorch_lightning.callbacks.EarlyStopping
+    - class_path: lightning.callbacks.EarlyStopping
       init_args:
         monitor: "train/loss" # name of the logged metric which determines when model is improving
         mode: "min" # "max" means higher metric value is better, can be also "min"
         patience: 100 # how many validation epochs of not improving until training stops
         min_delta: 0 # minimum change in the monitored metric needed to qualify as an improvement
 
-    - class_path: pytorch_lightning.callbacks.RichModelSummary
+    - class_path: lightning.callbacks.RichModelSummary
       init_args:
         max_depth: -1
 
-    - class_path: pytorch_lightning.callbacks.RichProgressBar
+    - class_path: lightning.callbacks.RichProgressBar
 
 # ---------------------------- MODEL -------------------------------------------
 model:
