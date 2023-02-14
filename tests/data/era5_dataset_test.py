@@ -3,7 +3,6 @@ from climate_learn.data.modules import ERA5
 import pytest
 
 DATA_PATH = "/data0/datasets/weatherbench/data/weatherbench/"
-
 GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
 
