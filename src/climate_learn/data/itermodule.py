@@ -11,7 +11,7 @@ from .module import collate_fn
 import torch
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
-from pytorch_lightning import LightningDataModule
+from lightning import LightningDataModule
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset

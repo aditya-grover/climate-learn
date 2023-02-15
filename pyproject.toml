@@ -24,35 +24,30 @@ classifiers = [
     "License :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "black",
-    "cdsapi",
-    "dask",
-    "flake8",
+dependencies = [    
+    "cdsapi>=0.5.1",
+    "dask>=2022.2.0",
     "importlib-metadata==4.13.0",
-    "pytorch-lightning", 
-    "matplotlib",
-    "netcdf4",
-    "rich",
-    "scikit-learn",
-    "timm",
-    "wandb",
-    "xarray",
+    "lightning>=1.9.0", 
+    "matplotlib>=3.5.3",
+    "netcdf4>=1.6.2",
+    "scikit-learn>=1.0.2",
+    "timm>=0.6.12",
+    "wandb>=0.13.9",
+    "xarray>=0.20.2",
 ]
-# TODO: update code to use `lightning` intsead of `pytorch-lightning` since
-# pip install pytorch-lightning has been deprecated and will stop being updated June 2023
-# https://pytorch-lightning.readthedocs.io/en/latest/starter/installation.html#install-with-pip
 
 [project.optional-dependencies]
-docs = [
-    "ipython",
-    "nbsphinx",
-    "sphinx==5.3.0",
-    "sphinx_rtd_theme==1.1.1"
+dev = [
+    "black>=23.1.0",    
+    "flake8>=3.9.2",
+    "pytest>=7.2.1",
 ]
-test = [
-    "pytest",
-    "flake8"
+docs = [
+    "ipython>=7.34.0",
+    "nbsphinx>=0.8.12",
+    "sphinx>=5.3.0",
+    "sphinx_rtd_theme>=1.1.1"
 ]
 
 [project.urls]
