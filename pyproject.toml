@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [    
     "cdsapi>=0.5.1",
     "dask>=2022.2.0",
+    "importlib-metadata==4.13.0",
     "lightning>=1.9.0", 
     "matplotlib>=3.5.3",
     "netcdf4>=1.6.2",
