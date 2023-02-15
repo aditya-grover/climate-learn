@@ -34,44 +34,20 @@ class Linear(nn.Module):
         pred = self.W(x.flatten(1))
         return pred.unflatten(dim=1, sizes=(self.out_channels, self.h, self.w))
 
-    def forward(self, x: torch.Tensor, y, out_variables, metric, lat):
+    def forward(self, x: torch.Tensor, y, out_variables, metric, lat, log_postfix):
         pred = self.predict(x)
-        return [m(pred, y, out_variables, lat) for m in metric], pred
-
-    def rollout(
-        self,
-        x: torch.Tensor,
-        y: torch.Tensor,
-        clim,
-        variables,
-        out_variables,
-        steps,
-        metric,
-        transform,
-        lat,
-        log_steps,
-        log_days,
-        mean_transform,
-        std_transform,
-        log_day,
-    ):
-        # transform: get back to the original range
-        if steps > 1:
-            # can only rollout for more than 1 step if input variables and output variables are the same
-            assert len(variables) == len(out_variables)
-
-        preds = []
-        for _ in range(steps):
-            x = self.predict(x)
-            preds.append(x)
-        preds = torch.stack(preds, dim=1)
-
-        preds = transform(preds)
-        y = transform(y)
-
         return [
-            m(preds, y, out_variables, lat, log_steps, log_days) for m in metric
-        ], preds
+            m(pred, y, out_variables, lat, log_postfix=log_postfix) for m in metric
+        ], pred
+
+    def evaluate(
+        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
+    ):
+        pred = self.predict(x)
+        return [
+            m(pred, y, transform, out_variables, lat, clim, log_postfix)
+            for m in metrics
+        ], pred
 
 
 # model = TokenizedMAE(depth=4, decoder_depth=2).cuda()
