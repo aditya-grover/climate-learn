@@ -6,9 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "climate_learn"
 version = "0.0.1"
 authors = [
+    { name = "Jason Jewik", email = "jason.jewik@cs.ucla.edu" },
     { name = "Hritik Bansal", email = "hbansal@g.ucla.edu" },
     { name = "Shashank Goel", email = "shashankgoel@g.ucla.edu" },
-    { name = "Jason Jewik", email = "jason.jewik@cs.ucla.edu" },
     { name = "Siddharth Nandy", email = "sidd.nandy@gmail.com" },
     { name = "Tung Nguyen", email = "tungnd@g.ucla.edu" },
     { name = "Seongbin Park", email = "shannonsbpark@gmail.com" },
@@ -19,9 +19,22 @@ description = "ClimateLearn: Benchmarking Machine Learning for Data-driven Clima
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
-    "Development Status :: In Progress",
+    "Development Status :: 2 - Pre-Alpha",
     "Programming Language :: Python :: 3",
-    "License :: MIT License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [    
