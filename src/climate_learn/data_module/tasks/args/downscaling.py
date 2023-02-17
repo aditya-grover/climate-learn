@@ -15,7 +15,7 @@ class DownscalingArgs(TaskArgs):
         split="train",
     ):
         super().__init__(
-            dataset_args, in_vars, constant_names, out_vars, subsample, split
+            dataset_args, in_vars, out_vars, constant_names, subsample, split
         )
         self.highres_dataset_args = highres_dataset_args
 

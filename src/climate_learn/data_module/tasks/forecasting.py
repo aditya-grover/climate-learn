@@ -21,7 +21,8 @@ class Forecasting(Task):
 
     def setup(self):
         super().setup()
-        assert set(self.constant_names) <= set(self.dataset.constant_names)
+        if len(self.constant_names) > 0:
+            assert set(self.constant_names) <= set(self.dataset.constant_names)
         inp_data = xr.concat(
             [self.dataset.data_dict[k] for k in self.in_vars], dim="level"
         )
