@@ -61,7 +61,9 @@ class DownscaleLitModule(LightningModule):
         x, y, _, out_variables = batch
         x = interpolate_input(x, y)
 
-        loss_dict, _ = self.net.forward(x, y, out_variables, [mse], lat=self.lat)
+        loss_dict, _ = self.net.forward(
+            x, y, out_variables, [mse], lat=self.lat, log_postfix=""
+        )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
             self.log(
@@ -78,8 +80,16 @@ class DownscaleLitModule(LightningModule):
         x, y, variables, out_variables = batch
         x = interpolate_input(x, y)
 
-        all_loss_dicts, _ = self.net.upsample(
-            x, y, out_variables, self.denormalization, [rmse, pearson, mean_bias]
+        all_loss_dicts, _ = self.net.evaluate(
+            x,
+            y,
+            variables,
+            out_variables,
+            self.denormalization,
+            [rmse, pearson, mean_bias],
+            self.lat,
+            self.val_clim,
+            log_postfix="",
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -102,8 +112,16 @@ class DownscaleLitModule(LightningModule):
         x, y, variables, out_variables = batch
         x = interpolate_input(x, y)
 
-        all_loss_dicts, _ = self.net.upsample(
-            x, y, out_variables, self.denormalization, [rmse, pearson, mean_bias]
+        all_loss_dicts, _ = self.net.evaluate(
+            x,
+            y,
+            variables,
+            out_variables,
+            self.denormalization,
+            [rmse, pearson, mean_bias],
+            self.lat,
+            self.test_clim,
+            log_postfix="",
         )
         loss_dict = {}
         for d in all_loss_dicts:

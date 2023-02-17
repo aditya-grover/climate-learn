@@ -8,7 +8,12 @@ from torchvision.transforms import transforms
 from sklearn.linear_model import Ridge
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .utils.metrics import lat_weighted_acc, lat_weighted_mse, lat_weighted_rmse
+from .utils.metrics import (
+    lat_weighted_mse,
+    lat_weighted_mse_val,
+    lat_weighted_acc,
+    lat_weighted_rmse,
+)
 
 OptimizerCallable = Callable[[Iterable], torch.optim.Optimizer]
 
@@ -31,7 +36,7 @@ class ForecastLitModule(LightningModule):
         self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
         self.lr_baseline = None
         self.train_loss = [lat_weighted_mse]
-        self.val_loss = [lat_weighted_rmse]
+        self.val_loss = [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc]
         self.optim_cls = optimizer
 
     def forward(self, x):
@@ -57,11 +62,26 @@ class ForecastLitModule(LightningModule):
     def set_test_climatology(self, clim):
         self.test_clim = clim
 
+    def get_log_postfix(self):
+        pred_range = self.pred_range.hours()
+        if pred_range < 24:
+            log_postfix = f"{pred_range}_hours"
+        else:
+            days = pred_range / 24
+            log_postfix = f"{days:.1f}_days"
+        return log_postfix
+
     def training_step(self, batch: Any, batch_idx: int):
         x, y, _, out_variables = batch
+        log_postfix = self.get_log_postfix()
 
         loss_dict, _ = self.net.forward(
-            x, y, out_variables, metric=self.train_loss, lat=self.lat
+            x,
+            y,
+            out_variables,
+            metric=self.train_loss,
+            lat=self.lat,
+            log_postfix=log_postfix,
         )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
@@ -77,29 +97,18 @@ class ForecastLitModule(LightningModule):
 
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        pred_steps = 1
-        pred_range = self.pred_range.hours()
+        log_postfix = self.get_log_postfix()
 
-        default_days = [1, 3, 5]
-        days_each_step = pred_range / 24
-        default_steps = [
-            d / days_each_step for d in default_days if d % days_each_step == 0
-        ]
-        steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
-        days = [int(s * pred_range / 24) for s in steps]
-
-        all_loss_dicts, _ = self.net.rollout(
+        all_loss_dicts, _ = self.net.evaluate(
             x,
             y,
-            self.val_clim,
             variables,
             out_variables,
-            steps=pred_steps,
-            metric=self.val_loss,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
+            self.denormalization,
+            self.val_loss,
+            self.lat,
+            self.val_clim,
+            log_postfix,
         )
         loss_dict = {}
         for d in all_loss_dicts:
@@ -120,29 +129,18 @@ class ForecastLitModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         x, y, variables, out_variables = batch
-        pred_steps = 1
-        pred_range = self.pred_range.hours()
+        log_postfix = self.get_log_postfix()
 
-        default_days = [1, 3, 5]
-        days_each_step = pred_range / 24
-        default_steps = [
-            d / days_each_step for d in default_days if d % days_each_step == 0
-        ]
-        steps = [int(s) for s in default_steps if s <= pred_steps and s > 0]
-        days = [int(s * pred_range / 24) for s in steps]
-
-        all_loss_dicts, _ = self.net.rollout(
+        all_loss_dicts, _ = self.net.evaluate(
             x,
             y,
-            self.test_clim,
             variables,
             out_variables,
-            steps=pred_steps,
-            metric=self.test_loss,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
+            self.denormalization,
+            self.test_loss,
+            self.lat,
+            self.test_clim,
+            log_postfix,
         )
 
         loss_dict = {}
@@ -162,21 +160,16 @@ class ForecastLitModule(LightningModule):
 
         # rmse for climatology baseline
         clim_pred = self.train_clim  # C, H, W
-        clim_pred = (
-            clim_pred.unsqueeze(0)
-            .unsqueeze(0)
-            .repeat(y.shape[0], y.shape[1], 1, 1, 1)
-            .to(y.device)
-        )
+        clim_pred = clim_pred.unsqueeze(0).repeat(y.shape[0], 1, 1, 1).to(y.device)
         baseline_rmse = lat_weighted_rmse(
             clim_pred,
-            y.unsqueeze(1),
+            y,
+            self.denormalization,
             out_variables,
+            self.lat,
+            None,
+            log_postfix,
             transform_pred=False,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
         )
         for var in baseline_rmse.keys():
             self.log(
@@ -189,16 +182,15 @@ class ForecastLitModule(LightningModule):
             )
 
         # rmse for persistence baseline
-        pers_pred = x  # B, 1, C, H, W
+        pers_pred = x[:, -1]  # B, C, H, W
         baseline_rmse = lat_weighted_rmse(
             pers_pred,
-            y.unsqueeze(1),
+            y,
+            self.denormalization,
             out_variables,
-            transform_pred=True,
-            transform=self.denormalization,
-            lat=self.lat,
-            log_steps=steps,
-            log_days=days,
+            self.lat,
+            None,
+            log_postfix,
         )
         for var in baseline_rmse.keys():
             self.log(
@@ -216,17 +208,15 @@ class ForecastLitModule(LightningModule):
             lr_pred = self.lr_baseline.predict(
                 x.cpu().reshape((x.shape[0], -1))
             ).reshape(y.shape)
-            lr_pred = lr_pred[:, np.newaxis, :, :, :]  # B, 1, C, H, W
             lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
             baseline_rmse = lat_weighted_rmse(
                 lr_pred,
                 y,
+                self.denormalization,
                 out_variables,
-                transform_pred=True,
-                transform=self.denormalization,
-                lat=self.lat,
-                log_steps=steps,
-                log_days=days,
+                self.lat,
+                None,
+                log_postfix,
             )
             for var in baseline_rmse.keys():
                 self.log(
