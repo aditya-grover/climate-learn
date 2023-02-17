@@ -1,6 +1,6 @@
-from lightning import Trainer as LitTrainer
-from lightning import seed_everything
-from lightning.callbacks import (
+from pytorch_lightning import Trainer as LitTrainer
+from pytorch_lightning import seed_everything
+from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,

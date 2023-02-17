@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 import torch
-from lightning import LightningModule
+from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 from sklearn.linear_model import Ridge
 
