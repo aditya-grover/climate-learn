@@ -1,5 +1,5 @@
 import os
-from climate_learn.data.modules import ERA5Forecasting
+from climate_learn.data_module.data import ERA5Forecasting
 from climate_learn.utils.datetime import Hours
 import pytest
 

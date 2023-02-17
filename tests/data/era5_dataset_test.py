@@ -1,5 +1,5 @@
 import os
-from climate_learn.data.modules import ERA5
+from climate_learn.data_module.data import ERA5
 import pytest
 
 DATA_PATH = "/data0/datasets/weatherbench/data/weatherbench/"

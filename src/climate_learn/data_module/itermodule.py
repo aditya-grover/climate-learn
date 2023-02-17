@@ -3,7 +3,7 @@ import glob
 from typing import Optional
 
 # Local application
-from .modules import *
+from .data import *
 from ..utils.datetime import Hours
 from .module import collate_fn
 

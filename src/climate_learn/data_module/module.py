@@ -1,6 +1,8 @@
 # Local application
-from .modules import *
+from .data import *
 from ..utils.datetime import Year, Hours
+
+import copy
 
 # Third party
 import torch
@@ -26,26 +28,41 @@ def collate_fn(batch):
     return inp, out, variables, out_variables
 
 
+class DataModuleArgs:
+    def __init__(
+        self,
+        task_args,
+        train_start_year,
+        val_start_year,
+        test_start_year,
+        end_year=Year(2018),
+    ):
+        
+        self.train_start_year = train_start_year
+        self.val_start_year = val_start_year
+        self.test_start_year = test_start_year
+        self.end_year = end_year
+
+        self.train_task_args = copy.deepcopy(task_args)
+        self.train_task_args.split = "train"
+        self.train_task_args.setup(self)
+
+        self.val_task_args = copy.deepcopy(task_args)
+        self.val_task_args.split = "val"
+        self.val_task_args.setup(self)
+
+        self.test_task_args = copy.deepcopy(task_args)
+        self.test_task_args.split = "test"
+        self.test_task_args.setup(self)
+
+
 class DataModule(LightningDataModule):
     """ClimateLearn's data module interface. Encapsulates dataset/task-specific
     data modules."""
 
     def __init__(
         self,
-        dataset,
-        task,
-        root_dir,
-        in_vars,
-        out_vars,
-        train_start_year,
-        val_start_year,
-        test_start_year,
-        end_year=Year(2018),
-        root_highres_dir=None,
-        history: int = 1,
-        window: int = 6,
-        pred_range=Hours(6),
-        subsample=Hours(1),
+        data_module_args,
         batch_size=64,
         num_workers=0,
         pin_memory=False,
@@ -92,68 +109,26 @@ class DataModule(LightningDataModule):
         super().__init__()
 
         assert (
-            end_year >= test_start_year
-            and test_start_year > val_start_year
-            and val_start_year > train_start_year
+            data_module_args.end_year >= data_module_args.test_start_year
+            and data_module_args.test_start_year > data_module_args.val_start_year
+            and data_module_args.val_start_year > data_module_args.train_start_year
         )
         self.save_hyperparameters(logger=False)
+        task_class = data_module_args.task_args.task_class
 
-        if dataset != "ERA5":
-            raise NotImplementedError("Only support ERA5")
-        if task == "downscaling" and root_highres_dir is None:
-            raise NotImplementedError(
-                "High-resolution data has to be provided for downscaling"
-            )
+        self.train_dataset = task_class(data_module_args.train_task_args)
+        self.train_dataset.setup()
 
-        task_string = "Forecasting" if task == "forecasting" else "Downscaling"
-        caller = eval(f"{dataset.upper()}{task_string}")
-
-        train_years = range(train_start_year, val_start_year)
-        self.train_dataset = caller(
-            root_dir,
-            root_highres_dir,
-            in_vars,
-            out_vars,
-            history,
-            window,
-            pred_range.hours(),
-            train_years,
-            subsample.hours(),
-            "train",
-        )
-
-        val_years = range(val_start_year, test_start_year)
-        self.val_dataset = caller(
-            root_dir,
-            root_highres_dir,
-            in_vars,
-            out_vars,
-            history,
-            window,
-            pred_range.hours(),
-            val_years,
-            subsample.hours(),
-            "val",
-        )
+        self.val_dataset = task_class(data_module_args.val_task_args)
+        self.val_dataset.setup()
         self.val_dataset.set_normalize(
             self.train_dataset.inp_transform,
             self.train_dataset.out_transform,
             self.train_dataset.constant_transform,
         )
 
-        test_years = range(test_start_year, end_year + 1)
-        self.test_dataset = caller(
-            root_dir,
-            root_highres_dir,
-            in_vars,
-            out_vars,
-            history,
-            window,
-            pred_range.hours(),
-            test_years,
-            subsample.hours(),
-            "test",
-        )
+        self.test_dataset = task_class(data_module_args.test_task_args)
+        self.test_dataset.setup()
         self.test_dataset.set_normalize(
             self.train_dataset.inp_transform,
             self.train_dataset.out_transform,
