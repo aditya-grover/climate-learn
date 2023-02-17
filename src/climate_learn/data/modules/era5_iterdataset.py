@@ -68,7 +68,10 @@ class NpyReader(IterableDataset):
             path_inp = self.inp_file_list[idx]
             path_out = self.out_file_list[idx]
             inp = np.load(path_inp)
-            out = np.load(path_out)
+            if path_out == path_inp:
+                out = inp
+            else:
+                out = np.load(path_out)
             yield {k: inp[k] for k in self.variables}, {
                 k: out[k] for k in self.out_variables
             }, self.variables, self.out_variables
