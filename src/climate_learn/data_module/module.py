@@ -1,6 +1,6 @@
 # Local application
-from .data import *
 from ..utils.datetime import Year, Hours
+from climate_learn.data_module.tasks import *
 
 import copy
 
@@ -37,7 +37,6 @@ class DataModuleArgs:
         test_start_year,
         end_year=Year(2018),
     ):
-        
         self.train_start_year = train_start_year
         self.val_start_year = val_start_year
         self.test_start_year = test_start_year
@@ -114,7 +113,7 @@ class DataModule(LightningDataModule):
             and data_module_args.val_start_year > data_module_args.train_start_year
         )
         self.save_hyperparameters(logger=False)
-        task_class = data_module_args.task_args.task_class
+        task_class = eval(data_module_args.train_task_args.task_class)
 
         self.train_dataset = task_class(data_module_args.train_task_args)
         self.train_dataset.setup()

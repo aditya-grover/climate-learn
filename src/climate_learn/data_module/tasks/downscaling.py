@@ -2,38 +2,35 @@ import torch
 import numpy as np
 import xarray as xr
 
+from climate_learn.data_module.data import *
 from climate_learn.data_module.tasks.task import Task
 from climate_learn.data_module.tasks.args import DownscalingArgs
+
 
 class Downscaling(Task):
     args_class = DownscalingArgs
 
     def __init__(self, task_args):
-        super.__init__(
-            task_args.dataset_args, 
-            task_args.in_vars, 
-            task_args.constant_names, 
-            task_args.out_vars, 
-            task_args.subsample, 
-            task_args.split
-        )
-        highres_dataset_class = task_args.highres_dataset_args.data_class
+        super().__init__(task_args)
+        highres_dataset_class = eval(task_args.highres_dataset_args.data_class)
         self.highres_dataset = highres_dataset_class(task_args.highres_dataset_args)
-        
-        assert self.in_vars in self.dataset.variables
-        assert self.out_vars in self.highres_dataset.variables
-        assert self.constant_names in self.dataset.constant_names
+
+        assert set(self.in_vars) <= set(self.dataset.variables)
+        assert set(self.out_vars) <= set(self.highres_dataset.variables)
 
     def setup(self):
         super().setup()
+        assert set(self.constant_names) <= set(self.dataset.constant_names)
         self.highres_dataset.setup()
-        inp_data = xr.concat([self.dataset.data_dict[k] for k in self.in_vars], dim="level")
+        inp_data = xr.concat(
+            [self.dataset.data_dict[k] for k in self.in_vars], dim="level"
+        )
         out_data = xr.concat(
             [self.highres_dataset.data_dict[k] for k in self.out_vars], dim="level"
         )
 
-        self.inp_data = inp_data[::self.subsample].to_numpy().astype(np.float32)
-        self.out_data = out_data[::self.subsample].to_numpy().astype(np.float32)
+        self.inp_data = inp_data[:: self.subsample].to_numpy().astype(np.float32)
+        self.out_data = out_data[:: self.subsample].to_numpy().astype(np.float32)
 
         constants_data = [
             self.dataset.constants[k].to_numpy().astype(np.float32)
@@ -62,7 +59,11 @@ class Downscaling(Task):
             self.out_transform = None
             self.constant_transform = None
 
-        self.time = self.dataset.data_dict[self.in_vars[0]].time.to_numpy()[::self.subsample].copy()
+        self.time = (
+            self.dataset.data_dict[self.in_vars[0]]
+            .time.to_numpy()[:: self.subsample]
+            .copy()
+        )
         self.inp_lon = self.dataset.lon
         self.inp_lat = self.dataset.lat
         self.out_lon = self.highres_dataset.lon

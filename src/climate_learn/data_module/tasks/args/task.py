@@ -1,14 +1,12 @@
-from climate_learn.data_module.tasks.task import Task
-
 class TaskArgs:
-    task_class = Task
+    task_class = "Task"
 
     def __init__(
         self,
         dataset_args,
         in_vars,
-        constant_names,
         out_vars,
+        constant_names=[],
         subsample=1,
         split="train",
     ):
@@ -18,7 +16,7 @@ class TaskArgs:
         self.out_vars = out_vars
         self.subsample = subsample
         self.split = split
-    
+
     def setup(self, data_module_args):
         self.dataset_args.split = self.split
         self.dataset_args.setup(data_module_args)

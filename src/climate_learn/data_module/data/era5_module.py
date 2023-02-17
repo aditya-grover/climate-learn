@@ -18,7 +18,7 @@ class ERA5(Data):
     args_class = ERA5Args
 
     def __init__(self, data_args):
-        super().__init__(data_args.variables, data_args.split)
+        super().__init__(data_args)
         self.root_dir = data_args.root_dir
         self.years = data_args.years
 

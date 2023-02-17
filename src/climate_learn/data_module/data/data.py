@@ -9,10 +9,10 @@ class Data(Dataset):
         super().__init__()
         self.variables = data_args.variables
         self.split = data_args.split
-    
+
     def setup(self):
         pass
-    
+
     def __getitem__(self, index):
         pass
 

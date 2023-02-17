@@ -5,30 +5,29 @@ import xarray as xr
 from climate_learn.data_module.tasks.task import Task
 from climate_learn.data_module.tasks.args import ForecastingArgs
 
+
 class Forecasting(Task):
     args_class = ForecastingArgs
 
     def __init__(self, task_args):
-        super.__init__(
-            task_args.dataset_args, 
-            task_args.in_vars, 
-            task_args.constant_names, 
-            task_args.out_vars, 
-            task_args.subsample, 
-            task_args.split
-        )
-        assert self.in_vars in self.dataset.variables
-        assert self.out_vars in self.dataset.variables
-        assert self.constant_names in self.dataset.constant_names
-        
+        super().__init__(task_args)
+
+        assert set(self.in_vars) <= set(self.dataset.variables)
+        assert set(self.out_vars) <= set(self.dataset.variables)
+
         self.history = task_args.history
         self.window = task_args.window
         self.pred_range = task_args.pred_range
 
     def setup(self):
         super().setup()
-        inp_data = xr.concat([self.dataset.data_dict[k] for k in self.in_vars], dim="level")
-        out_data = xr.concat([self.dataset.data_dict[k] for k in self.out_vars], dim="level")
+        assert set(self.constant_names) <= set(self.dataset.constant_names)
+        inp_data = xr.concat(
+            [self.dataset.data_dict[k] for k in self.in_vars], dim="level"
+        )
+        out_data = xr.concat(
+            [self.dataset.data_dict[k] for k in self.out_vars], dim="level"
+        )
         self.inp_data = inp_data.to_numpy().astype(np.float32)
         self.out_data = out_data.to_numpy().astype(np.float32)
 
@@ -58,7 +57,7 @@ class Forecasting(Task):
 
         self.time = (
             self.dataset.data_dict[self.in_vars[0]]
-            .time.to_numpy()[:-self.pred_range:self.subsample]
+            .time.to_numpy()[: -self.pred_range : self.subsample]
             .copy()
         )
         # why do we need different lat and lan for input and output for foprecasting
@@ -69,7 +68,6 @@ class Forecasting(Task):
 
         del self.dataset.data_dict
 
-    
     def get_climatology(self):
         return torch.from_numpy(self.out_data.mean(axis=0))
 
