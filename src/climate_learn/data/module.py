@@ -5,7 +5,7 @@ from ..utils.datetime import Year, Hours
 # Third party
 import torch
 from torch.utils.data import DataLoader
-from lightning import LightningDataModule
+from pytorch_lightning import LightningDataModule
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset

@@ -2,7 +2,7 @@ import math
 import warnings
 from typing import List
 
-# from lightning.utilities.cli import LR_SCHEDULER_REGISTRY
+# from pytorch_lightning.utilities.cli import LR_SCHEDULER_REGISTRY
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
