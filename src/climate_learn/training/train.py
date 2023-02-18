@@ -4,6 +4,7 @@ from lightning.callbacks import (
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,
+    EarlyStopping
 )
 
 import logging
@@ -21,6 +22,7 @@ class Trainer:
         precision=16,
         max_epochs=4,
         logger=False,
+        patience=5
     ):
         seed_everything(seed)
 
@@ -32,6 +34,12 @@ class Trainer:
         )
         summary_callback = RichModelSummary(max_depth=-1)
         progress_callback = RichProgressBar()
+        early_stop_callback = EarlyStopping(
+             monitor="val/w_mse", 
+             patience=patience, 
+             verbose=False,
+             mode="min"
+         )
 
         self.trainer = LitTrainer(
             logger=logger,
@@ -39,7 +47,7 @@ class Trainer:
             devices=devices,
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[checkpoint_callback, summary_callback, progress_callback],
+            callbacks=[checkpoint_callback, summary_callback, progress_callback, early_stop_callback],
         )
 
     def fit(self, model_module, data_module):
