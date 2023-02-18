@@ -1,6 +1,6 @@
 import os
 import wandb
-from lightning.loggers import WandbLogger as wblogger
+from pytorch_lightning.loggers import WandbLogger as wblogger
 
 
 def WandbLogger(project="climate_tutorial", name="default", notebook="CCAI Tutorial"):
