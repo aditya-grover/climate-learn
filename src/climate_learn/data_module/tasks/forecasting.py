@@ -1,7 +1,8 @@
-from typing import Any, Callable, Sequence, Tuple
+from typing import Callable, Sequence, Tuple, Union
 import torch
 import numpy as np
 import xarray as xr
+from torchvision.transforms import transforms
 
 from climate_learn.data_module.tasks.task import Task
 from climate_learn.data_module.tasks.args import ForecastingArgs
@@ -30,60 +31,56 @@ class Forecasting(Task):
         out_data = xr.concat(
             [self.dataset.data_dict[k] for k in self.out_vars], dim="level"
         )
-        self.inp_data: Any = inp_data.to_numpy().astype(
-            np.float32
-        )  # TODO add stronger typecheck
-        self.out_data: Any = out_data.to_numpy().astype(
-            np.float32
-        )  # TODO add stronger typecheck
+        self.inp_data: np.ndarray = inp_data.to_numpy().astype(np.float32)
+        self.out_data: np.ndarray = out_data.to_numpy().astype(np.float32)
 
         constants_data = [
             self.dataset.constants[k].to_numpy().astype(np.float32)
             for k in self.constant_names
         ]
         if len(constants_data) > 0:
-            self.constants_data = np.stack(
+            self.constants_data: Union[np.ndarray, None] = np.stack(
                 constants_data, axis=0
-            )  # 3, 32, 64 # TODO add typehinting
+            )  # 3, 32, 64
         else:
-            self.constants_data = None  # TODO add typehinting
+            self.constants_data: Union[np.ndarray, None] = None
 
         assert len(self.inp_data) == len(self.out_data)
 
         if self.split == "train":
-            self.inp_transform: Any = self.get_normalize(
+            self.inp_transform: Union[transforms.Normalize, None] = self.get_normalize(
                 self.inp_data
-            )  # TODO add stronger typecheck
-            self.out_transform: Any = self.get_normalize(
+            )
+            self.out_transform: Union[transforms.Normalize, None] = self.get_normalize(
                 self.out_data
-            )  # TODO add stronger typecheck
-            self.constant_transform: Any = (
+            )
+            self.constant_transform: Union[transforms.Normalize, None] = (
                 self.get_normalize(np.expand_dims(self.constants_data, axis=0))
                 if self.constants_data is not None
                 else None
-            )  # TODO add stronger typecheck
+            )
         else:
-            self.inp_transform: Any = None  # TODO add stronger typecheck
-            self.out_transform: Any = None  # TODO add stronger typecheck
-            self.constant_transform: Any = None  # TODO add stronger typecheck
+            self.inp_transform: Union[transforms.Normalize, None] = None
+            self.out_transform: Union[transforms.Normalize, None] = None
+            self.constant_transform: Union[transforms.Normalize, None] = None
 
-        self.time: Any = (
+        self.time: np.ndarray = (
             self.dataset.data_dict[self.in_vars[0]]
             .time.to_numpy()[: -self.pred_range : self.subsample]
             .copy()
-        )  # TODO add stronger typecheck
+        )
         # why do we need different lat and lan for input and output for foprecasting
-        self.inp_lon: Any = self.dataset.lon  # TODO add stronger typecheck
-        self.inp_lat: Any = self.dataset.lat  # TODO add stronger typecheck
-        self.out_lon: Any = self.dataset.lon  # TODO add stronger typecheck
-        self.out_lat: Any = self.dataset.lat  # TODO add stronger typecheck
+        self.inp_lon: np.ndarray = self.dataset.lon
+        self.inp_lat: np.ndarray = self.dataset.lat
+        self.out_lon: np.ndarray = self.dataset.lon
+        self.out_lat: np.ndarray = self.dataset.lat
 
         del self.dataset.data_dict
 
     def get_climatology(self) -> torch.Tensor:
         return torch.from_numpy(self.out_data.mean(axis=0))
 
-    def create_inp_out(self, index) -> Tuple[Any, Any]:  # TODO add stronger typecheck
+    def create_inp_out(self, index) -> Tuple[np.ndarray, np.ndarray]:
         inp = []
         for i in range(self.history):
             idx = index + self.window * i
@@ -95,7 +92,7 @@ class Forecasting(Task):
 
     def __getitem__(
         self, index
-    ) -> Tuple[Any, Any, Sequence[str], Sequence[str]]:  # TODO add stronger typecheck
+    ) -> Tuple[np.ndarray, np.ndarray, Sequence[str], Sequence[str]]:
         inp, out = self.create_inp_out(index)
         out = self.out_transform(torch.from_numpy(out))  # C, 32, 64
         inp = self.inp_transform(torch.from_numpy(inp))  # T, C, 32, 64

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence
+from typing import Callable, Sequence, Union
 import numpy as np
 
 from torch.utils.data import Dataset
@@ -30,20 +30,23 @@ class Task(Dataset):
     def setup(self) -> None:
         print(f"Creating {self.split} dataset")
         self.dataset.setup()
-        self.lat: Any = self.dataset.lat  # TODO add stronger typecheck
-        self.lon: Any = self.dataset.lon  # TODO add stronger typecheck
+        self.lat: np.ndarray = self.dataset.lat
+        self.lon: np.ndarray = self.dataset.lon
 
-    def get_normalize(self, data: Any) -> Any:  # TODO add stronger typecheck
+    def get_normalize(self, data: np.ndarray) -> transforms.Normalize:
         mean = np.mean(data, axis=(0, 2, 3))
         std = np.std(data, axis=(0, 2, 3))
         return transforms.Normalize(mean, std)
 
     def set_normalize(
-        self, inp_normalize: Any, out_normalize: Any, constant_normalize: Any
-    ) -> None:  # for val and test #TODO add stronger typecheck
-        self.inp_transform: Any = inp_normalize
-        self.out_transform: Any = out_normalize
-        self.constant_transform: Any = constant_normalize
+        self,
+        inp_normalize: Union[transforms.Normalize, None],
+        out_normalize: Union[transforms.Normalize, None],
+        constant_normalize: Union[transforms.Normalize, None],
+    ) -> None:  # for val and test
+        self.inp_transform: Union[transforms.Normalize, None] = inp_normalize
+        self.out_transform: Union[transforms.Normalize, None] = out_normalize
+        self.constant_transform: Union[transforms.Normalize, None] = constant_normalize
 
 
 TaskArgs._task_class = Task

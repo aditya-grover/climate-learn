@@ -1,13 +1,16 @@
 # Local application
 from ..utils.datetime import Year, Hours
-from climate_learn.data_module.tasks import *
+from climate_learn.data_module.tasks import TaskArgs, Task
 
 import copy
+from typing import Callable, Tuple, Union
 
 # Third party
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from pytorch_lightning.core.datamodule import LightningDataModule
+from torchvision.transforms import transforms
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
@@ -31,26 +34,26 @@ def collate_fn(batch):
 class DataModuleArgs:
     def __init__(
         self,
-        task_args,
-        train_start_year,
-        val_start_year,
-        test_start_year,
-        end_year=Year(2018),
-    ):
-        self.train_start_year = train_start_year
-        self.val_start_year = val_start_year
-        self.test_start_year = test_start_year
-        self.end_year = end_year
+        task_args: TaskArgs,
+        train_start_year: int,
+        val_start_year: int,
+        test_start_year: int,
+        end_year: int = 2018,
+    ) -> None:
+        self.train_start_year: int = train_start_year
+        self.val_start_year: int = val_start_year
+        self.test_start_year: int = test_start_year
+        self.end_year: int = end_year
 
-        self.train_task_args = copy.deepcopy(task_args)
+        self.train_task_args: TaskArgs = copy.deepcopy(task_args)
         self.train_task_args.split = "train"
         self.train_task_args.setup(self)
 
-        self.val_task_args = copy.deepcopy(task_args)
+        self.val_task_args: TaskArgs = copy.deepcopy(task_args)
         self.val_task_args.split = "val"
         self.val_task_args.setup(self)
 
-        self.test_task_args = copy.deepcopy(task_args)
+        self.test_task_args: TaskArgs = copy.deepcopy(task_args)
         self.test_task_args.split = "test"
         self.test_task_args.setup(self)
 
@@ -61,11 +64,11 @@ class DataModule(LightningDataModule):
 
     def __init__(
         self,
-        data_module_args,
-        batch_size=64,
-        num_workers=0,
-        pin_memory=False,
-    ):
+        data_module_args: DataModuleArgs,
+        batch_size: int = 64,
+        num_workers: int = 0,
+        pin_memory: bool = False,
+    ) -> None:
         r"""
         .. highlight:: python
 
@@ -114,14 +117,14 @@ class DataModule(LightningDataModule):
         )
         self.save_hyperparameters(logger=False)
         if isinstance(data_module_args.train_task_args._task_class, str):
-            task_class = eval(data_module_args.train_task_args._task_class)
+            task_class: Callable[..., Task] = eval(data_module_args.train_task_args._task_class)
         else:
-            task_class = data_module_args.train_task_args._task_class
+            task_class: Callable[..., Task] = data_module_args.train_task_args._task_class
 
-        self.train_dataset = task_class(data_module_args.train_task_args)
+        self.train_dataset: Task = task_class(data_module_args.train_task_args)
         self.train_dataset.setup()
 
-        self.val_dataset = task_class(data_module_args.val_task_args)
+        self.val_dataset: Task = task_class(data_module_args.val_task_args)
         self.val_dataset.setup()
         self.val_dataset.set_normalize(
             self.train_dataset.inp_transform,
@@ -129,7 +132,7 @@ class DataModule(LightningDataModule):
             self.train_dataset.constant_transform,
         )
 
-        self.test_dataset = task_class(data_module_args.test_task_args)
+        self.test_dataset: Task = task_class(data_module_args.test_task_args)
         self.test_dataset.setup()
         self.test_dataset.set_normalize(
             self.train_dataset.inp_transform,
@@ -137,13 +140,13 @@ class DataModule(LightningDataModule):
             self.train_dataset.constant_transform,
         )
 
-    def get_lat_lon(self):
+    def get_lat_lon(self) -> Tuple[np.ndarray, np.ndarray]:
         return self.train_dataset.lat, self.train_dataset.lon
 
-    def get_out_transforms(self):
+    def get_out_transforms(self) -> Union[transforms.Normalize, None]:
         return self.train_dataset.out_transform
 
-    def get_climatology(self, split="val"):
+    def get_climatology(self, split: str = "val") -> torch.Tensor:
         if split == "train":
             return self.train_dataset.get_climatology()
         elif split == "val":
@@ -153,7 +156,7 @@ class DataModule(LightningDataModule):
         else:
             raise NotImplementedError
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
             shuffle=True,
@@ -163,7 +166,7 @@ class DataModule(LightningDataModule):
             collate_fn=collate_fn,
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.val_dataset,
             shuffle=False,
@@ -173,7 +176,7 @@ class DataModule(LightningDataModule):
             collate_fn=collate_fn,
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test_dataset,
             shuffle=False,

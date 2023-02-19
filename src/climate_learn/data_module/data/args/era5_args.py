@@ -1,13 +1,14 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, Sequence, TYPE_CHECKING, Union
+from typing import Callable, Iterable, Sequence, TYPE_CHECKING, Union
 from climate_learn.data_module.data.args import DataArgs
 
 if TYPE_CHECKING:
+    from climate_learn.data_module.data import ERA5
     from climate_learn.data_module.module import DataModuleArgs
 
 
 class ERA5Args(DataArgs):
-    _data_class: Union[Callable[..., Any], str] = "ERA5"
+    _data_class: Union[Callable[..., ERA5], str] = "ERA5"
 
     def __init__(
         self,

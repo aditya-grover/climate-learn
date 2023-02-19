@@ -1,9 +1,10 @@
 import os
 import glob
 import xarray as xr
+import numpy as np
 
 from tqdm import tqdm
-from typing import Any, Callable, Iterable, Sequence, Tuple
+from typing import Callable, Iterable, Sequence
 from climate_learn.data_module.data import Data
 from climate_learn.data_module.data.args import ERA5Args
 from ..constants import (
@@ -25,16 +26,16 @@ class ERA5(Data):
 
     def setup(self) -> None:
         self.constant_names: Sequence[str] = []
-        self.data_dict: dict[str, Any] = self.load_from_nc(
+        self.data_dict: dict[str, xr.core.dataarray.DataArray] = self.load_from_nc(
             self.root_dir
-        )  # TODO add stronger typecheck
-        self.lat, self.lon = self.get_lat_lon()  # TODO: Add type hinting
+        )
+        self.set_lat_lon()
 
-    def load_from_nc(self, data_dir: str) -> dict[str, Any]:
+    def load_from_nc(self, data_dir: str) -> dict[str, xr.core.dataarray.DataArray]:
         self.constant_names = [
             name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS
         ]
-        self.constants: dict[str, Any] = {}  # TODO add stronger typecheck
+        self.constants: dict[str, xr.core.dataarray.DataArray] = {}
         if len(self.constant_names) > 0:
             ps = glob.glob(os.path.join(data_dir, "constants", "*.nc"))
             all_constants = xr.open_mfdataset(ps, combine="by_coords")
@@ -80,15 +81,14 @@ class ERA5(Data):
         self.variables = list(data_dict.keys())
         return data_dict
 
-    def get_lat_lon(self) -> Tuple[Any, Any]:  # TODO add stronger typecheck
+    def set_lat_lon(self) -> None:
         # lat lon is stored in each of the nc files, just need to load one and extract
         dir_var = os.path.join(self.root_dir, self.variables[0])
         year = self.years[0]
         ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
         xr_data = xr.open_mfdataset(ps, combine="by_coords")
-        lat = xr_data["lat"].to_numpy()
-        lon = xr_data["lon"].to_numpy()
-        return lat, lon
+        self.lat: np.ndarray = xr_data["lat"].to_numpy()
+        self.lon: np.ndarray = xr_data["lon"].to_numpy()
 
     def __getitem__(self, index: int) -> None:
         pass

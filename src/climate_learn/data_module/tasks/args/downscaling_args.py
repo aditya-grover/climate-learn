@@ -1,14 +1,15 @@
 from __future__ import annotations
-from typing import Any, Callable, Sequence, TYPE_CHECKING, Union
+from typing import Callable, Sequence, TYPE_CHECKING, Union
 from climate_learn.data_module.data.args import DataArgs
 from climate_learn.data_module.tasks.args import TaskArgs
 
 if TYPE_CHECKING:
+    from climate_learn.data_module.tasks import Downscaling
     from climate_learn.data_module.module import DataModuleArgs
 
 
 class DownscalingArgs(TaskArgs):
-    _task_class: Union[Callable[..., Any], str] = "Downscaling"
+    _task_class: Union[Callable[..., Downscaling], str] = "Downscaling"
 
     def __init__(
         self,
