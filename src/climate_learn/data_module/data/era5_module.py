@@ -4,7 +4,7 @@ import xarray as xr
 import numpy as np
 
 from tqdm import tqdm
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Dict, Iterable, Sequence
 from climate_learn.data_module.data import Data
 from climate_learn.data_module.data.args import ERA5Args
 from ..constants import (
@@ -26,16 +26,16 @@ class ERA5(Data):
 
     def setup(self) -> None:
         self.constant_names: Sequence[str] = []
-        self.data_dict: dict[str, xr.core.dataarray.DataArray] = self.load_from_nc(
+        self.data_dict: Dict[str, xr.core.dataarray.DataArray] = self.load_from_nc(
             self.root_dir
         )
         self.set_lat_lon()
 
-    def load_from_nc(self, data_dir: str) -> dict[str, xr.core.dataarray.DataArray]:
+    def load_from_nc(self, data_dir: str) -> Dict[str, xr.core.dataarray.DataArray]:
         self.constant_names = [
             name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS
         ]
-        self.constants: dict[str, xr.core.dataarray.DataArray] = {}
+        self.constants: Dict[str, xr.core.dataarray.DataArray] = {}
         if len(self.constant_names) > 0:
             ps = glob.glob(os.path.join(data_dir, "constants", "*.nc"))
             all_constants = xr.open_mfdataset(ps, combine="by_coords")
