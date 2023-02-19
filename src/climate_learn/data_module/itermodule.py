@@ -3,7 +3,7 @@ import glob
 from typing import Optional
 
 # Local application
-from .modules import *
+from .data.era5_iterdataset import *
 from ..utils.datetime import Hours
 from .module import collate_fn
 
@@ -11,7 +11,7 @@ from .module import collate_fn
 import torch
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
-from lightning import LightningDataModule
+from pytorch_lightning import LightningDataModule
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
