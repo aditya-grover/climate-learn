@@ -3,7 +3,7 @@ import glob
 import xarray as xr
 
 from tqdm import tqdm
-from typing import Any, Callable, Iterable, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, Sequence, Tuple
 from climate_learn.data_module.data import Data
 from climate_learn.data_module.data.args import ERA5Args
 from ..constants import (
@@ -24,9 +24,7 @@ class ERA5(Data):
         self.years: Iterable[int] = data_args.years
 
     def setup(self) -> None:
-        self.constant_names: Union[
-            None, Sequence[str]
-        ] = None  # Can we work with empty list instead of None?
+        self.constant_names: Sequence[str] = []
         self.data_dict: dict[str, Any] = self.load_from_nc(
             self.root_dir
         )  # TODO add stronger typecheck

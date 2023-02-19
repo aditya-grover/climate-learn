@@ -1,4 +1,8 @@
-from typing import Any, Callable, Sequence, Union
+from __future__ import annotations
+from typing import Any, Callable, Sequence, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from climate_learn.data_module.module import DataModuleArgs
 
 
 class DataArgs:
@@ -8,5 +12,5 @@ class DataArgs:
         self.variables: Sequence[str] = variables
         self.split: str = split
 
-    def setup(self, data_module_args: Any) -> None:  # TODO add stronger typecheck
+    def setup(self, data_module_args: DataModuleArgs) -> None:
         pass

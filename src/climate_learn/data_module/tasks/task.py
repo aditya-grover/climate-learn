@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence, Union
+from typing import Any, Callable, Sequence
 import numpy as np
 
 from torch.utils.data import Dataset
@@ -23,7 +23,7 @@ class Task(Dataset):
 
         self.in_vars: Sequence[str] = task_args.in_vars
         self.out_vars: Sequence[str] = task_args.out_vars
-        self.constant_names: Union[Sequence[str], None] = task_args.constant_names
+        self.constant_names: Sequence[str] = task_args.constant_names
         self.subsample: int = task_args.subsample
         self.split: str = task_args.split
 

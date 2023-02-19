@@ -1,5 +1,9 @@
-from typing import Any, Callable, Iterable, Sequence, Union
+from __future__ import annotations
+from typing import Any, Callable, Iterable, Sequence, TYPE_CHECKING, Union
 from climate_learn.data_module.data.args import DataArgs
+
+if TYPE_CHECKING:
+    from climate_learn.data_module.module import DataModuleArgs
 
 
 class ERA5Args(DataArgs):
@@ -16,7 +20,7 @@ class ERA5Args(DataArgs):
         self.root_dir: str = root_dir
         self.years: Iterable[int] = years
 
-    def setup(self, data_module_args: Any) -> None:  # TODO add stronger typecheck
+    def setup(self, data_module_args: DataModuleArgs) -> None:
         if self.split == "train":
             self.years = range(
                 data_module_args.train_start_year, data_module_args.val_start_year

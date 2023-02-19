@@ -1,5 +1,9 @@
-from typing import Any, Callable, Sequence, Union
+from __future__ import annotations
+from typing import Any, Callable, Sequence, TYPE_CHECKING, Union
 from climate_learn.data_module.data.args import DataArgs
+
+if TYPE_CHECKING:
+    from climate_learn.data_module.module import DataModuleArgs
 
 
 class TaskArgs:
@@ -21,6 +25,6 @@ class TaskArgs:
         self.subsample: int = subsample
         self.split: str = split
 
-    def setup(self, data_module_args: Any) -> None:  # TODO add stronger typecheck
+    def setup(self, data_module_args: DataModuleArgs) -> None:
         self.dataset_args.split = self.split
         self.dataset_args.setup(data_module_args)
