@@ -78,54 +78,24 @@ class ResNet(nn.Module):
 
         return pred
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat):
+    def forward(
+        self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat, log_postfix
+    ):
         # B, C, H, W
         pred = self.predict(x)
-        return ([m(pred, y, out_variables, lat=lat) for m in metric], x)
-
-    def rollout(
-        self,
-        x: torch.Tensor,
-        y: torch.Tensor,
-        clim,
-        variables,
-        out_variables,
-        steps,
-        metric,
-        transform,
-        lat,
-        log_steps,
-        log_days,
-    ):
-        if steps > 1:
-            assert len(variables) == len(out_variables)
-
-        preds = []
-        for _ in range(steps):
-            x = self.predict(x)
-            preds.append(x)
-        preds = torch.stack(preds, dim=1)
-        if len(y.shape) == 4:
-            y = y.unsqueeze(1)
-
         return (
             [
-                m(
-                    preds,
-                    y,
-                    out_variables,
-                    transform=transform,
-                    lat=lat,
-                    log_steps=log_steps,
-                    log_days=log_days,
-                    clim=clim,
-                )
+                m(pred, y, out_variables, lat=lat, log_postfix=log_postfix)
                 for m in metric
             ],
             x,
         )
 
-    def upsample(self, x, y, out_vars, transform, metric):
-        with torch.no_grad():
-            pred = self.predict(x)
-        return ([m(pred, y, out_vars, transform=transform) for m in metric], x)
+    def evaluate(
+        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
+    ):
+        pred = self.predict(x)
+        return [
+            m(pred, y, transform, out_variables, lat, clim, log_postfix)
+            for m in metrics
+        ], pred

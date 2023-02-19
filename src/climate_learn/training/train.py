@@ -8,8 +8,8 @@ from pytorch_lightning.callbacks import (
 
 import logging
 
-logging.getLogger("lightning").setLevel(logging.ERROR)
-logging.getLogger("lightning").setLevel(logging.ERROR)
+logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
 
 class Trainer:
