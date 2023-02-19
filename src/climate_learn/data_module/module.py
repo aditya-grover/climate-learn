@@ -113,7 +113,10 @@ class DataModule(LightningDataModule):
             and data_module_args.val_start_year > data_module_args.train_start_year
         )
         self.save_hyperparameters(logger=False)
-        task_class = eval(data_module_args.train_task_args.task_class)
+        if isinstance(data_module_args.train_task_args._task_class, str):
+            task_class = eval(data_module_args.train_task_args._task_class)
+        else:
+            task_class = data_module_args.train_task_args._task_class
 
         self.train_dataset = task_class(data_module_args.train_task_args)
         self.train_dataset.setup()

@@ -3,6 +3,7 @@ import glob
 import xarray as xr
 
 from tqdm import tqdm
+from typing import Any, Callable, Iterable, Sequence, Tuple, Union
 from climate_learn.data_module.data import Data
 from climate_learn.data_module.data.args import ERA5Args
 from ..constants import (
@@ -15,23 +16,27 @@ from ..constants import (
 
 
 class ERA5(Data):
-    args_class = ERA5Args
+    args_class: Callable[..., ERA5Args] = ERA5Args
 
-    def __init__(self, data_args):
+    def __init__(self, data_args: ERA5Args) -> None:
         super().__init__(data_args)
-        self.root_dir = data_args.root_dir
-        self.years = data_args.years
+        self.root_dir: str = data_args.root_dir
+        self.years: Iterable[int] = data_args.years
 
-    def setup(self):
-        self.constant_names = None
-        self.data_dict = self.load_from_nc(self.root_dir)
-        self.lat, self.lon = self.get_lat_lon()
+    def setup(self) -> None:
+        self.constant_names: Union[
+            None, Sequence[str]
+        ] = None  # Can we work with empty list instead of None?
+        self.data_dict: dict[str, Any] = self.load_from_nc(
+            self.root_dir
+        )  # TODO add stronger typecheck
+        self.lat, self.lon = self.get_lat_lon()  # TODO: Add type hinting
 
-    def load_from_nc(self, data_dir):
+    def load_from_nc(self, data_dir: str) -> dict[str, Any]:
         self.constant_names = [
             name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS
         ]
-        self.constants = {}
+        self.constants: dict[str, Any] = {}  # TODO add stronger typecheck
         if len(self.constant_names) > 0:
             ps = glob.glob(os.path.join(data_dir, "constants", "*.nc"))
             all_constants = xr.open_mfdataset(ps, combine="by_coords")
@@ -77,7 +82,7 @@ class ERA5(Data):
         self.variables = list(data_dict.keys())
         return data_dict
 
-    def get_lat_lon(self):
+    def get_lat_lon(self) -> Tuple[Any, Any]:  # TODO add stronger typecheck
         # lat lon is stored in each of the nc files, just need to load one and extract
         dir_var = os.path.join(self.root_dir, self.variables[0])
         year = self.years[0]
@@ -87,8 +92,11 @@ class ERA5(Data):
         lon = xr_data["lon"].to_numpy()
         return lat, lon
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> None:
         pass
 
-    def __len__(self):
+    def __len__(self) -> None:
         pass
+
+
+ERA5Args._data_class = ERA5
