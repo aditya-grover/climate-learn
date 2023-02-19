@@ -9,7 +9,7 @@ from typing import Callable, Tuple, Union
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from pytorch_lightning.core.datamodule import LightningDataModule
+from pytorch_lightning import LightningDataModule
 from torchvision.transforms import transforms
 
 # TODO: include exceptions in docstrings
