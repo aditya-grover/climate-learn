@@ -117,9 +117,13 @@ class DataModule(LightningDataModule):
         )
         self.save_hyperparameters(logger=False)
         if isinstance(data_module_args.train_task_args._task_class, str):
-            task_class: Callable[..., Task] = eval(data_module_args.train_task_args._task_class)
+            task_class: Callable[..., Task] = eval(
+                data_module_args.train_task_args._task_class
+            )
         else:
-            task_class: Callable[..., Task] = data_module_args.train_task_args._task_class
+            task_class: Callable[
+                ..., Task
+            ] = data_module_args.train_task_args._task_class
 
         self.train_dataset: Task = task_class(data_module_args.train_task_args)
         self.train_dataset.setup()

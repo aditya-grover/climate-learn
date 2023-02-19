@@ -7,6 +7,7 @@ import pytest
 DATA_PATH = "/data0/datasets/weatherbench/data/weatherbench/"
 GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
+
 @pytest.mark.skipif(GITHUB_ACTIONS, reason="only works locally")
 class TestModuleInstantiation:
     def test_datamodule_initialization(self):
