@@ -16,7 +16,6 @@ logging.getLogger("lightning").setLevel(logging.ERROR)
 class Trainer:
     def __init__(
         self,
-        task,
         seed=0,
         accelerator="gpu",
         devices=1,
@@ -24,6 +23,8 @@ class Trainer:
         max_epochs=4,
         logger=False,
         patience=5,
+        early_stopping=False,
+        task=None,
     ):
         seed_everything(seed)
 
@@ -36,14 +37,22 @@ class Trainer:
         summary_callback = RichModelSummary(max_depth=-1)
         progress_callback = RichProgressBar()
 
-        if task == "forecasting":
-            monitor = "val/w_mse"
-        elif task == "downscaling":
-            monitor = "val/mse"
-        else:
-            raise NotImplementedError(
-                "Please specify either forecasting or downscaling as the training task. Other tasks not available."
-            )
+        callbacks = [
+            checkpoint_callback,
+            summary_callback,
+            progress_callback,
+        ]
+
+        if early_stopping:
+            if task == "forecasting":
+                monitor = "val/w_mse"
+            elif task == "downscaling":
+                monitor = "val/mse"
+            else:
+                raise NotImplementedError(
+                    "Please specify either forecasting or downscaling as the training task. Other tasks not available."
+                )
+            callbacks.append(early_stop_callback)
 
         early_stop_callback = EarlyStopping(
             monitor=monitor, patience=patience, verbose=False, mode="min"
@@ -55,12 +64,7 @@ class Trainer:
             devices=devices,
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=[
-                checkpoint_callback,
-                summary_callback,
-                progress_callback,
-                early_stop_callback,
-            ],
+            callbacks=callbacks
         )
 
     def fit(self, model_module, data_module):
