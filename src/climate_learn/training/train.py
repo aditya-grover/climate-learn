@@ -45,7 +45,9 @@ class Trainer:
                 "Please specify either forecasting or downscaling as the training task. Other tasks not available."
             )
 
-        early_stop_callback = EarlyStopping(monitor=monitor, patience=patience, verbose=False, mode="min")
+        early_stop_callback = EarlyStopping(
+            monitor=monitor, patience=patience, verbose=False, mode="min"
+        )
 
         self.trainer = LitTrainer(
             logger=logger,
