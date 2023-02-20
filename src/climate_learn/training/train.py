@@ -41,7 +41,9 @@ class Trainer:
         elif task == "downscaling":
             monitor = "val/mse"
         else:
-            raise NotImplementedError("Please specify either forecasting or downscaling as the training task. Other tasks not available.")
+            raise NotImplementedError(
+                "Please specify either forecasting or downscaling as the training task. Other tasks not available."
+            )
 
         early_stop_callback = EarlyStopping(monitor=monitor, patience=patience, verbose=False, mode="min")
 
@@ -52,9 +54,9 @@ class Trainer:
             precision=precision,
             max_epochs=max_epochs,
             callbacks=[
-                checkpoint_callback, 
-                summary_callback, 
-                progress_callback, 
+                checkpoint_callback,
+                summary_callback,
+                progress_callback,
                 early_stop_callback,
             ],
         )
