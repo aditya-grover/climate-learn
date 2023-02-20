@@ -65,7 +65,7 @@ class Trainer:
             devices=devices,
             precision=precision,
             max_epochs=max_epochs,
-            callbacks=callbacks
+            callbacks=callbacks,
         )
 
     def fit(self, model_module, data_module):
