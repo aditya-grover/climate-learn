@@ -52,11 +52,12 @@ class Trainer:
                 raise NotImplementedError(
                     "Please specify either forecasting or downscaling as the training task. Other tasks not available."
                 )
-            callbacks.append(early_stop_callback)
 
-        early_stop_callback = EarlyStopping(
-            monitor=monitor, patience=patience, verbose=False, mode="min"
-        )
+            early_stop_callback = EarlyStopping(
+                monitor=monitor, patience=patience, verbose=False, mode="min"
+            )
+
+            callbacks.append(early_stop_callback)
 
         self.trainer = LitTrainer(
             logger=logger,
