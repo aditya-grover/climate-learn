@@ -68,13 +68,16 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
         inv_normalize = model_module.denormalization
         init_condition, gt = inv_normalize(x), inv_normalize(y)
+        init_condition = np.flip(init_condition.detach().cpu().squeeze().numpy(), 0)
         pred = inv_normalize(pred)
+        pred = np.flip(pred.detach().cpu().squeeze().numpy(), 0)
+        gt = np.flip(gt.detach().cpu().squeeze().numpy(), 0)
         bias = pred - gt
 
-        for i, tensor in enumerate([init_condition, gt, pred, bias]):
+        for i, np_array in enumerate([init_condition, gt, pred, bias]):
             ax = axes[index][i]
-            im = ax.imshow(tensor.detach().squeeze().cpu().numpy())
-            im.set_cmap(cmap=plt.cm.RdBu)
+            im = ax.imshow(np_array)
+            im.set_cmap(cmap=plt.cm.coolwarm)
             fig.colorbar(im, ax=ax)
 
         if data_module.hparams.task == "forecasting":
@@ -126,19 +129,22 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
 
         inv_normalize = model_module.denormalization
         init_condition, gt = inv_normalize(x), inv_normalize(y)
+        init_condition = np.flip(init_condition.detach().cpu().numpy(), 2)
         pred = inv_normalize(pred)
+        pred = np.flip(pred.detach().cpu().numpy(), 2)
+        gt = np.flip(gt.detach().cpu().numpy(), 2)
         bias = pred - gt  # B, 1, 32, 64
-        mean_bias = bias.mean(dim=0)
+        mean_bias = np.mean(bias, axis=0)
         all_mean_bias.append(mean_bias)
 
-    all_mean_bias = torch.stack(all_mean_bias, dim=0)
-    mean_bias = torch.mean(all_mean_bias, dim=0)
+    all_mean_bias = np.stack(all_mean_bias, axis=0)
+    mean_bias = np.mean(all_mean_bias, axis=0)
 
     fig, axes = plt.subplots(1, 1, figsize=(12, 4), squeeze=False)
     ax = axes[0, 0]
 
-    im = ax.imshow(mean_bias.detach().squeeze().cpu().numpy())
-    im.set_cmap(cmap=plt.cm.RdBu)
+    im = ax.imshow(mean_bias.squeeze())
+    im.set_cmap(cmap=plt.cm.coolwarm)
     fig.colorbar(im, ax=ax)
     ax.set_title("Mean bias [Kelvin]")
 
