@@ -111,7 +111,7 @@ class ERA5Forecasting(ERA5):
     ):
         print(f"Creating {split} dataset")
         unique_vars = list(set(in_vars) | set(out_vars))
-        super().__init__(root_dir, root_highres_dir, unique_vars, years, split)
+        super().__init__(root_dir, root_highres_dir, in_vars, years, split)
 
         self.in_vars = list(self.data_dict.keys())
         self.out_vars = out_vars
