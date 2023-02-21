@@ -9,33 +9,27 @@
 
 ## Usage
 
+[**Python3**](https://www.python.org/) is required.
+```
+pip install climate-learn
+```
+
 ### Quickstart
 Please refer to this [Google Colab](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa) for a tutorial-style exposition into developing your first models for forecasting and downscaling in ClimateLearn.
 
 We previewed some key features of ClimateLearn at a spotlight tutorial in the "Tackling Climate Change with Machine Learning" Workshop at the Neural Information Processing Systems 2022 Conference. The slides and recorded talk can be found on [Climate Change AI's website](https://www.climatechange.ai/papers/neurips2022/114). 
 
-### Local Installation
-
-[**Python3**](https://www.python.org/) is required. Currently, ClimateLearn can only be installed from source.
-
-```
-$ git clone https://github.com/aditya-grover/climate-learn.git
-$ cd climate-learn
-$ pip install -e .
-```
-
 ### Documentation
 Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
 
 ### Integrations
-
 - [Weights & Biases](https://wandb.ai/site)
 
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
 
 ## Contributing
-Contributions are welcome! See our [contributing guide](CONTRIBUTING.md).
+Contributions are welcome! See our [contributing guide](https://github.com/aditya-grover/climate-learn/blob/main/CONTRIBUTING.md).
 
 ## Citing ClimateLearn
-If you use ClimateLearn, please see the [`CITATION.cff`](CITATION.cff) file or use the citation prompt provided by GitHub in the sidebar.
+If you use ClimateLearn, please see the [`CITATION.cff`](https://github.com/aditya-grover/climate-learn/blob/main/CITATION.cff) file or use the citation prompt provided by GitHub in the sidebar.

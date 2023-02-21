@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "climate_learn"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
-    { name = "Jason Jewik", email = "jason.jewik@cs.ucla.edu" },
+    { name = "MINT at UCLA", email = "jason.jewik@cs.ucla.edu" },
     { name = "Hritik Bansal", email = "hbansal@g.ucla.edu" },
     { name = "Shashank Goel", email = "shashankgoel@g.ucla.edu" },
     { name = "Siddharth Nandy", email = "sidd.nandy@gmail.com" },
     { name = "Tung Nguyen", email = "tungnd@g.ucla.edu" },
     { name = "Seongbin Park", email = "shannonsbpark@gmail.com" },
     { name = "Jingchen Tang", email = "tangtang1228@ucla.edu" },
+    { name = "Jason Jewik", email = "jason.jewik@cs.ucla.edu" },
     { name = "Aditya Grover", email = "adityag@cs.ucla.edu" },
 ]
 description = "ClimateLearn: Benchmarking Machine Learning for Data-driven Climate Science"
@@ -55,6 +56,8 @@ dev = [
     "black>=23.1.0",    
     "flake8>=3.9.2",
     "pytest>=7.2.1",
+    "build",
+    "twine"
 ]
 docs = [
     "ipython>=7.34.0",
