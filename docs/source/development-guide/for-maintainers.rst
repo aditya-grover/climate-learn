@@ -3,7 +3,8 @@ For Maintainers
 
 Managing Issues
 ---------------
-Coming soon!
+Issues fall into three categories: "Report a bug", "Report a docs issue", and "Feature request". No one is set as the default assignee for any issue. All issues should have an assignee within 24 hours. If you do not see one, please add either yourself or the maintainer who you think is most qualified to handle the issue.
+
 
 Managing Pull Requests
 ----------------------
