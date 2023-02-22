@@ -14,5 +14,4 @@ class Data(ABC):
         pass
 
 
-
 DataArgs._data_class = Data

@@ -91,5 +91,4 @@ class ERA5(Data):
         self.lon: np.ndarray = xr_data["lon"].to_numpy()
 
 
-
 ERA5Args._data_class = ERA5
