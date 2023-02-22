@@ -7,5 +7,5 @@ class TestERA5ArgsInstantiation:
             root_dir="my_data_path",
             variables=["random_variable_1", "random_variable_2"],
             years=range(2010, 2015),
-            split="Train",
+            split="train",
         )

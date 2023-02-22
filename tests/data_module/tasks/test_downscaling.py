@@ -5,9 +5,9 @@ from climate_learn.data_module.tasks.args import DownscalingArgs
 
 class TestDownscalingInstantiation:
     def test_initialization(self):
-        temp_data_args = DataArgs(variables=["random_variable_1"], split="Train")
+        temp_data_args = DataArgs(variables=["random_variable_1"], split="train")
         temp_highres_data_args = DataArgs(
-            variables=["random_variable_2"], split="Train"
+            variables=["random_variable_2"], split="train"
         )
         Downscaling(
             DownscalingArgs(

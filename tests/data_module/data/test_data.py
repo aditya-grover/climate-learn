@@ -6,6 +6,6 @@ class TestDataInstantiation:
     def test_initialization(self):
         Data(
             DataArgs(
-                variables=["random_variable_1", "random_variable_2"], split="Train"
+                variables=["random_variable_1", "random_variable_2"], split="train"
             )
         )

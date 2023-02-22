@@ -5,7 +5,7 @@ from climate_learn.data_module.data.args import DataArgs
 class TestForecastingArgsInstantiation:
     def test_initialization(self):
         temp_data_args = DataArgs(
-            variables=["random_variable_1", "random_variable_2"], split="Train"
+            variables=["random_variable_1", "random_variable_2"], split="train"
         )
         ForecastingArgs(
             temp_data_args,

@@ -6,7 +6,7 @@ from climate_learn.data_module.tasks.args import TaskArgs
 class TestTaskInstantiation:
     def test_initialization(self):
         temp_data_args = DataArgs(
-            variables=["random_variable_1", "random_variable_2"], split="Train"
+            variables=["random_variable_1", "random_variable_2"], split="train"
         )
         Task(
             TaskArgs(
