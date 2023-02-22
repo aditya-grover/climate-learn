@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC
 from typing import Callable, Sequence, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
@@ -6,7 +7,7 @@ if TYPE_CHECKING:
     from climate_learn.data_module.module import DataModuleArgs
 
 
-class DataArgs:
+class DataArgs(ABC):
     _data_class: Union[Callable[..., Data], str] = "Data"
 
     def __init__(self, variables: Sequence[str], split: str = "train") -> None:

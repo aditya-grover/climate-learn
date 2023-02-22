@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC
 from typing import Callable, Sequence, TYPE_CHECKING, Union
 from climate_learn.data_module.data.args import DataArgs
 
@@ -7,7 +8,7 @@ if TYPE_CHECKING:
     from climate_learn.data_module.module import DataModuleArgs
 
 
-class TaskArgs:
+class TaskArgs(ABC):
     _task_class: Union[Callable[..., Task], str] = "Task"
 
     def __init__(

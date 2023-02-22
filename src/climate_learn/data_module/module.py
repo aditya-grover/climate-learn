@@ -1,5 +1,6 @@
 # Local application
 from ..utils.datetime import Year, Hours
+from abc import ABC
 from climate_learn.data_module.tasks import TaskArgs, Task
 
 import copy
@@ -31,7 +32,7 @@ def collate_fn(batch):
     return inp, out, variables, out_variables
 
 
-class DataModuleArgs:
+class DataModuleArgs(ABC):
     def __init__(
         self,
         task_args: TaskArgs,

@@ -90,11 +90,6 @@ class ERA5(Data):
         self.lat: np.ndarray = xr_data["lat"].to_numpy()
         self.lon: np.ndarray = xr_data["lon"].to_numpy()
 
-    def __getitem__(self, index: int) -> None:
-        pass
-
-    def __len__(self) -> None:
-        pass
 
 
 ERA5Args._data_class = ERA5
