@@ -128,14 +128,31 @@ def test_lat_weighted_nll():
     # check the shape of the output dictionary
     assert len(loss_dict) == len(vars) + 1 # +1 for "w_nll" key
 
-    # w_lat: torch.Size([1, 32, 1])
+    # get the golden loss to verify
+    golden_loss = torch.nn.GaussianNLLLoss(reduction='none')
+    loss = golden_loss(loc, y, scale)
+
+    w_lat = np.cos(np.deg2rad(lat))
+    w_lat = w_lat / w_lat.mean()  # (H, )
+    w_lat = (torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(dtype=loss.dtype, device=loss.device))
+
+    golden_loss_dict = {}
+    with torch.no_grad():
+        for i, var in enumerate(vars):
+            golden_loss_dict[f"w_nll_{var}_{log_postfix}"] = torch.mean(loss[:, i] * w_lat)
+
+    golden_loss_dict["w_nll"] = np.mean([golden_loss_dict[k].cpu() for k in golden_loss_dict.keys()])
+    print('\ngolden_nll:\n',golden_loss_dict)
+    print("\nnll:\n", loss_dict)
         
-    # check the shape and type of each loss
+    # check the shape and type of each loss, and check with golden loss
     for var in vars:
         loss_key = f"w_nll_{var}_{log_postfix}"
         assert loss_key in loss_dict
         assert isinstance(loss_dict[loss_key], torch.Tensor)
+        # assert loss_dict[loss_key] == golden_loss_dict[loss_key]
         
     assert isinstance(loss_dict["w_nll"], np.float32)
+    # assert loss_dict['w_nll'] == golden_loss_dict['w_nll']
     
-    print("\nnll:\n", loss_dict)
+    
