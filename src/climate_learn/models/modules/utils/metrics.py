@@ -273,6 +273,7 @@ def categorical_loss(pred, y, transform, vars, lat, clim, log_postfix):
     # get the labels [128, 1, 32, 64]
     _, labels = y.max(dim=1) # y.shape = pred.shape = [128, 50, 1, 32, 64] 
     error = loss(pred, labels.to(pred.device)) # error.shape [128, 1, 32, 64]
+    print(error.shape)
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
@@ -281,8 +282,10 @@ def categorical_loss(pred, y, transform, vars, lat, clim, log_postfix):
         torch.from_numpy(w_lat)
         .unsqueeze(0)
         .unsqueeze(-1)
-        .to(dtype=crps.dtype, device=crps.device)
+        .to(dtype=error.dtype, device=error.device)
     )
+
+    print(w_lat.shape)
 
     loss_dict = {}
     with torch.no_grad():

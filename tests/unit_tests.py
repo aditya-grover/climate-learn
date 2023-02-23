@@ -7,40 +7,6 @@ from src.climate_learn.models.modules.utils.metrics import categorical_loss
 
 class TestCategoricalLoss(unittest.TestCase):
     
-    def categorical_loss(self, pred, y, transform, vars, lat, clim, log_postfix):
-        """
-        y: [B, 50, C, H, W]
-        pred: [B, 50, C, H, W]
-        vars: list of variable names
-        lat: H
-        """
-        loss = torch.nn.CrossEntropyLoss(reduction='none')
-        # get the labels [128, 1, 32, 64]
-        _, labels = y.max(dim=1) # y.shape = pred.shape = [128, 50, 1, 32, 64] 
-        error = loss(pred, labels.to(pred.device)) # error.shape [128, 1, 32, 64]
-        print(error.shape)
-
-        # lattitude weights
-        w_lat = np.cos(np.deg2rad(lat))
-        w_lat = w_lat / w_lat.mean()  # (H, )
-        w_lat = (
-            torch.from_numpy(w_lat)
-            .unsqueeze(0)
-            .unsqueeze(-1)
-            .to(dtype=error.dtype, device=error.device)
-        )
-
-        print(w_lat.shape)
-
-        loss_dict = {}
-        with torch.no_grad():
-            for i, var in enumerate(vars):
-                loss_dict[f"categorical_{var}_{log_postfix}"] = torch.mean(error[:, i] * w_lat)
-
-        loss_dict["w_categorical"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-        return loss_dict
-
     def test_categorical_loss(self):
         # create test input tensors
         batch_size = 128
@@ -57,7 +23,7 @@ class TestCategoricalLoss(unittest.TestCase):
         lat = np.random.rand(32)
         clim = None
         log_postfix = "test"
-        loss_dict = self.categorical_loss(pred, y, transform, vars, lat, clim, log_postfix)
+        loss_dict = categorical_loss(pred, y, transform, vars, lat, clim, log_postfix)
         
         # check the shape of the output dictionary
         self.assertEqual(len(loss_dict), len(vars) + 1) # +1 for "w_categorical" key
