@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from scipy import stats
-from math import sqrt
 from torch.distributions.normal import Normal
 
 
@@ -168,7 +167,9 @@ def lat_weighted_nll(pred, y, transform, vars, lat, clim, log_postfix):
     """
     assert type(pred) == Normal
 
-    error = - pred.log_prob(y)
+    # apply Gaussian NLL Loss
+    loss = torch.nn.GaussianNLLLoss(reduction='none')
+    error = loss(pred.loc, y, pred.scale)
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
@@ -200,13 +201,13 @@ def lat_weighted_crps_gaussian(pred, y, transform, vars, lat, clim, log_postfix)
     mean, std = pred.loc, pred.scale
     assert std is not None
 
-    s = (y - mean) / std
+    z = (y - mean) / std
 
     standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
-    cdf = standard_normal.cdf(s)
-    pdf = torch.exp(standard_normal.log_prob(s))
+    cdf = standard_normal.cdf(z)
+    pdf = torch.exp(standard_normal.log_prob(z))
 
-    crps = std * (s * (2*cdf - 1) + 2*pdf - 1/sqrt(torch.pi))
+    crps = std * (z * (2 * cdf - 1) + 2 * pdf - 1 / np.sqrt(np.pi))
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
@@ -271,9 +272,9 @@ def lat_weighted_categorical_loss(pred, y, transform, vars, lat, clim, log_postf
     lat: H
     """
     loss = torch.nn.CrossEntropyLoss(reduction='none')
-    # get the labels [128, 1, 32, 64]
-    _, labels = y.max(dim=1) # y.shape = pred.shape = [128, 50, 1, 32, 64] 
-    error = loss(pred, labels.to(pred.device)) # error.shape [128, 1, 32, 64]
+    # get the labels [B, C, H, W]
+    _, labels = y.max(dim=1) # y.shape = pred.shape = [B, 50, C, H, W] 
+    error = loss(pred, labels.to(pred.device)) # error.shape [B, C, H, W]
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
