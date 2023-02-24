@@ -29,6 +29,7 @@ class ForecastingArgs(TaskArgs):
         self.history: int = history
         self.window: int = window
         self.pred_range: int = pred_range
-
+        self.subsample: int = subsample
+        
     def setup(self, data_module_args: DataModuleArgs) -> None:
         super().setup(data_module_args)

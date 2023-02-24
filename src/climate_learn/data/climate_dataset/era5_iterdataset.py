@@ -79,13 +79,14 @@ class NpyReader(IterableDataset):
 
 class Forecast(IterableDataset):
     def __init__(
-        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6
+        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6, subsample: int = 1
     ) -> None:
         super().__init__()
         self.dataset = dataset
         self.pred_range = pred_range
         self.history = history
         self.window = window
+        self.subsample = subsample
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
@@ -102,7 +103,7 @@ class Forecast(IterableDataset):
             for t in range(self.history):
                 inputs[t] = inputs[t].roll(-t * self.window, dims=0)
 
-            last_idx = -((self.history - 1) * self.window + self.pred_range)
+            last_idx = -((self.history - 1) * self.window + self.pred_range // self.subsample)
 
             inputs = inputs[:, :last_idx].transpose(0, 1)  # N, T, C, H, W
 
@@ -112,7 +113,7 @@ class Forecast(IterableDataset):
             output_ids = (
                 torch.arange(inputs.shape[0])
                 + (self.history - 1) * self.window
-                + predict_ranges
+                + predict_ranges // self.subsample
             )
             outputs = y[output_ids]
 

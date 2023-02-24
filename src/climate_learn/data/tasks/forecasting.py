@@ -20,6 +20,7 @@ class Forecasting(Task):
         self.history: int = task_args.history
         self.window: int = task_args.window
         self.pred_range: int = task_args.pred_range
+        self.subsample: int = task_args.subsample
 
     def setup(self) -> None:
         super().setup()
@@ -31,8 +32,9 @@ class Forecasting(Task):
         out_data = xr.concat(
             [self.dataset.data_dict[k] for k in self.out_vars], dim="level"
         )
-        self.inp_data: np.ndarray = inp_data.to_numpy().astype(np.float32)
-        self.out_data: np.ndarray = out_data.to_numpy().astype(np.float32)
+
+        self.inp_data: np.ndarray = inp_data[::self.subsample].to_numpy().astype(np.float32)
+        self.out_data: np.ndarray = out_data[::self.subsample].to_numpy().astype(np.float32)
 
         constants_data = [
             self.dataset.constants[k].to_numpy().astype(np.float32)
@@ -86,7 +88,8 @@ class Forecasting(Task):
             idx = index + self.window * i
             inp.append(self.inp_data[idx])
         inp = np.stack(inp, axis=0)
-        out_idx = index + (self.history - 1) * self.window + self.pred_range
+
+        out_idx = index + (self.history - 1) * self.window + (self.pred_range // self.subsample)
         out = self.out_data[out_idx]
         return inp, out
 
@@ -107,7 +110,7 @@ class Forecasting(Task):
         return inp, out, self.in_vars + self.constant_names, self.out_vars
 
     def __len__(self) -> int:
-        return len(self.inp_data) - ((self.history - 1) * self.window + self.pred_range)
+        return len(self.inp_data) - ((self.history - 1) * self.window + self.pred_range // self.subsample)
 
 
 ForecastingArgs._task_class = Forecasting

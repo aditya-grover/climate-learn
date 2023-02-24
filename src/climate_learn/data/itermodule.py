@@ -65,6 +65,7 @@ class IterDataModule(LightningDataModule):
                 "pred_range": pred_range.hours(),
                 "history": history,
                 "window": window,
+                "subsample": subsample.hours(),
             }
         else:  # downscaling
             self.dataset_caller = Downscale
