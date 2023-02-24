@@ -22,6 +22,7 @@ class ERA5Args(ClimateDatasetArgs):
         self.years: Iterable[int] = years
 
     def setup(self, data_module_args: DataModuleArgs) -> None:
+        super().setup()
         if self.split == "train":
             self.years = range(
                 data_module_args.train_start_year, data_module_args.val_start_year

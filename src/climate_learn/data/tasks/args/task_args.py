@@ -28,5 +28,6 @@ class TaskArgs(ABC):
         self.split: str = split
 
     def setup(self, data_module_args: DataModuleArgs) -> None:
+        assert self.split in ["train", "val", "test"]
         self.dataset_args.split = self.split
         self.dataset_args.setup(data_module_args)

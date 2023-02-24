@@ -15,4 +15,4 @@ class ClimateDatasetArgs(ABC):
         self.split: str = split
 
     def setup(self, data_module_args: DataModuleArgs) -> None:
-        pass
+        assert self.split in ["train", "val", "test"]
