@@ -9,6 +9,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from climate_learn.data.tasks import Downscaling, Forecasting
+
 # TODO: include exceptions in docstrings
 
 
@@ -41,14 +43,14 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
         os.makedirs(save_dir, exist_ok=True)
 
     # dataset.setup()
-    dataset = eval(f"data_module.{split}_dataset")
+    task_dataset = eval(f"data_module.{split}_dataset")
 
     if type(samples) == int:
-        idxs = random.sample(range(0, len(dataset)), samples)
+        idxs = random.sample(range(0, len(task_dataset)), samples)
     elif type(samples) == list:
         idxs = [
             np.searchsorted(
-                dataset.time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H"))
+                task_dataset.time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H"))
             )
             for dt in samples
         ]
@@ -60,7 +62,7 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
     fig, axes = plt.subplots(len(idxs), 4, figsize=(30, 3 * len(idxs)), squeeze=False)
 
     for index, idx in enumerate(idxs):
-        x, y, _, _ = dataset[idx]  # 1, 1, 32, 64
+        x, y, _, _ = task_dataset[idx]  # 1, 1, 32, 64
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = interpolate_input(x, y)
@@ -77,12 +79,12 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
             im.set_cmap(cmap=plt.cm.RdBu)
             fig.colorbar(im, ax=ax)
 
-        if data_module.hparams.task == "forecasting":
+        if isinstance(task_dataset, Forecasting):
             axes[index][0].set_title("Initial condition [Kelvin]")
             axes[index][1].set_title("Ground truth [Kelvin]")
             axes[index][2].set_title("Prediction [Kelvin]")
             axes[index][3].set_title("Bias [Kelvin]")
-        elif data_module.hparams.task == "downscaling":
+        elif isinstance(task_dataset, Downscaling):
             axes[index][0].set_title("Low resolution data [Kelvin]")
             axes[index][1].set_title("High resolution data [Kelvin]")
             axes[index][2].set_title("Downscaled [Kelvin]")
