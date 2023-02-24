@@ -3,7 +3,7 @@ import glob
 from typing import Optional
 
 # Local application
-from .modules import *
+from .climate_dataset.era5_iterdataset import *
 from ..utils.datetime import Hours
 from .module import collate_fn
 
