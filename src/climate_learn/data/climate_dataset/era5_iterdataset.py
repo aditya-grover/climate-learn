@@ -116,6 +116,16 @@ class Forecast(IterableDataset):
                 + predict_ranges
             )
             outputs = y[output_ids]
+            
+            # print ('len orig', inputs.shape[0])
+            # print ('subsample', self.subsample)
+            
+            inputs = inputs[::self.subsample]
+            outputs = outputs[::self.subsample]
+            
+            # print ('after subsampling', inputs.shape[0])
+            # import sys
+            # sys.exit()
 
             yield inputs, outputs, variables, out_variables
 
