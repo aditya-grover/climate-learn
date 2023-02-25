@@ -103,7 +103,7 @@ class Forecast(IterableDataset):
             for t in range(self.history):
                 inputs[t] = inputs[t].roll(-t * self.window, dims=0)
 
-            last_idx = -((self.history - 1) * self.window + self.pred_range // self.subsample)
+            last_idx = -((self.history - 1) * self.window + self.pred_range)
 
             inputs = inputs[:, :last_idx].transpose(0, 1)  # N, T, C, H, W
 
@@ -113,7 +113,7 @@ class Forecast(IterableDataset):
             output_ids = (
                 torch.arange(inputs.shape[0])
                 + (self.history - 1) * self.window
-                + predict_ranges // self.subsample
+                + predict_ranges
             )
             outputs = y[output_ids]
 
