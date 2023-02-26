@@ -89,7 +89,7 @@ class Forecasting(Task):
             inp.append(self.inp_data[idx])
         inp = np.stack(inp, axis=0)
 
-        out_idx = index + (self.history - 1) * self.window + self.pred_range
+        out_idx = index + (self.history - 1) * self.window + (self.pred_range // self.subsample)
         out = self.out_data[out_idx]
         return inp, out
 
@@ -110,7 +110,7 @@ class Forecasting(Task):
         return inp, out, self.in_vars + self.constant_names, self.out_vars
 
     def __len__(self) -> int:
-        return (len(self.inp_data) - ((self.history - 1) * self.window + self.pred_range)) // self.subsample
+        return len(self.inp_data) - ((self.history - 1) * self.window + (self.pred_range // self.subsample)) 
 
 
 ForecastingArgs._task_class = Forecasting
