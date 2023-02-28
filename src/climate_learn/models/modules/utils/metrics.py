@@ -266,14 +266,16 @@ def lat_weighted_spread_skill_ratio(pred, y, transform, vars, lat, clim, log_pos
 
 def lat_weighted_categorical_loss(pred, y, transform, vars, lat, clim, log_postfix):
     """
-    y: [B, 50, C, H, W]
+    y: [B, C, H, W, 50]
     pred: [B, 50, C, H, W]
     vars: list of variable names
     lat: H
     """
     loss = torch.nn.CrossEntropyLoss(reduction='none')
+    # y.shape = [B, C, H, W, 50]
+    # pred.shape = [B, 50, C, H, W]
     # get the labels [B, C, H, W]
-    _, labels = y.max(dim=1) # y.shape = pred.shape = [B, 50, C, H, W] 
+    _, labels = y.max(dim=-1)
     error = loss(pred, labels.to(pred.device)) # error.shape [B, C, H, W]
 
     # lattitude weights

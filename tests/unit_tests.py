@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.distributions.normal import Normal
+from torch.nn.functional import one_hot
 import properscoring as ps
 from src.climate_learn.models.modules.utils.metrics import (
     lat_weighted_categorical_loss,
@@ -132,7 +133,7 @@ def test_categorical_loss():
     height = 32
     width = 64
     pred = torch.randn(batch_size, num_bins, num_channels, height, width)
-    y = torch.randint(low=0, high=num_bins, size=(batch_size, num_bins, num_channels, height, width))
+    y = one_hot(torch.randn(batch_size, num_channels, height, width, num_bins).argmax(dim=4), num_bins)
         
     # call the lat_weighted_categorical_loss function
     transform = None
