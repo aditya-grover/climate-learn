@@ -79,7 +79,9 @@ def lat_weighted_mse_val(pred, y, transform, vars, lat, clim, log_postfix):
     return loss_dict
 
 
-def lat_weighted_rmse(pred, y, transform, vars, lat, clim, log_postfix, transform_pred=True):
+def lat_weighted_rmse(
+    pred, y, transform, vars, lat, clim, log_postfix, transform_pred=True
+):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -155,6 +157,7 @@ def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix):
 
     return loss_dict
 
+
 ### uncertainty metrics
 
 
@@ -168,7 +171,7 @@ def lat_weighted_nll(pred, y, transform, vars, lat, clim, log_postfix):
     assert type(pred) == Normal
 
     # apply Gaussian NLL Loss
-    loss = torch.nn.GaussianNLLLoss(reduction='none')
+    loss = torch.nn.GaussianNLLLoss(reduction="none")
     error = loss(pred.loc, y, pred.scale)
 
     # lattitude weights
@@ -255,7 +258,9 @@ def lat_weighted_spread_skill_ratio(pred, y, transform, vars, lat, clim, log_pos
     loss_dict = {}
     with torch.no_grad():
         for i, var in enumerate(vars):
-            spread = torch.mean(torch.sqrt(torch.mean(variance[:, i] * w_lat, dim=(-2, -1))))
+            spread = torch.mean(
+                torch.sqrt(torch.mean(variance[:, i] * w_lat, dim=(-2, -1)))
+            )
             rmse = torch.mean(torch.sqrt(torch.mean(error[:, i] * w_lat, dim=(-2, -1))))
             loss_dict[f"w_spread_{var}_{log_postfix}"] = spread / rmse
 
@@ -271,12 +276,12 @@ def lat_weighted_categorical_loss(pred, y, transform, vars, lat, clim, log_postf
     vars: list of variable names
     lat: H
     """
-    loss = torch.nn.CrossEntropyLoss(reduction='none')
+    loss = torch.nn.CrossEntropyLoss(reduction="none")
     # y.shape = [B, C, H, W, 50]
     # pred.shape = [B, 50, C, H, W]
     # get the labels [B, C, H, W]
     _, labels = y.max(dim=-1)
-    error = loss(pred, labels.to(pred.device)) # error.shape [B, C, H, W]
+    error = loss(pred, labels.to(pred.device))  # error.shape [B, C, H, W]
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
@@ -291,14 +296,16 @@ def lat_weighted_categorical_loss(pred, y, transform, vars, lat, clim, log_postf
     loss_dict = {}
     with torch.no_grad():
         for i, var in enumerate(vars):
-            loss_dict[f"w_categorical_{var}_{log_postfix}"] = torch.mean(error[:, i] * w_lat)
+            loss_dict[f"w_categorical_{var}_{log_postfix}"] = torch.mean(
+                error[:, i] * w_lat
+            )
 
     loss_dict["w_categorical"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
 
     return loss_dict
 
-### Downscaling metrics
 
+### Downscaling metrics
 
 
 def mse_val(pred, y, transform, vars, lat, clim, log_postfix):
