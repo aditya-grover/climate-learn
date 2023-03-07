@@ -1,7 +1,9 @@
 # Local application
 from ..utils.datetime import Year, Hours
 from abc import ABC
+from climate_learn.data.climate_dataset import ClimateDatasetArgs, ClimateDataset
 from climate_learn.data.tasks import TaskArgs, Task
+from climate_learn.data.dataset import MapDataset
 
 import copy
 from typing import Callable, Tuple, Union
@@ -35,28 +37,41 @@ def collate_fn(batch):
 class DataModuleArgs(ABC):
     def __init__(
         self,
+        climate_dataset_args: ClimateDatasetArgs,
         task_args: TaskArgs,
+        loading_style: str,
         train_start_year: int,
         val_start_year: int,
         test_start_year: int,
         end_year: int = 2018,
     ) -> None:
+        assert loading_style in ["map", "iter"]
+        if loading_style == "map":
+            self.data_loading_class = MapDataset
         self.train_start_year: int = train_start_year
         self.val_start_year: int = val_start_year
         self.test_start_year: int = test_start_year
         self.end_year: int = end_year
 
-        self.train_task_args: TaskArgs = copy.deepcopy(task_args)
-        self.train_task_args.split = "train"
-        self.train_task_args.setup(self)
+        self.train_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
+            climate_dataset_args
+        )
+        self.train_climate_dataset_args.split = "train"
+        self.train_climate_dataset_args.setup(self)
 
-        self.val_task_args: TaskArgs = copy.deepcopy(task_args)
-        self.val_task_args.split = "val"
-        self.val_task_args.setup(self)
+        self.val_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
+            climate_dataset_args
+        )
+        self.val_climate_dataset_args.split = "val"
+        self.val_climate_dataset_args.setup(self)
 
-        self.test_task_args: TaskArgs = copy.deepcopy(task_args)
-        self.test_task_args.split = "test"
-        self.test_task_args.setup(self)
+        self.test_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
+            climate_dataset_args
+        )
+        self.test_climate_dataset_args.split = "test"
+        self.test_climate_dataset_args.setup(self)
+
+        self.task_args = task_args
 
 
 class DataModule(LightningDataModule):
@@ -117,39 +132,44 @@ class DataModule(LightningDataModule):
             and data_module_args.val_start_year > data_module_args.train_start_year
         )
         self.save_hyperparameters(logger=False)
-        if isinstance(data_module_args.train_task_args._task_class, str):
-            task_class: Callable[..., Task] = eval(
-                data_module_args.train_task_args._task_class
-            )
-        else:
-            task_class: Callable[
-                ..., Task
-            ] = data_module_args.train_task_args._task_class
+        # if isinstance(data_module_args.train_task_args._task_class, str):
+        #     task_class: Callable[..., Task] = eval(
+        #         data_module_args.train_task_args._task_class
+        #     )
+        # else:
+        #     task_class: Callable[
+        #         ..., Task
+        #     ] = data_module_args.train_task_args._task_class
 
-        self.train_dataset: Task = task_class(data_module_args.train_task_args)
+        data_loading_class = data_module_args.data_loading_class
+        self.train_dataset: Task = data_loading_class(
+            data_module_args.train_climate_dataset_args, data_module_args.task_args
+        )
         self.train_dataset.setup()
 
-        self.val_dataset: Task = task_class(data_module_args.val_task_args)
+        self.val_dataset: Task = data_loading_class(
+            data_module_args.val_climate_dataset_args, data_module_args.task_args
+        )
         self.val_dataset.setup()
         self.val_dataset.set_normalize(
-            self.train_dataset.inp_transform,
-            self.train_dataset.out_transform,
-            self.train_dataset.constant_transform,
+            self.train_dataset.inp_transforms,
+            self.train_dataset.out_transforms,
         )
 
-        self.test_dataset: Task = task_class(data_module_args.test_task_args)
+        self.test_dataset: Task = data_loading_class(
+            data_module_args.test_climate_dataset_args, data_module_args.task_args
+        )
         self.test_dataset.setup()
         self.test_dataset.set_normalize(
-            self.train_dataset.inp_transform,
-            self.train_dataset.out_transform,
-            self.train_dataset.constant_transform,
+            self.train_dataset.inp_transforms,
+            self.train_dataset.out_transforms,
         )
 
     def get_lat_lon(self) -> Tuple[np.ndarray, np.ndarray]:
         return self.train_dataset.lat, self.train_dataset.lon
 
     def get_out_transforms(self) -> Union[transforms.Normalize, None]:
-        return self.train_dataset.out_transform
+        return self.train_dataset.out_transforms
 
     def get_climatology(self, split: str = "val") -> torch.Tensor:
         if split == "train":
