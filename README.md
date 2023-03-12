@@ -15,9 +15,14 @@ pip install climate-learn
 ```
 
 ### Quickstart
-Please refer to this [Google Colab](https://colab.research.google.com/drive/1WiNEK1BHsiGzo_bT9Fcm8lea2H_ghNfa) for a tutorial-style exposition into developing your first models for forecasting and downscaling in ClimateLearn.
+We have a series of tutorial Jupyter notebooks in the `notebooks` folder. We recommend reading them in the following order to see a typical ClimateLearn workflow.
+1. Data Processing
+2. Model Training & Evaluation
+3. Visualization
 
-We previewed some key features of ClimateLearn at a spotlight tutorial in the "Tackling Climate Change with Machine Learning" Workshop at the Neural Information Processing Systems 2022 Conference. The slides and recorded talk can be found on [Climate Change AI's website](https://www.climatechange.ai/papers/neurips2022/114). 
+To run the notebooks, please upload them to [Google Colab](https://colab.research.google.com/). 
+
+We also previewed some key features of ClimateLearn at a spotlight tutorial in the "Tackling Climate Change with Machine Learning" Workshop at the Neural Information Processing Systems 2022 Conference. The slides and recorded talk can be found on [Climate Change AI's website](https://www.climatechange.ai/papers/neurips2022/114).
 
 ### Documentation
 Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
