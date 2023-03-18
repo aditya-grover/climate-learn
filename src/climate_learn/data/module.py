@@ -3,7 +3,7 @@ from ..utils.datetime import Year, Hours
 from abc import ABC
 from climate_learn.data.climate_dataset import ClimateDatasetArgs, ClimateDataset
 from climate_learn.data.tasks import TaskArgs, Task
-from climate_learn.data.dataset import MapDataset
+from climate_learn.data.dataset import MapDataset, ShardedDataset
 
 import copy
 from typing import Callable, Tuple, Union
@@ -45,9 +45,11 @@ class DataModuleArgs(ABC):
         test_start_year: int,
         end_year: int = 2018,
     ) -> None:
-        assert loading_style in ["map", "iter"]
+        assert loading_style in ["map", "shard"]
         if loading_style == "map":
             self.data_loading_class = MapDataset
+        else:
+            self.data_loading_class = ShardedDataset
         self.train_start_year: int = train_start_year
         self.val_start_year: int = val_start_year
         self.test_start_year: int = test_start_year
@@ -145,20 +147,24 @@ class DataModule(LightningDataModule):
         self.train_dataset: Task = data_loading_class(
             data_module_args.train_climate_dataset_args, data_module_args.task_args
         )
-        self.train_dataset.setup()
 
         self.val_dataset: Task = data_loading_class(
             data_module_args.val_climate_dataset_args, data_module_args.task_args
         )
+
+        self.test_dataset: Task = data_loading_class(
+            data_module_args.test_climate_dataset_args, data_module_args.task_args
+        )
+
+    def setup(self, stage):
+        self.train_dataset.setup()
+
         self.val_dataset.setup()
         self.val_dataset.set_normalize(
             self.train_dataset.inp_transforms,
             self.train_dataset.out_transforms,
         )
 
-        self.test_dataset: Task = data_loading_class(
-            data_module_args.test_climate_dataset_args, data_module_args.task_args
-        )
         self.test_dataset.setup()
         self.test_dataset.set_normalize(
             self.train_dataset.inp_transforms,

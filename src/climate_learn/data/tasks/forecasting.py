@@ -19,7 +19,7 @@ class Forecasting(Task):
         self.window: int = task_args.window
         self.pred_range: int = task_args.pred_range
 
-    def setup(self, data_len, variables_to_update) -> None:
+    def setup(self, data_len, variables_to_update={}) -> None:
         for variable in variables_to_update:
             if variable in self.in_vars:
                 self.in_vars.remove(variable)

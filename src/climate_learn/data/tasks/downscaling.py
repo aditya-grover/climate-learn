@@ -16,7 +16,7 @@ class Downscaling(Task):
     def __init__(self, task_args: DownscalingArgs) -> None:
         super().__init__(task_args)
 
-    def setup(self, data_len, variables_to_update) -> None:
+    def setup(self, data_len, variables_to_update=[{}, {}]) -> None:
         # # why is this a single number instead of a tuple
         # self.downscale_ratio: Any = (
         #     self.out_data.shape[-1] // self.inp_data.shape[-1]
@@ -25,13 +25,13 @@ class Downscaling(Task):
         for variable in variables_to_update[0]:
             if variable in self.in_vars:
                 self.in_vars.remove(variable)
-                for variable_to_add in variables_to_update[variable]:
+                for variable_to_add in variables_to_update[0][variable]:
                     self.in_vars.append(variable_to_add)
 
         for variable in variables_to_update[1]:
             if variable in self.out_vars:
                 self.out_vars.remove(variable)
-                for variable_to_add in variables_to_update[variable]:
+                for variable_to_add in variables_to_update[1][variable]:
                     self.out_vars.append(variable_to_add)
 
         return data_len // self.subsample

@@ -10,28 +10,33 @@ class ClimateDataset(ABC):
         self.variables: Sequence[str] = data_args.variables
         self.split: str = data_args.split
 
-    def setup(self, style="map") -> None:
-        self.setup_metadata()
+    def setup(self, style="map", setup_args={}) -> None:
+        self.setup_constants()
         if style == "map":
             return self.setup_map(), {}
-        elif style == "iter":
-            return self.setup_iter(), {}
+        elif style == "shard":
+            return self.setup_shard(setup_args), {}
         else:
             raise ValueError
 
     def setup_metadata(self) -> None:
         pass
 
+    def setup_constants(self) -> None:
+        pass
+
     def setup_map(self) -> None:
+        self.setup_metadata()
         return None
 
-    def setup_iter(self) -> None:
+    def setup_shard(self, setup_args={}) -> None:
+        self.setup_metadata()
+        return None
+
+    def load_chunk(self, chunk_id) -> None:
         return None
 
     def get_item(self, index):
-        pass
-
-    def get_iteritem(self):
         pass
 
     def get_constants_data(self):

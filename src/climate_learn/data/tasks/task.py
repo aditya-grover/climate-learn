@@ -15,8 +15,8 @@ class Task(ABC):
         self.constant_names: Sequence[str] = task_args.constant_names
         self.subsample: int = task_args.subsample
 
-    def setup(self, data_len, variables_to_update) -> None:
-        return data_len
+    def setup(self, data_len, variables_to_update={}) -> None:
+        return data_len // self.subsample
 
     def set_normalize(
         self,
