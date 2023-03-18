@@ -62,7 +62,7 @@ class ERA5(ClimateDataset):
 
     def initialize_data_dict(self) -> None:
         if hasattr(self, "data_dict"):
-            return {k: [] for k in self.data_dict.keys()}, {} 
+            return {k: [] for k in self.data_dict.keys()}, {}
         data_dict: Dict[str, torch.tensor] = {}
         variables_to_update = {}
         for name in self.variables:

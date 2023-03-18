@@ -166,7 +166,9 @@ class ShardedDataset(IterableDataset):
     def setup(self):
         print("Setting up Data")
         setup_args = self.get_setup_args(seed=0)
-        data_len, variables_to_update = self.data.setup(style="shard", setup_args=setup_args)
+        data_len, variables_to_update = self.data.setup(
+            style="shard", setup_args=setup_args
+        )
         #### TODO: Come up with better way to extract lat and lon
         ## HotFix (StackedClimateDataset returns a list instead of dict)
         ## TODO: Need some sort of communication from all the process and then form assert
