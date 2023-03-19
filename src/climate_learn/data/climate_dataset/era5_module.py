@@ -4,6 +4,7 @@ import xarray as xr
 import torch
 import random
 import copy
+import numpy
 
 from tqdm import tqdm
 from typing import Callable, Dict, Iterable, Sequence
@@ -31,8 +32,8 @@ class ERA5(ClimateDataset):
         dir_var = os.path.join(self.root_dir, self.variables[0])
         ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
         xr_data = xr.open_mfdataset(ps, combine="by_coords")
-        self.lat: torch.tensor = torch.tensor(xr_data["lat"].values)
-        self.lon: torch.tensor = torch.tensor(xr_data["lon"].values)
+        self.lat: numpy.ndarray = xr_data["lat"].values
+        self.lon: numpy.ndarray = xr_data["lon"].values
 
     def setup_metadata(self, year):
         print("Setting up Meta Data")

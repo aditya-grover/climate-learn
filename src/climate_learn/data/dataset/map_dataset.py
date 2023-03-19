@@ -18,6 +18,7 @@ class MapDataset(Dataset):
         else:
             task_class = task_args._task_class
         self.task = task_class(task_args)
+        self.setup()
 
     def setup(self):
         print("Setting up Data")

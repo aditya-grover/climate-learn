@@ -27,10 +27,16 @@ def collate_fn(batch):
     :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
     :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
     """
-    inp = torch.stack([batch[i][0] for i in range(len(batch))])
-    out = torch.stack([batch[i][1] for i in range(len(batch))])
-    variables = batch[0][2]
-    out_variables = batch[0][3]
+    def handle_dict_features(t):
+        t = torch.stack(tuple(t.values()))
+        if len(t.size()) == 4:
+            return torch.transpose(t, 0, 1)
+        return t
+    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
+    
+    variables = list(batch[0][0].keys())
+    out_variables = list(batch[0][1].keys())
     return inp, out, variables, out_variables
 
 
@@ -156,7 +162,6 @@ class DataModule(LightningDataModule):
             data_module_args.test_climate_dataset_args, data_module_args.task_args
         )
 
-    def setup(self, stage):
         self.train_dataset.setup()
 
         self.val_dataset.setup()
