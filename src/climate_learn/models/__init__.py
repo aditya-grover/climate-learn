@@ -5,7 +5,7 @@ from climate_learn.data.tasks.args import ForecastingArgs
 from climate_learn.utils.datetime import Hours
 
 
-def load_model(name, task, model_kwargs, optim_kwargs):
+def load_model(name, task, model_kwargs, optim_kwargs, iterative_model = False, iter_model_out_vars = -1):
     if name == "vit":
         model_cls = VisionTransformer
     elif name == "resnet":
@@ -16,7 +16,7 @@ def load_model(name, task, model_kwargs, optim_kwargs):
     model = model_cls(**model_kwargs)
 
     if task == "forecasting":
-        module = ForecastLitModule(model, **optim_kwargs)
+        module = ForecastLitModule(model, **optim_kwargs, iterative_model=iterative_model, iter_model_out_vars=iter_model_out_vars)
     elif task == "downscaling":
         module = DownscaleLitModule(model, **optim_kwargs)
     else:

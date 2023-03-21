@@ -72,14 +72,14 @@ class NpyReader(IterableDataset):
                 out = inp
             else:
                 out = np.load(path_out)
-            yield {k: inp[k] for k in self.variables}, {
-                k: out[k] for k in self.out_variables
+            yield {k: inp[k] for k in self.variables if k!='time'}, {
+                k: out[k] for k in self.out_variables if k!='time'
             }, self.variables, self.out_variables
 
 
 class Forecast(IterableDataset):
     def __init__(
-        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6, subsample: int = 1
+        self, dataset_type: str, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6, subsample: int = 1, min_cont_time: int = 6, max_cont_time: int = 120
     ) -> None:
         super().__init__()
         self.dataset = dataset
@@ -87,12 +87,35 @@ class Forecast(IterableDataset):
         self.history = history
         self.window = window
         self.subsample = subsample
+        self.dataset_type = dataset_type
+        self.min_cont_time = min_cont_time
+        self.max_cont_time = max_cont_time
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
             x = np.concatenate(
                 [inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1
             )
+            last_idx = -((self.history - 1) * self.window + self.pred_range)
+            rand_lead_times = np.empty( shape=(0, 0) )
+
+            if 'time' in variables:
+                # all possible lead times in the given prediction range
+                cont_times = np.arange(self.min_cont_time, self.max_cont_time+1, self.subsample)
+                if self.dataset_type == 'test':
+                    cont_times = np.arange(self.pred_range, self.pred_range+1)
+                # random indices that will be used to choose one of the possible lead times randomly
+                rand_indices = np.random.randint(low=0, high=cont_times.shape, size=(x.shape[0]))
+                # random lead times
+                rand_lead_times = np.array([cont_times[k] for k in rand_indices])
+                cont_lead_times = np.expand_dims(rand_lead_times, axis=(1,2,3))
+                shape_changer = np.ones((x.shape[0], 1, x.shape[2], x.shape[3]))
+                cont_lead_times = shape_changer * cont_lead_times
+                cont_lead_times = cont_lead_times.astype(np.float32)
+                x_new = np.concatenate((x, cont_lead_times), axis=1)
+                x = x_new
+                last_idx = -((self.history - 1) * self.window + self.max_cont_time)
+            
             x = torch.from_numpy(x)
             y = np.concatenate(
                 [out_data[k].astype(np.float32) for k in out_data.keys()], axis=1
@@ -103,13 +126,15 @@ class Forecast(IterableDataset):
             for t in range(self.history):
                 inputs[t] = inputs[t].roll(-t * self.window, dims=0)
 
-            last_idx = -((self.history - 1) * self.window + self.pred_range)
 
             inputs = inputs[:, :last_idx].transpose(0, 1)  # N, T, C, H, W
-
             predict_ranges = (
                 torch.ones(inputs.shape[0]).to(torch.long) * self.pred_range
             )
+
+            if 'time' in variables:
+                predict_ranges = torch.from_numpy(rand_lead_times[:inputs.shape[0]])
+            
             output_ids = (
                 torch.arange(inputs.shape[0])
                 + (self.history - 1) * self.window
@@ -122,7 +147,7 @@ class Forecast(IterableDataset):
             
             inputs = inputs[::self.subsample]
             outputs = outputs[::self.subsample]
-            
+
             # print ('after subsampling', inputs.shape[0])
             # import sys
             # sys.exit()

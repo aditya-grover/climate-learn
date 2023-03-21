@@ -36,6 +36,8 @@ class IterDataModule(LightningDataModule):
         batch_size=64,
         num_workers=0,
         pin_memory=False,
+        min_cont_time: int = 6,
+        max_cont_time: int = 120
     ):
         r"""
         .. highlight:: python
@@ -66,6 +68,8 @@ class IterDataModule(LightningDataModule):
                 "history": history,
                 "window": window,
                 "subsample": subsample.hours(),
+                "min_cont_time": min_cont_time,
+                "max_cont_time": max_cont_time
             }
         else:  # downscaling
             self.dataset_caller = Downscale
@@ -77,6 +81,9 @@ class IterDataModule(LightningDataModule):
         self.out_lister_val = glob.glob(os.path.join(out_root_dir, "val", "*.npz"))
         self.inp_lister_test = glob.glob(os.path.join(inp_root_dir, "test", "*.npz"))
         self.out_lister_test = glob.glob(os.path.join(out_root_dir, "test", "*.npz"))
+
+        self.min_cont_time = min_cont_time
+        self.max_cont_time = max_cont_time
 
         self.transforms = self.get_normalize(inp_root_dir, in_vars)
         self.output_transforms = self.get_normalize(out_root_dir, out_vars)
@@ -92,14 +99,24 @@ class IterDataModule(LightningDataModule):
 
     def get_normalize(self, root_dir, variables):
         normalize_mean = dict(np.load(os.path.join(root_dir, "normalize_mean.npz")))
+        if 'time' in variables:
+            mean_time = np.mean(np.arange(self.dataset_arg["min_cont_time"], self.dataset_arg["max_cont_time"] + 1, self.dataset_arg["subsample"]))
+            mean_time = round(mean_time, 2)
+            print("mean_time", mean_time)
+            normalize_mean['time'] = np.array([mean_time]).astype(np.float32)
         mean = []
         for var in variables:
             if var != "total_precipitation":
                 mean.append(normalize_mean[var])
-            else:
+            else: 
                 mean.append(np.array([0.0]))
         normalize_mean = np.concatenate(mean)
         normalize_std = dict(np.load(os.path.join(root_dir, "normalize_std.npz")))
+        if 'time' in variables:
+            std_time = np.std(np.arange(self.dataset_arg["min_cont_time"], self.dataset_arg["max_cont_time"] + 1, self.dataset_arg["subsample"]))
+            std_time = round(std_time, 2)
+            print("std_time", std_time)
+            normalize_std['time'] = np.array([std_time]).astype(np.float32)
         normalize_std = np.concatenate([normalize_std[var] for var in variables])
         return transforms.Normalize(normalize_mean, normalize_std)
 
@@ -119,6 +136,7 @@ class IterDataModule(LightningDataModule):
             self.data_train = ShuffleIterableDataset(
                 IndividualDataIter(
                     self.dataset_caller(
+                        "train",
                         NpyReader(
                             inp_file_list=self.inp_lister_train,
                             out_file_list=self.out_lister_train,
@@ -136,6 +154,7 @@ class IterDataModule(LightningDataModule):
 
             self.data_val = IndividualDataIter(
                 self.dataset_caller(
+                    "val",
                     NpyReader(
                         inp_file_list=self.inp_lister_val,
                         out_file_list=self.out_lister_val,
@@ -151,6 +170,7 @@ class IterDataModule(LightningDataModule):
 
             self.data_test = IndividualDataIter(
                 self.dataset_caller(
+                    "test",
                     NpyReader(
                         inp_file_list=self.inp_lister_test,
                         out_file_list=self.out_lister_test,

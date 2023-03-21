@@ -71,5 +71,9 @@ class Trainer:
     def fit(self, model_module, data_module):
         self.trainer.fit(model_module, data_module)
 
-    def test(self, model_module, data_module):
-        self.trainer.test(model_module, data_module)
+    def test(self, model_module, data_module, checkpoint_path=""):
+        if checkpoint_path:
+            print("checkpoint_path", checkpoint_path)
+            self.trainer.test(model_module, data_module, ckpt_path=checkpoint_path)
+        else:
+            self.trainer.test(model_module, data_module)

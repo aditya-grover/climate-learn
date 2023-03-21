@@ -17,14 +17,19 @@ class ResNet(nn.Module):
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
+        num_steps: int = 1,
+        iter_model_out_channels: int = 3
     ) -> None:
         super().__init__()
         self.in_channels = in_channels
         if out_channels is None:
             out_channels = in_channels
         self.out_channels = out_channels
+        if iter_model_out_channels is None:
+            iter_model_out_channels = out_channels
+        self.iter_model_out_channels = iter_model_out_channels
         self.hidden_channels = hidden_channels
-
+        self.num_steps = num_steps
         if activation == "gelu":
             self.activation = nn.GELU()
         elif activation == "relu":
@@ -92,10 +97,18 @@ class ResNet(nn.Module):
         )
 
     def evaluate(
-        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
+        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix, iter=False
     ):
-        pred = self.predict(x)
+        pred = []
+        splice_out_variables = -1
+        for i in range(self.num_steps):
+            pred = self.predict(x)
+            if iter:
+                x = pred.reshape(x.shape)
+
+        if iter:
+            splice_out_variables = self.iter_model_out_channels
         return [
-            m(pred, y, transform, out_variables, lat, clim, log_postfix)
+            m(pred, y, transform, out_variables, lat, clim, log_postfix, splice_out_variables=splice_out_variables)
             for m in metrics
         ], pred

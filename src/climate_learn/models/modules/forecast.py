@@ -23,6 +23,8 @@ class ForecastLitModule(LightningModule):
         self,
         net: torch.nn.Module,
         optimizer: OptimizerCallable = torch.optim.Adam,
+        iterative_model: bool = False,
+        iter_model_out_vars: int = -1,
         lr: float = 0.001,
         weight_decay: float = 0.005,
         warmup_epochs: int = 5,
@@ -38,6 +40,8 @@ class ForecastLitModule(LightningModule):
         self.train_loss = [lat_weighted_mse]
         self.val_loss = [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc]
         self.optim_cls = optimizer
+        self.iterative_model = iterative_model
+        self.iter_model_out_vars = iter_model_out_vars
 
     def forward(self, x):
         with torch.no_grad():
@@ -141,6 +145,7 @@ class ForecastLitModule(LightningModule):
             self.lat,
             self.test_clim,
             log_postfix,
+            self.iterative_model
         )
 
         loss_dict = {}
@@ -170,6 +175,7 @@ class ForecastLitModule(LightningModule):
             None,
             log_postfix,
             transform_pred=False,
+            splice_out_variables=self.iter_model_out_vars
         )
         for var in baseline_rmse.keys():
             self.log(
@@ -183,6 +189,7 @@ class ForecastLitModule(LightningModule):
 
         # rmse for persistence baseline
         pers_pred = x[:, -1]  # B, C, H, W
+        pers_pred = pers_pred[:,:y.shape[1],:,:]
         baseline_rmse = lat_weighted_rmse(
             pers_pred,
             y,
@@ -191,6 +198,7 @@ class ForecastLitModule(LightningModule):
             self.lat,
             None,
             log_postfix,
+            splice_out_variables=self.iter_model_out_vars
         )
         for var in baseline_rmse.keys():
             self.log(
@@ -217,6 +225,7 @@ class ForecastLitModule(LightningModule):
                 self.lat,
                 None,
                 log_postfix,
+                splice_out_variables=self.iter_model_out_vars
             )
             for var in baseline_rmse.keys():
                 self.log(

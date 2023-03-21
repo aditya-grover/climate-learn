@@ -2,11 +2,10 @@ import numpy as np
 import torch
 from scipy import stats
 
-
 ### Training loss
 
 
-def mse(pred, y, vars, lat=None, log_postfix=""):
+def mse(pred, y, vars, lat=None, log_postfix="", splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -24,7 +23,7 @@ def mse(pred, y, vars, lat=None, log_postfix=""):
     return loss_dict
 
 
-def lat_weighted_mse(pred, y, vars, lat, log_postfix=""):
+def lat_weighted_mse(pred, y, vars, lat, log_postfix="", splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [C, C, H, W]
@@ -52,7 +51,7 @@ def lat_weighted_mse(pred, y, vars, lat, log_postfix=""):
 ### Forecasting metrics
 
 
-def lat_weighted_mse_val(pred, y, transform, vars, lat, clim, log_postfix):
+def lat_weighted_mse_val(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -79,7 +78,7 @@ def lat_weighted_mse_val(pred, y, transform, vars, lat, clim, log_postfix):
 
 
 def lat_weighted_rmse(
-    pred, y, transform, vars, lat, clim, log_postfix, transform_pred=True
+    pred, y, transform, vars, lat, clim, log_postfix, transform_pred=True, splice_out_variables = -1
 ):
     """
     y: [B, C, H, W]
@@ -90,6 +89,10 @@ def lat_weighted_rmse(
     if transform_pred:
         pred = transform(pred)
     y = transform(y)
+    if splice_out_variables != -1:
+        pred = pred[:,:splice_out_variables,:,:]
+        y = y[:,:splice_out_variables,:,:]
+        vars = vars[:splice_out_variables]
 
     error = (pred - y) ** 2  # [B, C, H, W]
 
@@ -115,7 +118,7 @@ def lat_weighted_rmse(
     return loss_dict
 
 
-def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix):
+def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B C, H, W]
@@ -125,6 +128,8 @@ def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix):
 
     pred = transform(pred)
     y = transform(y)
+    if splice_out_variables != -1:
+        vars = vars[:splice_out_variables]
 
     # lattitude weights
     w_lat = np.cos(np.deg2rad(lat))
@@ -158,7 +163,7 @@ def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix):
 
 
 ### Downscaling metrics
-def mse_val(pred, y, transform, vars, lat, clim, log_postfix):
+def mse_val(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -177,7 +182,7 @@ def mse_val(pred, y, transform, vars, lat, clim, log_postfix):
     return loss_dict
 
 
-def rmse(pred, y, transform, vars, lat, clim, log_postfix):
+def rmse(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -202,7 +207,7 @@ def rmse(pred, y, transform, vars, lat, clim, log_postfix):
     return loss_dict
 
 
-def pearson(pred, y, transform, vars, lat, clim, log_postfix):
+def pearson(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
@@ -225,7 +230,7 @@ def pearson(pred, y, transform, vars, lat, clim, log_postfix):
     return loss_dict
 
 
-def mean_bias(pred, y, transform, vars, lat, clim, log_postfix):
+def mean_bias(pred, y, transform, vars, lat, clim, log_postfix, splice_out_variables = -1):
     """
     y: [B, C, H, W]
     pred: [B, C, H, W]
