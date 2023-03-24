@@ -1,5 +1,4 @@
 import os
-# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/srikeerthibolli/anaconda3/lib/
 os.environ['LD_LIBRARY_PATH']
 from climate_learn.data import download
 from climate_learn.utils.data import load_dataset, view
@@ -10,16 +9,13 @@ from climate_learn.models import load_model
 from climate_learn.data import IterDataModule
 from climate_learn.training import Trainer, WandbLogger
 from climate_learn.models import load_model
-import torch
-
-torch.cuda.empty_cache()
 
 pred_range = Hours(6)
 
 forecast_data_module = IterDataModule(
     task="forecasting",
-    inp_root_dir="/data0/datasets/weatherbench/data/weatherbench/era5/2.8125deg_npz",
-    out_root_dir="/data0/datasets/weatherbench/data/weatherbench/era5/2.8125deg_npz",
+    inp_root_dir="",
+    out_root_dir="",
     in_vars = ['2m_temperature',  'geopotential_500', 'temperature_850', 'geopotential_50', 'geopotential_250', 'geopotential_600', 'geopotential_700', 'geopotential_850', 'geopotential_925',  'u_component_of_wind_50', 'u_component_of_wind_250', 'u_component_of_wind_500', 'u_component_of_wind_600', 'u_component_of_wind_700', 'u_component_of_wind_850', 'u_component_of_wind_925', 'v_component_of_wind_50', 'v_component_of_wind_250', 'v_component_of_wind_500', 'v_component_of_wind_600', 'v_component_of_wind_700', 'v_component_of_wind_850', 'v_component_of_wind_925', 'temperature_50', 'temperature_250', 'temperature_500', 'temperature_600', 'temperature_700', 'temperature_925', 'specific_humidity_50', 'specific_humidity_250', 'specific_humidity_500', 'specific_humidity_600', 'specific_humidity_700', 'specific_humidity_850', 'specific_humidity_925'],
     out_vars = ['2m_temperature',  'geopotential_500', 'temperature_850', 'geopotential_50', 'geopotential_250', 'geopotential_600', 'geopotential_700', 'geopotential_850', 'geopotential_925',  'u_component_of_wind_50', 'u_component_of_wind_250', 'u_component_of_wind_500', 'u_component_of_wind_600', 'u_component_of_wind_700', 'u_component_of_wind_850', 'u_component_of_wind_925', 'v_component_of_wind_50', 'v_component_of_wind_250', 'v_component_of_wind_500', 'v_component_of_wind_600', 'v_component_of_wind_700', 'v_component_of_wind_850', 'v_component_of_wind_925', 'temperature_50', 'temperature_250', 'temperature_500', 'temperature_600', 'temperature_700', 'temperature_925', 'specific_humidity_50', 'specific_humidity_250', 'specific_humidity_500', 'specific_humidity_600', 'specific_humidity_700', 'specific_humidity_850', 'specific_humidity_925'],
     pred_range=pred_range,
@@ -37,7 +33,8 @@ if isIterative :
         num_steps = int(Hours.hours(pred_range)/short_range)
     else:
         num_steps = int(Days.hours(pred_range)/short_range)
-print(num_steps)
+
+print("num_steps = ", num_steps)
 
 forecast_model_kwargs = {
     "in_channels": len(forecast_data_module.hparams.in_vars),
@@ -74,7 +71,7 @@ forecast_trainer = Trainer(
     early_stopping=False,
     task = "forecasting"
 )
-forecast_trainer.fit(forecast_model_module, forecast_data_module)
-forecast_trainer.test(forecast_model_module, forecast_data_module)
 
-# forecast_trainer.test(forecast_model_module, forecast_data_module, "path")
+forecast_trainer.fit(forecast_model_module, forecast_data_module)
+
+forecast_trainer.test(forecast_model_module, forecast_data_module)
