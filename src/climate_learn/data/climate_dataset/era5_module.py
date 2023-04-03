@@ -16,6 +16,7 @@ from ..constants import (
     CONSTANTS,
     SINGLE_LEVEL_VARS,
     PRESSURE_LEVEL_VARS,
+    NAME_LEVEL_TO_VAR_LEVEL,
 )
 
 
@@ -27,9 +28,17 @@ class ERA5(ClimateDataset):
         self.root_dir: str = data_args.root_dir
         self.years: Iterable[int] = data_args.years
 
+    def get_file_name_from_variable(self, var):
+        if var in SINGLE_LEVEL_VARS or var in PRESSURE_LEVEL_VARS:
+            return var
+        else:
+            return "_".join(var.split("_")[:-1])
+
     def set_lat_lon(self, year) -> None:
         # lat lon is stored in each of the nc files, just need to load one and extract
-        dir_var = os.path.join(self.root_dir, self.variables[0])
+        dir_var = os.path.join(
+            self.root_dir, self.get_file_name_from_variable(self.variables[0])
+        )
         ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
         xr_data = xr.open_mfdataset(ps, combine="by_coords")
         self.lat: numpy.ndarray = xr_data["lat"].values
@@ -45,7 +54,9 @@ class ERA5(ClimateDataset):
         if hasattr(self, "constant_names"):
             return
         self.constant_names: Sequence[str] = [
-            name for name in self.variables if NAME_TO_VAR[name] in CONSTANTS
+            name
+            for name in self.variables
+            if NAME_TO_VAR[self.get_file_name_from_variable(name)] in CONSTANTS
         ]
         self.constants: Dict[str, torch.tensor] = {}
         if len(self.constant_names) > 0:
@@ -69,6 +80,9 @@ class ERA5(ClimateDataset):
         for name in self.variables:
             if name in SINGLE_LEVEL_VARS:
                 data_dict[name] = []
+            ## if variable is an instance of specific multi level vars
+            elif name in NAME_LEVEL_TO_VAR_LEVEL:
+                data_dict[name] = []
             elif name in PRESSURE_LEVEL_VARS:
                 variables_to_add = []
                 for level in DEFAULT_PRESSURE_LEVELS:
@@ -86,17 +100,22 @@ class ERA5(ClimateDataset):
         print("Loading variables from disk")
         for year in tqdm(years):
             for var in self.variables:
-                dir_var = os.path.join(data_dir, var)
+                dir_var = os.path.join(data_dir, self.get_file_name_from_variable(var))
                 ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
                 xr_data = xr.open_mfdataset(ps, combine="by_coords")
-                xr_data = xr_data[NAME_TO_VAR[var]]
+                xr_data = xr_data[NAME_TO_VAR[self.get_file_name_from_variable(var)]]
                 # np_data = xr_data.to_numpy()
                 if len(xr_data.shape) == 3:  # 8760, 32, 64
                     data_dict[var].append(xr_data)
-                else:  # pressure level
-                    for level in DEFAULT_PRESSURE_LEVELS:
+                else:  # multi level data
+                    if var in NAME_LEVEL_TO_VAR_LEVEL:  ## loading only a specific level
+                        level = int(var.split("_")[-1])
                         xr_data_level = (xr_data.sel(level=[level])).squeeze(axis=1)
-                        data_dict[f"{var}_{level}"].append(xr_data_level)
+                        data_dict[var].append(xr_data_level)
+                    else:  ## loading all levels
+                        for level in DEFAULT_PRESSURE_LEVELS:
+                            xr_data_level = (xr_data.sel(level=[level])).squeeze(axis=1)
+                            data_dict[f"{var}_{level}"].append(xr_data_level)
 
         print("Concatenating data from different years")
         data_dict = {k: xr.concat(data_dict[k], dim="time") for k in data_dict.keys()}
@@ -107,15 +126,18 @@ class ERA5(ClimateDataset):
         self.time = data_dict[next(iter(data_dict.keys()))].time.values
         print("Converting data from xarray to torch tensor")
         data_dict = {k: torch.tensor(data_dict[k].values) for k in data_dict.keys()}
-        # self.variables = list(data_dict.keys())
         return data_dict, variables_to_update
 
     def setup_map(self):
+        self.setup_constants(self.root_dir)
         self.setup_metadata(self.years[0])
         self.data_dict, variables_to_update = self.load_from_nc_by_years(
             self.root_dir, self.years
         )
-        return len(self.data_dict[self.variables[0]]), variables_to_update
+        return (
+            len(self.data_dict[next(iter(self.data_dict.keys()))]),
+            variables_to_update,
+        )
 
     def build_years_to_iterate(self, seed, drop_last):
         temp_years = list(copy.deepcopy(self.years))
@@ -146,6 +168,7 @@ class ERA5(ClimateDataset):
             drop_last = False
 
         years_to_iterate = self.build_years_to_iterate(args["seed"], drop_last)
+        self.setup_constants(self.root_dir)
         self.setup_metadata(years_to_iterate[0])
 
         assert len(years_to_iterate) >= self.n_chunks
@@ -159,10 +182,9 @@ class ERA5(ClimateDataset):
         self.data_dict, _ = self.load_from_nc_by_years(
             self.root_dir, years_to_iterate_this_chunk
         )
-        return len(self.data_dict[self.variables[0]])
+        return len(self.data_dict[next(iter(self.data_dict.keys()))])
 
     def setup(self, style="map", setup_args={}) -> None:
-        self.setup_constants(self.root_dir)
         if style == "map":
             return self.setup_map()
         elif style == "shard":

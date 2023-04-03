@@ -21,7 +21,8 @@ class Downscaling(Task):
         # self.downscale_ratio: Any = (
         #     self.out_data.shape[-1] // self.inp_data.shape[-1]
         # )  # TODO add stronger typecheck
-
+        # Assuming that variables_to_update is a list of dict
+        # As it is coming from StackedClimateDataset
         for variable in variables_to_update[0]:
             if variable in self.in_vars:
                 self.in_vars.remove(variable)

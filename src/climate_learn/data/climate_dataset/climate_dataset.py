@@ -11,7 +11,6 @@ class ClimateDataset(ABC):
         self.split: str = data_args.split
 
     def setup(self, style="map", setup_args={}) -> None:
-        self.setup_constants()
         if style == "map":
             return self.setup_map(), {}
         elif style == "shard":
@@ -26,10 +25,12 @@ class ClimateDataset(ABC):
         pass
 
     def setup_map(self) -> None:
+        self.setup_constants()
         self.setup_metadata()
         return None
 
     def setup_shard(self, setup_args={}) -> None:
+        self.setup_constants()
         self.setup_metadata()
         return None
 

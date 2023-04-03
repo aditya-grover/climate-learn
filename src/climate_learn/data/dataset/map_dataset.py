@@ -18,7 +18,6 @@ class MapDataset(Dataset):
         else:
             task_class = task_args._task_class
         self.task = task_class(task_args)
-        self.setup()
 
     def setup(self):
         print("Setting up Data")
@@ -34,6 +33,8 @@ class MapDataset(Dataset):
         else:
             self.lat = metadata["lat"]
             self.lon = metadata["lon"]
+            self.out_lat = metadata["lat"]
+            self.out_lon = metadata["lon"]
         print("Setting up Task")
         self.length = self.task.setup(data_len, variables_to_update)
         print("Calculating Transforms for the task")
