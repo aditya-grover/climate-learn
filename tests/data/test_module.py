@@ -22,7 +22,7 @@ class TestModuleInstantiation:
                 "land_sea_mask",
             ],
             years=range(2009, 2015),
-            split="train"
+            split="train",
         )
         high_res_climate_dataset_args = ERA5Args(
             root_dir=os.path.join(DATA_PATH, "era5/2.8125deg/"),
@@ -31,9 +31,11 @@ class TestModuleInstantiation:
                 "temperature_250",
             ],
             years=range(2009, 2015),
-            split="train"
+            split="train",
         )
-        stacked_climate_dataset_args = StackedClimateDatasetArgs([climate_dataset_args, high_res_climate_dataset_args])
+        stacked_climate_dataset_args = StackedClimateDatasetArgs(
+            [climate_dataset_args, high_res_climate_dataset_args]
+        )
         downscaling_args = DownscalingArgs(
             in_vars=[
                 "2m_temperature",
@@ -50,8 +52,10 @@ class TestModuleInstantiation:
             ],
             subsample=6,
         )
-        dataset_args = ShardDatasetArgs(stacked_climate_dataset_args, downscaling_args, 2)
-        
+        dataset_args = ShardDatasetArgs(
+            stacked_climate_dataset_args, downscaling_args, 2
+        )
+
         DataModule(DataModuleArgs(dataset_args, 2009, 2015, 2017))
 
     def test_shard_initialization(self):
@@ -65,7 +69,7 @@ class TestModuleInstantiation:
                 "land_sea_mask",
             ],
             years=range(2009, 2015),
-            split="train"
+            split="train",
         )
         forecasting_args = ForecastingArgs(
             in_vars=[
@@ -85,5 +89,5 @@ class TestModuleInstantiation:
             subsample=6,
         )
         dataset_args = MapDatasetArgs(climate_dataset_args, forecasting_args)
-        
+
         DataModule(DataModuleArgs(dataset_args, 2014, 2016, 2017))

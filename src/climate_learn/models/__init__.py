@@ -5,6 +5,7 @@ from climate_learn.data.task.args import ForecastingArgs
 from climate_learn.utils.datetime import Hours
 import torch
 
+
 def load_model(name, task, model_kwargs, optim_kwargs):
     if name == "vit":
         model_cls = VisionTransformer

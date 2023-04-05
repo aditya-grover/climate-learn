@@ -10,5 +10,5 @@ class TestForecastingArgsInstantiation:
             history=10,
             window=4,
             pred_range=24,
-            subsample=3
+            subsample=3,
         )
