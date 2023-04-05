@@ -19,11 +19,14 @@ About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by
 `Professor Aditya Grover <https://aditya-grover.github.io/>`_.
 
+Getting Started
+---------------
+Please see the `quickstart section <https://github.com/aditya-grover/climate-learn#quickstart>`_ of our GitHub repository.
+
 .. toctree::
    :caption: User Guide
    :maxdepth: 2
 
-   user-guide/getting_started
    user-guide/datasets
    user-guide/models
    user-guide/metrics
