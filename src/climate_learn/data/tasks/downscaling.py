@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence, Tuple
+from typing import Any, Callable, Dict, Sequence, Tuple
 import torch
 import numpy as np
 
@@ -16,7 +16,11 @@ class Downscaling(Task):
     def __init__(self, task_args: DownscalingArgs) -> None:
         super().__init__(task_args)
 
-    def setup(self, data_len, variables_to_update=[{}, {}]) -> None:
+    def setup(
+        self,
+        data_len: int,
+        variables_to_update: Sequence[Dict[str, Sequence[str]]] = [{}, {}],
+    ) -> int:
         # # why is this a single number instead of a tuple
         # self.downscale_ratio: Any = (
         #     self.out_data.shape[-1] // self.inp_data.shape[-1]
@@ -37,14 +41,21 @@ class Downscaling(Task):
 
         return data_len // self.subsample
 
-    def get_raw_index(self, index):
+    def get_raw_index(self, index: int) -> int:
         return index * self.subsample
 
     def create_inp_out(
-        self, raw_data, constants_data, apply_transform: bool = 1
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        inp_data = {k: raw_data[0][k] for k in self.in_vars}  # [32, 64]
-        out_data = {k: raw_data[1][k] for k in self.out_vars}  # [64, 128]
+        self,
+        raw_data: Dict[str, torch.tensor],
+        constants_data: Dict[str, torch.tensor],
+        apply_transform: bool = 1,
+    ) -> Tuple[Dict[str, torch.tensor], Dict[str, torch.tensor]]:
+        inp_data: Dict[str, torch.tensor] = {
+            k: raw_data[0][k] for k in self.in_vars
+        }  # [32, 64]
+        out_data: Dict[str, torch.tensor] = {
+            k: raw_data[1][k] for k in self.out_vars
+        }  # [64, 128]
 
         # transforms.Normalize works only on image like data (C * H * W), hence adding channel via unsqueeze and then removing it after transformation
         if apply_transform:
@@ -58,7 +69,9 @@ class Downscaling(Task):
             }
 
         for constant in self.constant_names:
-            constant_data = constants_data[0][constant]  # [32, 64]
+            constant_data: Dict[str, torch.tensor] = constants_data[0][
+                constant
+            ]  # [32, 64]
             if apply_transform:
                 constant_data = (
                     self.constant_transform[constant](constant_data.unsqueeze(0))

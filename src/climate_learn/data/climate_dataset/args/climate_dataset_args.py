@@ -14,5 +14,6 @@ class ClimateDatasetArgs(ABC):
         self.variables: Sequence[str] = variables
         self.split: str = split
 
-    def setup(self, data_module_args: DataModuleArgs) -> None:
-        assert self.split in ["train", "val", "test"]
+    def setup(self, data_module_args: DataModuleArgs, split: str) -> None:
+        assert split in ["train", "val", "test"]
+        self.split = split

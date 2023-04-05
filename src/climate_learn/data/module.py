@@ -1,17 +1,20 @@
 # Local application
 from ..utils.datetime import Year, Hours
 from abc import ABC
-from climate_learn.data.climate_dataset import ClimateDatasetArgs, ClimateDataset
-from climate_learn.data.tasks import TaskArgs, Task
-from climate_learn.data.dataset import MapDataset, ShardedDataset
+from climate_learn.data.dataset import (
+    MapDatasetArgs,
+    MapDataset,
+    ShardDatasetArgs,
+    ShardDataset,
+)
 
 import copy
-from typing import Callable, Tuple, Union
+from typing import Callable, Dict, Sequence, Tuple, Union
 
 # Third party
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, IterableDataset
 from pytorch_lightning import LightningDataModule
 from torchvision.transforms import transforms
 
@@ -19,7 +22,9 @@ from torchvision.transforms import transforms
 # TODO: document legal input/output variables for each dataset
 
 
-def collate_fn(batch):
+def collate_fn(
+    batch,
+) -> Tuple[torch.tensor, torch.tensor, Sequence[str], Sequence[str]]:
     r"""Collate function for DataLoaders.
 
     :param batch: A batch of data samples.
@@ -27,14 +32,18 @@ def collate_fn(batch):
     :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
     :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
     """
-    def handle_dict_features(t):
+
+    def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+        ## Hotfix for the models to work with dict style data
         t = torch.stack(tuple(t.values()))
+        ## Handles the case for forecasting input as it has history in it
+        ## TODO: Come up with an efficient solution instead of if condition
         if len(t.size()) == 4:
             return torch.transpose(t, 0, 1)
         return t
+
     inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
     out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
-    
     variables = list(batch[0][0].keys())
     out_variables = list(batch[0][1].keys())
     return inp, out, variables, out_variables
@@ -43,43 +52,31 @@ def collate_fn(batch):
 class DataModuleArgs(ABC):
     def __init__(
         self,
-        climate_dataset_args: ClimateDatasetArgs,
-        task_args: TaskArgs,
-        loading_style: str,
+        dataset_args: Union[MapDatasetArgs, ShardDatasetArgs],
         train_start_year: int,
         val_start_year: int,
         test_start_year: int,
         end_year: int = 2018,
     ) -> None:
-        assert loading_style in ["map", "shard"]
-        if loading_style == "map":
-            self.data_loading_class = MapDataset
-        else:
-            self.data_loading_class = ShardedDataset
         self.train_start_year: int = train_start_year
         self.val_start_year: int = val_start_year
         self.test_start_year: int = test_start_year
         self.end_year: int = end_year
 
-        self.train_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
-            climate_dataset_args
-        )
-        self.train_climate_dataset_args.split = "train"
-        self.train_climate_dataset_args.setup(self)
+        self.train_dataset_args: Union[
+            MapDatasetArgs, ShardDatasetArgs
+        ] = copy.deepcopy(dataset_args)
+        self.train_dataset_args.setup(self, "train")
 
-        self.val_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
-            climate_dataset_args
+        self.val_dataset_args: Union[MapDatasetArgs, ShardDatasetArgs] = copy.deepcopy(
+            dataset_args
         )
-        self.val_climate_dataset_args.split = "val"
-        self.val_climate_dataset_args.setup(self)
+        self.val_dataset_args.setup(self, "val")
 
-        self.test_climate_dataset_args: ClimateDatasetArgs = copy.deepcopy(
-            climate_dataset_args
+        self.test_dataset_args: Union[MapDatasetArgs, ShardDatasetArgs] = copy.deepcopy(
+            dataset_args
         )
-        self.test_climate_dataset_args.split = "test"
-        self.test_climate_dataset_args.setup(self)
-
-        self.task_args = task_args
+        self.test_dataset_args.setup(self, "test")
 
 
 class DataModule(LightningDataModule):
@@ -140,26 +137,26 @@ class DataModule(LightningDataModule):
             and data_module_args.val_start_year > data_module_args.train_start_year
         )
         self.save_hyperparameters(logger=False)
-        # if isinstance(data_module_args.train_task_args._task_class, str):
-        #     task_class: Callable[..., Task] = eval(
-        #         data_module_args.train_task_args._task_class
-        #     )
-        # else:
-        #     task_class: Callable[
-        #         ..., Task
-        #     ] = data_module_args.train_task_args._task_class
+        if isinstance(data_module_args.train_dataset_args._data_class, str):
+            data_class: Callable[..., Union[MapDataset, ShardDataset]] = eval(
+                data_module_args.train_dataset_args._data_class
+            )
+        else:
+            data_class: Callable[
+                ..., Union[MapDataset, ShardDataset]
+            ] = data_module_args.train_dataset_args._data_class
 
-        data_loading_class = data_module_args.data_loading_class
-        self.train_dataset: Task = data_loading_class(
-            data_module_args.train_climate_dataset_args, data_module_args.task_args
+        self.train_dataset: Union[MapDataset, ShardDataset] = data_class(
+            data_module_args.train_dataset_args
         )
 
-        self.val_dataset: Task = data_loading_class(
-            data_module_args.val_climate_dataset_args, data_module_args.task_args
+        data_class = MapDataset
+        self.val_dataset: Union[MapDataset, ShardDataset] = data_class(
+            data_module_args.val_dataset_args
         )
 
-        self.test_dataset: Task = data_loading_class(
-            data_module_args.test_climate_dataset_args, data_module_args.task_args
+        self.test_dataset: Union[MapDataset, ShardDataset] = data_class(
+            data_module_args.test_dataset_args
         )
 
         self.train_dataset.setup()
@@ -192,32 +189,32 @@ class DataModule(LightningDataModule):
         else:
             raise NotImplementedError
 
+    def build_dataloader(
+        self, dataset: Union[MapDataset, ShardDataset], shuffle: bool
+    ) -> DataLoader:
+        if isinstance(dataset, IterableDataset):
+            return DataLoader(
+                dataset,
+                batch_size=self.hparams.batch_size,
+                num_workers=self.hparams.num_workers,
+                pin_memory=self.hparams.pin_memory,
+                collate_fn=collate_fn,
+            )
+        else:
+            return DataLoader(
+                dataset,
+                shuffle=shuffle,
+                batch_size=self.hparams.batch_size,
+                num_workers=self.hparams.num_workers,
+                pin_memory=self.hparams.pin_memory,
+                collate_fn=collate_fn,
+            )
+
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.train_dataset,
-            shuffle=True,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
-        )
+        return self.build_dataloader(self.train_dataset, True)
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.val_dataset,
-            shuffle=False,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
-        )
+        return self.build_dataloader(self.val_dataset, False)
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.test_dataset,
-            shuffle=False,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
-        )
+        return self.build_dataloader(self.test_dataset, False)

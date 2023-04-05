@@ -10,7 +10,8 @@ class ClimateDataset(ABC):
         self.variables: Sequence[str] = data_args.variables
         self.split: str = data_args.split
 
-    def setup(self, style="map", setup_args={}) -> None:
+    def setup(self, style: str = "map", setup_args: dict = {}) -> None:
+        assert style in ["map", "shard"]
         if style == "map":
             return self.setup_map(), {}
         elif style == "shard":
@@ -29,15 +30,15 @@ class ClimateDataset(ABC):
         self.setup_metadata()
         return None
 
-    def setup_shard(self, setup_args={}) -> None:
+    def setup_shard(self, setup_args: dict = {}) -> None:
         self.setup_constants()
         self.setup_metadata()
         return None
 
-    def load_chunk(self, chunk_id) -> None:
+    def load_chunk(self, chunk_id: int) -> None:
         return None
 
-    def get_item(self, index):
+    def get_item(self, index: int):
         pass
 
     def get_constants_data(self):

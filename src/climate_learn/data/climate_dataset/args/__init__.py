@@ -1,3 +1,3 @@
-from .climate_dataset_args import *
-from .stacked_climate_dataset_args import *
-from .era5_args import *
+from .climate_dataset_args import ClimateDatasetArgs
+from .stacked_climate_dataset_args import StackedClimateDatasetArgs
+from .era5_args import ERA5Args

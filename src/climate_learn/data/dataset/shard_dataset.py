@@ -1,64 +1,93 @@
+from typing import Callable, Dict, Sequence, Tuple, Union
 import numpy as np
 from torch.utils.data import IterableDataset
 import torch
+import numpy
+import random
 from torchvision.transforms import transforms
-from climate_learn.data.climate_dataset import ClimateDatasetArgs
-from climate_learn.data.tasks import TaskArgs
+from climate_learn.data.dataset.args import ShardDatasetArgs
+from climate_learn.data.climate_dataset import ClimateDataset
+from climate_learn.data.tasks import Task
 
 
-class ShardedDataset(IterableDataset):
-    def __init__(self, climate_dataset_args: ClimateDatasetArgs, task_args: TaskArgs):
-        if isinstance(climate_dataset_args._data_class, str):
-            climate_dataset_class = eval(climate_dataset_args._data_class)
+class ShardDataset(IterableDataset):
+    def __init__(self, dataset_args: ShardDatasetArgs):
+        if isinstance(dataset_args.climate_dataset_args._data_class, str):
+            climate_dataset_class: Callable[..., ClimateDataset] = eval(
+                dataset_args.climate_dataset_args._data_class
+            )
         else:
-            climate_dataset_class = climate_dataset_args._data_class
-        self.data = climate_dataset_class(climate_dataset_args)
+            climate_dataset_class: Callable[
+                ..., ClimateDataset
+            ] = dataset_args.climate_dataset_args._data_class
+        self.data: ClimateDataset = climate_dataset_class(
+            dataset_args.climate_dataset_args
+        )
 
-        if isinstance(task_args._task_class, str):
-            task_class = eval(task_args._task_class)
+        if isinstance(dataset_args.task_args._task_class, str):
+            task_class: Callable[..., Task] = eval(dataset_args.task_args._task_class)
         else:
-            task_class = task_args._task_class
-        self.task = task_class(task_args)
-        self.n_chunks = 5
+            task_class: Callable[..., Task] = dataset_args.task_args._task_class
+        self.task: Task = task_class(dataset_args.task_args)
+        self.n_chunks = dataset_args.n_chunks
 
-    def get_setup_args(self, seed):
-        setup_args = {}
+    def get_setup_args(self, seed: int) -> Dict[str, int]:
+        setup_args: Dict[str, int] = {}
         worker_info = torch.utils.data.get_worker_info()
         if torch.distributed.is_available() and torch.distributed.is_initialized():
-            rank = torch.distributed.get_rank()
-            world_size = torch.distributed.get_world_size()
-            worker_info = torch.utils.data.get_worker_info()
+            rank: int = torch.distributed.get_rank()
+            world_size: int = torch.distributed.get_world_size()
             if worker_info is not None:
                 # Inside one of the worker process
-                num_workers = worker_info.num_workers
+                sett = "Distributed is on; worker process"
+                info = f"worker id: {worker_info.id}, num_workers: {worker_info.num_workers}, rank: {rank}, world_size: {world_size}"
+                # print(f"{sett} {info}")
+                num_workers: int = worker_info.num_workers
                 rank = rank * num_workers + worker_info.id
                 world_size = world_size * num_workers
+            else:
+                sett = "Distributed is on; main process"
+                info = f"rank: {rank}, world_size: {world_size}"
+                # print(f"{sett} {info}")
         else:
             if worker_info is not None:
                 # Not in a distributed setting; Inside one of the worker process
-                rank = worker_info.id
-                world_size = worker_info.num_workers
+                sett = "Distributed is off; worker process"
+                info = f"worker id: {worker_info.id}, num_workers: {worker_info.num_workers}"
+                # print(f"{sett} {info}")
+                rank: int = worker_info.id
+                world_size: int = worker_info.num_workers
             else:
                 # Not in a distributed setting; Inside main process
-                rank = 0
-                world_size = 1
+                sett = "Distributed is off; main process"
+                info = f"Nothing to look at"
+                # print(f"{sett} {info}")
+                rank: int = 0
+                world_size: int = 1
         setup_args["world_size"] = world_size
         setup_args["rank"] = rank
         setup_args["seed"] = seed
         setup_args["n_chunks"] = self.n_chunks
         return setup_args
 
-    def setup_transforms(self):
-        constants_data = self.data.get_constants_data()
-        transform_data = []
-        chunks_iterated_till_now = 0
+    def setup_transforms(self) -> None:
+        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        transform_data: Sequence[
+            Tuple[
+                Dict[str, torch.tensor],
+                Dict[str, torch.tensor],
+                Dict[str, torch.tensor],
+                Dict[str, torch.tensor],
+                int,
+            ]
+        ] = []
+        chunks_iterated_till_now: int = 0
         while chunks_iterated_till_now < self.n_chunks:
-            data_len = self.data.load_chunk(chunks_iterated_till_now)
-            length = self.task.setup(data_len)
-            # TODO: shuffline logic can go here
+            data_len: int = self.data.load_chunk(chunks_iterated_till_now)
+            length: int = self.task.setup(data_len)
             for index in range(length):
-                raw_index = self.task.get_raw_index(index)
-                raw_data = self.data.get_item(raw_index)
+                raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
+                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
                 inp_data, out_data = self.task.create_inp_out(
                     raw_data, constants_data, apply_transform=0
                 )
@@ -72,6 +101,7 @@ class ShardedDataset(IterableDataset):
             stacked_inp_data = {k: torch.stack(stacked_inp_data[k]) for k in inp_data}
             stacked_out_data = {k: torch.stack(stacked_out_data[k]) for k in out_data}
 
+            # Taking mean over entire histories for forecasting
             mean_inp_data = {
                 k: torch.mean(stacked_inp_data[k]) for k in stacked_inp_data
             }
@@ -87,15 +117,21 @@ class ShardedDataset(IterableDataset):
             chunks_iterated_till_now += 1
 
         ### Using https://math.stackexchange.com/a/37131 to calculate mean and std from chunk mean and std
-        # Done to prevent any numerical overflow
-        length_gcd = np.gcd.reduce([chunk_data[4] for chunk_data in transform_data])
-        reduced_total_length = torch.tensor(0.0)
+        # GCD used to prevent any numerical overflow
+        length_gcd: int = np.gcd.reduce(
+            [chunk_data[4] for chunk_data in transform_data]
+        )
+        reduced_total_length: torch.tensor = torch.tensor(0.0)
         for chunk_data in transform_data:
             chunk_data[4] = torch.tensor(chunk_data[4] / length_gcd)
             reduced_total_length += chunk_data[4]
 
-        mean_inp_data = {k: torch.tensor(0.0) for k in transform_data[0][0].keys()}
-        mean_out_data = {k: torch.tensor(0.0) for k in transform_data[0][2].keys()}
+        mean_inp_data: Dict[str, torch.tensor] = {
+            k: torch.tensor(0.0) for k in transform_data[0][0].keys()
+        }
+        mean_out_data: Dict[str, torch.tensor] = {
+            k: torch.tensor(0.0) for k in transform_data[0][2].keys()
+        }
 
         for chunk_data in transform_data:
             chunk_length = chunk_data[4]
@@ -110,8 +146,12 @@ class ShardedDataset(IterableDataset):
                 for k in mean_out_data
             }
 
-        std_inp_data = {k: torch.tensor(0.0) for k in transform_data[0][1].keys()}
-        std_out_data = {k: torch.tensor(0.0) for k in transform_data[0][3].keys()}
+        std_inp_data: Dict[str, torch.tensor] = {
+            k: torch.tensor(0.0) for k in transform_data[0][1].keys()
+        }
+        std_out_data: Dict[str, torch.tensor] = {
+            k: torch.tensor(0.0) for k in transform_data[0][3].keys()
+        }
 
         for chunk_data in transform_data:
             chunk_length = chunk_data[4]
@@ -143,29 +183,32 @@ class ShardedDataset(IterableDataset):
         ## TODO: Need some sort of communication from all the process and then form assert
         ## for Standard deviation some sort of formula would need to be used for effective comm
 
-        self.inp_transforms = {
+        self.inp_transforms: Dict[str, transforms.Normalize] = {
             k: transforms.Normalize(mean_inp_data[k], std_inp_data[k])
             for k in stacked_inp_data
         }
-        self.out_transforms = {
+        self.out_transforms: Dict[str, transforms.Normalize] = {
             k: transforms.Normalize(mean_out_data[k], std_out_data[k])
             for k in stacked_out_data
         }
 
         self.task.set_normalize(self.inp_transforms, self.out_transforms)
-        self.climatology = {
+        self.climatology: Dict[str, torch.tensor] = {
             k: torch.mean(stacked_out_data[k], dim=0) for k in stacked_out_data
         }
 
-    def get_climatology(self):
+    def get_climatology(self) -> Dict[str, torch.tensor]:
         return self.climatology
 
-    def set_normalize(self, inp_transforms, out_transforms):
+    def set_normalize(
+        self,
+        inp_transforms: Dict[str, transforms.Normalize],
+        out_transforms: Dict[str, transforms.Normalize],
+    ) -> None:
         self.task.set_normalize(inp_transforms, out_transforms)
 
-    def setup(self):
-        print("Setting up Data")
-        setup_args = self.get_setup_args(seed=0)
+    def setup(self) -> None:
+        setup_args: Dict[str, int] = self.get_setup_args(seed=0)
         data_len, variables_to_update = self.data.setup(
             style="shard", setup_args=setup_args
         )
@@ -174,31 +217,40 @@ class ShardedDataset(IterableDataset):
         ## TODO: Need some sort of communication from all the process and then form assert
         metadata = self.data.get_metadata()
         if isinstance(metadata, list):  # For downscaling
-            self.lat = metadata[0]["lat"]
-            self.lon = metadata[0]["lon"]
-            self.out_lat = metadata[1]["lat"]
-            self.out_lon = metadata[1]["lon"]
+            self.lat: numpy.ndarray = metadata[0]["lat"]
+            self.lon: numpy.ndarray = metadata[0]["lon"]
+            self.out_lat: numpy.ndarray = metadata[1]["lat"]
+            self.out_lon: numpy.ndarray = metadata[1]["lon"]
         else:
-            self.lat = metadata["lat"]
-            self.lon = metadata["lon"]
-        print("Setting up Task")
+            self.lat: numpy.ndarray = metadata["lat"]
+            self.lon: numpy.ndarray = metadata["lon"]
+            self.out_lat: numpy.ndarray = metadata["lat"]
+            self.out_lon: numpy.ndarray = metadata["lon"]
         ## TODO: Need some sort of communication from all the process and then form assert
         _ = self.task.setup(data_len, variables_to_update)
-        print("Calculating Transforms for the task")
         self.setup_transforms()
+        self.epoch: int = 0
 
     def __iter__(self):
         ### TODO: get epoch number which then would be used to set seed
-        setup_args = self.get_setup_args(seed=0)
+        ## Hacky solution for now; Ideally should get that from Trainer
+        self.epoch += 1
+        setup_args: Dict[str, int] = self.get_setup_args(seed=self.epoch)
         data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
-        constants_data = self.data.get_constants_data()
-        chunks_iterated_till_now = 0
+        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        chunks_iterated_till_now: int = 0
         while chunks_iterated_till_now < self.n_chunks:
-            data_len = self.data.load_chunk(chunks_iterated_till_now)
-            length = self.task.setup(data_len)
+            data_len: int = self.data.load_chunk(chunks_iterated_till_now)
+            length: int = self.task.setup(data_len)
+
             # TODO: shuffline logic can go here
-            for index in range(length):
-                raw_index = self.task.get_raw_index(index)
-                raw_data = self.data.get_item(raw_index)
+            indices: Sequence[int] = list(range(length))
+            random.Random(self.epoch).shuffle(indices)
+            for index in indices:
+                raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
+                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
                 yield self.task.create_inp_out(raw_data, constants_data)
             chunks_iterated_till_now += 1
+
+
+ShardDatasetArgs._data_class = ShardDataset

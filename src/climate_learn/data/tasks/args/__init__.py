@@ -1,3 +1,3 @@
-from .task_args import *
-from .forecasting_args import *
-from .downscaling_args import *
+from .task_args import TaskArgs
+from .forecasting_args import ForecastingArgs
+from .downscaling_args import DownscalingArgs

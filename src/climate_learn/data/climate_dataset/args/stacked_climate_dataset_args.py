@@ -13,8 +13,11 @@ class StackedClimateDatasetArgs(ClimateDatasetArgs):
     ] = "StackedClimateDataset"
 
     def __init__(self, data_args: Sequence[ClimateDatasetArgs]) -> None:
-        self.child_data_args = data_args
+        self.child_data_args: Sequence[ClimateDatasetArgs] = data_args
+        assert len(data_args) > 0
+        self.split: str = data_args[0].split
 
-    def setup(self, data_module_args: DataModuleArgs) -> None:
+    def setup(self, data_module_args: DataModuleArgs, split: str) -> None:
         for data_args in self.child_data_args:
-            data_args.setup(data_module_args)
+            data_args.setup(data_module_args, split)
+        self.split = split
