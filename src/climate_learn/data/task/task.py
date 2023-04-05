@@ -3,7 +3,7 @@ from typing import Callable, Dict, Sequence, Tuple, Union
 import torch
 from torchvision.transforms import transforms
 
-from climate_learn.data.tasks.args import TaskArgs
+from climate_learn.data.task.args import TaskArgs
 
 
 class Task(ABC):

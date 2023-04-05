@@ -6,8 +6,8 @@ import numpy as np
 # from torchvision.transforms import transforms
 
 from climate_learn.data.climate_dataset import *
-from climate_learn.data.tasks.task import Task
-from climate_learn.data.tasks.args import DownscalingArgs
+from climate_learn.data.task.task import Task
+from climate_learn.data.task.args import DownscalingArgs
 
 
 class Downscaling(Task):

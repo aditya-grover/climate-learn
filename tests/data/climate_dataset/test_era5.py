@@ -1,5 +1,4 @@
-from climate_learn.data.climate_dataset.args import ERA5Args
-from climate_learn.data.climate_dataset import ERA5
+from climate_learn.data.climate_dataset import ERA5Args, ERA5
 
 
 class TestERA5Instantiation:

@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Callable, TYPE_CHECKING, Union
 
 from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
-from climate_learn.data.tasks.args import TaskArgs
+from climate_learn.data.task.args import TaskArgs
 
 if TYPE_CHECKING:
     from climate_learn.data.dataset import MapDataset

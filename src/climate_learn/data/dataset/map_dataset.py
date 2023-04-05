@@ -5,7 +5,7 @@ import numpy
 from torchvision.transforms import transforms
 from climate_learn.data.dataset.args import MapDatasetArgs
 from climate_learn.data.climate_dataset import ClimateDataset
-from climate_learn.data.tasks import Task
+from climate_learn.data.task import Task
 
 
 class MapDataset(Dataset):

@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from climate_learn.data.tasks import Downscaling, Forecasting
+from climate_learn.data.task import Downscaling, Forecasting
 
 # TODO: include exceptions in docstrings
 

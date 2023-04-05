@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Callable, Sequence, TYPE_CHECKING, Union
-from climate_learn.data.tasks.args import TaskArgs
+from climate_learn.data.task.args import TaskArgs
 
 if TYPE_CHECKING:
-    from climate_learn.data.tasks import Forecasting
+    from climate_learn.data.task import Forecasting
 
 
 class ForecastingArgs(TaskArgs):

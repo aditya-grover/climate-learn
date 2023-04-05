@@ -1,7 +1,7 @@
 from .components import *
 from .modules import *
 from climate_learn.data import IterDataModule, DataModule
-from climate_learn.data.tasks.args import ForecastingArgs
+from climate_learn.data.task.args import ForecastingArgs
 from climate_learn.utils.datetime import Hours
 import torch
 

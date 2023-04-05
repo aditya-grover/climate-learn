@@ -1,5 +1,5 @@
 from .climate_dataset import *
-from .tasks import *
+from .task import *
 from .dataset import *
 from .constants import *
 from .download import *

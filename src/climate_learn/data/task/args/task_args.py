@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Callable, Sequence, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from climate_learn.data.tasks import Task
+    from climate_learn.data.task import Task
 
 
 class TaskArgs(ABC):

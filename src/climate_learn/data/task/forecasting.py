@@ -1,8 +1,8 @@
 from typing import Callable, Dict, Sequence, Tuple, Union
 import torch
 
-from climate_learn.data.tasks.task import Task
-from climate_learn.data.tasks.args import ForecastingArgs
+from climate_learn.data.task.task import Task
+from climate_learn.data.task.args import ForecastingArgs
 
 
 class Forecasting(Task):
