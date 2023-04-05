@@ -1,10 +1,10 @@
-from typing import Any, Callable, Dict, Sequence, Tuple
+# Standard library
+from typing import Callable, Dict, Sequence, Tuple
+
+# Third party
 import torch
-import numpy as np
 
-# import xarray as xr
-# from torchvision.transforms import transforms
-
+# Local application
 from climate_learn.data.climate_dataset import *
 from climate_learn.data.task.task import Task
 from climate_learn.data.task.args import DownscalingArgs

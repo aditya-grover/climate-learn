@@ -1,13 +1,17 @@
-from typing import Callable, Dict, Sequence, Tuple, Union
-import numpy as np
-from torch.utils.data import IterableDataset
-import torch
-import numpy
+# Standard library
 import random
+from typing import Callable, Dict, Sequence, Tuple, Union
+
+# Third party
+import numpy
+import torch
+from torch.utils.data import IterableDataset
 from torchvision.transforms import transforms
-from climate_learn.data.dataset.args import ShardDatasetArgs
+
+# Local application
 from climate_learn.data.climate_dataset import ClimateDataset
 from climate_learn.data.task import Task
+from climate_learn.data.dataset.args import ShardDatasetArgs
 
 
 class ShardDataset(IterableDataset):
@@ -118,7 +122,7 @@ class ShardDataset(IterableDataset):
 
         ### Using https://math.stackexchange.com/a/37131 to calculate mean and std from chunk mean and std
         # GCD used to prevent any numerical overflow
-        length_gcd: int = np.gcd.reduce(
+        length_gcd: int = numpy.gcd.reduce(
             [chunk_data[4] for chunk_data in transform_data]
         )
         reduced_total_length: torch.tensor = torch.tensor(0.0)

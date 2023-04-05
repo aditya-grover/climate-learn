@@ -1,8 +1,12 @@
+# Standard library
 from abc import ABC
 from typing import Callable, Dict, Sequence, Tuple, Union
+
+# Third party
 import torch
 from torchvision.transforms import transforms
 
+# Local application
 from climate_learn.data.task.args import TaskArgs
 
 

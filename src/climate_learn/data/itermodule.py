@@ -2,16 +2,16 @@
 import glob
 from typing import Optional
 
-# Local application
-from .climate_dataset.era5_iterdataset import *
-from ..utils.datetime import Hours
-from .module import collate_fn
-
 # Third party
 import torch
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
 from pytorch_lightning import LightningDataModule
+
+# Local application
+from .climate_dataset.era5_iterdataset import *
+from ..utils.datetime import Hours
+from .module import collate_fn
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset

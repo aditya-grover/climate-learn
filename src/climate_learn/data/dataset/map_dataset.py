@@ -1,11 +1,16 @@
+# Standard library
 from typing import Callable, Dict, Sequence, Tuple, Union
-from torch.utils.data import Dataset
-import torch
+
+# Third party
 import numpy
+import torch
+from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from climate_learn.data.dataset.args import MapDatasetArgs
+
+# Local application
 from climate_learn.data.climate_dataset import ClimateDataset
 from climate_learn.data.task import Task
+from climate_learn.data.dataset.args import MapDatasetArgs
 
 
 class MapDataset(Dataset):

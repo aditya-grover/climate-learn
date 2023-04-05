@@ -1,7 +1,9 @@
+# Standard library
 from __future__ import annotations
 from abc import ABC
 from typing import Callable, Sequence, TYPE_CHECKING, Union
 
+# Local application
 if TYPE_CHECKING:
     from climate_learn.data.climate_dataset import ClimateDataset
     from climate_learn.data.module import DataModuleArgs

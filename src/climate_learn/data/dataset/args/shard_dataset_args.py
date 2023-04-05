@@ -1,7 +1,9 @@
+# Standard library
 from __future__ import annotations
 from abc import ABC
 from typing import Callable, TYPE_CHECKING, Union
 
+# Local application
 from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
 from climate_learn.data.task.args import TaskArgs
 

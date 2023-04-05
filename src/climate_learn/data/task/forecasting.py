@@ -1,6 +1,10 @@
-from typing import Callable, Dict, Sequence, Tuple, Union
+# Standard library
+from typing import Callable, Dict, Sequence, Tuple
+
+# Third party
 import torch
 
+# Local application
 from climate_learn.data.task.task import Task
 from climate_learn.data.task.args import ForecastingArgs
 

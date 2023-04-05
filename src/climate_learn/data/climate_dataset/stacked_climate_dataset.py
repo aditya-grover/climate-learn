@@ -1,8 +1,13 @@
+# Standard library
 from typing import Callable, Dict, Sequence, Tuple
+
+# Third party
+import numpy
+import torch
+
+# Local application
 from climate_learn.data.climate_dataset.args import StackedClimateDatasetArgs
 from climate_learn.data.climate_dataset import ClimateDataset
-import torch
-import numpy
 
 
 class StackedClimateDataset(ClimateDataset):

@@ -1,22 +1,23 @@
-# Local application
-from ..utils.datetime import Year, Hours
+# Standard library
 from abc import ABC
+import copy
+from typing import Callable, Dict, Sequence, Tuple, Union
+
+# Third party
+import numpy as np
+from pytorch_lightning import LightningDataModule
+import torch
+from torch.utils.data import DataLoader, IterableDataset
+from torchvision.transforms import transforms
+
+# Local application
 from climate_learn.data.dataset import (
     MapDatasetArgs,
     MapDataset,
     ShardDatasetArgs,
     ShardDataset,
 )
-
-import copy
-from typing import Callable, Dict, Sequence, Tuple, Union
-
-# Third party
-import numpy as np
-import torch
-from torch.utils.data import DataLoader, IterableDataset
-from pytorch_lightning import LightningDataModule
-from torchvision.transforms import transforms
+from climate_learn.utils.datetime import Year, Hours
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset

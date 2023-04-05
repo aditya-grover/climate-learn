@@ -1,5 +1,8 @@
+# Standard library
 from __future__ import annotations
 from typing import Callable, Sequence, TYPE_CHECKING, Union
+
+# Local application
 from climate_learn.data.task.args import TaskArgs
 
 if TYPE_CHECKING:
