@@ -72,6 +72,7 @@ class ShardDataset(IterableDataset):
         setup_args["rank"] = rank
         setup_args["seed"] = seed
         setup_args["n_chunks"] = self.n_chunks
+        setup_args["shuffle"] = True
         return setup_args
 
     def setup_transforms(self) -> None:
@@ -234,6 +235,42 @@ class ShardDataset(IterableDataset):
         _ = self.task.setup(data_len, variables_to_update)
         self.setup_transforms()
         self.epoch: int = 0
+
+    def get_data(self, entire_data: bool = False):
+        setup_args: Dict[str, int] = self.get_setup_args(seed=0)
+        del setup_args["shuffle"]
+        data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
+        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        ## We want last temporal data if we shard it
+        chunks_iterated_till_now: int = self.n_chunks - 1
+        if entire_data:
+            chunks_iterated_till_now = 0
+        data = []
+        while chunks_iterated_till_now < self.n_chunks:
+            data_len: int = self.data.load_chunk(chunks_iterated_till_now)
+            length: int = self.task.setup(data_len)
+            indices: Sequence[int] = list(range(length))
+            for index in indices:
+                raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
+                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
+                data.append(self.task.create_inp_out(raw_data, constants_data))
+            chunks_iterated_till_now += 1
+
+        def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+            ## Hotfix for the models to work with dict style data
+            t = torch.stack(tuple(t.values()))
+            ## Handles the case for forecasting input as it has history in it
+            ## TODO: Come up with an efficient solution instead of if condition
+            if len(t.size()) == 4:
+                return torch.transpose(t, 0, 1)
+            return t
+
+        inp = torch.stack([handle_dict_features(data[i][0]) for i in range(len(data))])
+        out = torch.stack([handle_dict_features(data[i][1]) for i in range(len(data))])
+        return inp, out
+
+    def get_time(self):
+        raise NotImplementedError
 
     def __iter__(self):
         ### TODO: get epoch number which then would be used to set seed

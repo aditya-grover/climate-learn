@@ -102,6 +102,34 @@ class MapDataset(Dataset):
     ) -> None:
         self.task.set_normalize(inp_transforms, out_transforms)
 
+    def get_data(self):
+        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        data = []
+        for index in range(self.length):
+            raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
+            raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
+            data.append(self.task.create_inp_out(raw_data, constants_data))
+
+        def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+            ## Hotfix for the models to work with dict style data
+            t = torch.stack(tuple(t.values()))
+            ## Handles the case for forecasting input as it has history in it
+            ## TODO: Come up with an efficient solution instead of if condition
+            if len(t.size()) == 4:
+                return torch.transpose(t, 0, 1)
+            return t
+
+        inp = torch.stack([handle_dict_features(data[i][0]) for i in range(len(data))])
+        out = torch.stack([handle_dict_features(data[i][1]) for i in range(len(data))])
+        return inp, out
+
+    def get_time(self):
+        time_indices: Sequence[int] = [
+            self.task.get_time_index(index) for index in range(self.length)
+        ]
+        time: numpy.ndarray = self.data.get_time()
+        return time[time_indices]
+
     def __getitem__(
         self, index: int
     ) -> Tuple[Dict[str, torch.tensor], Dict[str, torch.tensor]]:

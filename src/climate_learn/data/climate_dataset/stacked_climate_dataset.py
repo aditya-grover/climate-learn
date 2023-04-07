@@ -52,6 +52,10 @@ class StackedClimateDataset(ClimateDataset):
     def get_constants_data(self) -> Sequence[Dict[str, torch.tensor]]:
         return [dataset.get_constants_data() for dataset in self.climate_datasets]
 
+    def get_time(self):
+        ## Assuming that all datasets have same time
+        return self.climate_datasets[0].time
+
     def get_metadata(self) -> Sequence[Dict[str, numpy.ndarray]]:
         return [dataset.get_metadata() for dataset in self.climate_datasets]
 

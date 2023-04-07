@@ -128,7 +128,7 @@ class ERA5(ClimateDataset):
         len_min = min([data_dict[k].shape[0] for k in data_dict.keys()])
         data_dict = {k: data_dict[k][-len_min:] for k in data_dict.keys()}
         # using next(iter) isntead of list(data_dict.keys())[0] to get random element
-        self.time = data_dict[next(iter(data_dict.keys()))].time.values
+        self.time: numpy.ndarray = data_dict[next(iter(data_dict.keys()))].time.values
         data_dict = {k: torch.from_numpy(data_dict[k].values) for k in data_dict.keys()}
         return data_dict, variables_to_update
 
@@ -143,13 +143,16 @@ class ERA5(ClimateDataset):
             variables_to_update,
         )
 
-    def build_years_to_iterate(self, seed: int, drop_last: bool) -> Sequence[int]:
+    def build_years_to_iterate(
+        self, seed: int, drop_last: bool, shuffle: bool
+    ) -> Sequence[int]:
         temp_years = list(copy.deepcopy(self.years))
-        random.Random(seed).shuffle(temp_years)
+        if shuffle:
+            random.Random(seed).shuffle(temp_years)
         if drop_last:
             n_years = len(temp_years) // self.world_size
         else:
-            n_years = -(len(temp_years) // (-self.world_size))
+            n_years = (len(temp_years) + self.world_size - 1) // self.world_size
         years_to_iterate = []
         start_index = self.rank
         for _ in range(n_years):
@@ -166,13 +169,19 @@ class ERA5(ClimateDataset):
         self.world_size: int = args["world_size"]
         self.rank: int = args["rank"]
         self.n_chunks: int = args["n_chunks"]
+
         if "drop_last" in args.keys():
             drop_last = True
         else:
             drop_last = False
 
+        if "shuffle" in args.keys():
+            shuffle = True
+        else:
+            shuffle = False
+
         years_to_iterate: Sequence[int] = self.build_years_to_iterate(
-            args["seed"], drop_last
+            args["seed"], drop_last, shuffle
         )
         self.setup_constants(self.root_dir)
         self.setup_metadata(years_to_iterate[0])
@@ -184,7 +193,12 @@ class ERA5(ClimateDataset):
         return -1, variables_to_update
 
     def load_chunk(self, chunk_id: int) -> int:
-        years_to_iterate_this_chunk = self.years_to_iterate[chunk_id :: self.n_chunks]
+        n_years_in_chunk: int = (
+            len(self.years_to_iterate) + self.n_chunks - 1
+        ) // self.n_chunks
+        years_to_iterate_this_chunk = self.years_to_iterate[
+            chunk_id * n_years_in_chunk : (chunk_id + 1) * n_years_in_chunk
+        ]
         self.data_dict, _ = self.load_from_nc_by_years(
             self.root_dir, years_to_iterate_this_chunk
         )
@@ -208,6 +222,9 @@ class ERA5(ClimateDataset):
         self,
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
         return self.constants
+
+    def get_time(self) -> numpy.ndarray:
+        return self.time
 
     def get_metadata(
         self,

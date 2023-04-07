@@ -44,6 +44,9 @@ class Downscaling(Task):
     def get_raw_index(self, index: int) -> int:
         return index * self.subsample
 
+    def get_time_index(self, index: int) -> int:
+        return index * self.subsample
+
     def create_inp_out(
         self,
         raw_data: Dict[str, torch.tensor],

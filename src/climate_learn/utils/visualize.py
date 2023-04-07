@@ -48,10 +48,9 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
     if type(samples) == int:
         idxs = random.sample(range(0, len(task_dataset)), samples)
     elif type(samples) == list:
+        time = task_dataset.get_time()
         idxs = [
-            np.searchsorted(
-                task_dataset.time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H"))
-            )
+            np.searchsorted(time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H")))
             for dt in samples
         ]
     else:

@@ -43,7 +43,10 @@ class Task(ABC):
             self.constant_transform[var] = inp_normalize[var]
 
     def get_raw_index(self, index: int) -> Union[Sequence[int], int]:
-        pass
+        raise NotImplementedError
+
+    def get_time_index(self, index: int) -> int:
+        raise NotImplementedError
 
     def create_inp_out(
         self,
@@ -51,7 +54,7 @@ class Task(ABC):
         constants_data: Dict[str, torch.tensor],
         apply_transform: bool = 1,
     ) -> Tuple[Dict[str, torch.tensor], Dict[str, torch.tensor]]:
-        pass
+        raise NotImplementedError
 
 
 TaskArgs._task_class = Task

@@ -47,6 +47,9 @@ class Forecasting(Task):
         indices.append(out_idx)
         return indices
 
+    def get_time_index(self, index: int) -> int:
+        return index * self.subsample + (self.history - 1) * self.window
+
     def create_inp_out(
         self,
         raw_data: Dict[str, torch.tensor],

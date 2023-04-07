@@ -20,13 +20,13 @@ class ClimateDataset(ABC):
         elif style == "shard":
             return self.setup_shard(setup_args), {}
         else:
-            raise ValueError
+            raise NotImplementedError
 
     def setup_metadata(self) -> None:
-        pass
+        raise NotImplementedError
 
     def setup_constants(self) -> None:
-        pass
+        raise NotImplementedError
 
     def setup_map(self) -> None:
         self.setup_constants()
@@ -39,16 +39,19 @@ class ClimateDataset(ABC):
         return None
 
     def load_chunk(self, chunk_id: int) -> None:
-        return None
+        raise NotImplementedError
 
     def get_item(self, index: int):
-        pass
+        raise NotImplementedError
 
     def get_constants_data(self):
-        pass
+        raise NotImplementedError
+
+    def get_time(self):
+        raise NotImplementedError
 
     def get_metadata(self):
-        pass
+        raise NotImplementedError
 
 
 ClimateDatasetArgs._data_class = ClimateDataset
