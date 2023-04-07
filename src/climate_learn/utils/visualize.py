@@ -61,7 +61,7 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
     fig, axes = plt.subplots(len(idxs), 4, figsize=(30, 3 * len(idxs)), squeeze=False)
 
     for index, idx in enumerate(idxs):
-        x, y, _, _ = task_dataset[idx]  # 1, 1, 32, 64
+        x, y = task_dataset[idx]  # 1, 1, 32, 64
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = interpolate_input(x, y)
