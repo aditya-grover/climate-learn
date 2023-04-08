@@ -1,6 +1,6 @@
 # Standard library
 from abc import ABC
-from typing import Callable, Sequence
+from typing import Any, Callable, Dict, Sequence
 
 # Local application
 from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
@@ -13,7 +13,7 @@ class ClimateDataset(ABC):
         self.variables: Sequence[str] = data_args.variables
         self.split: str = data_args.split
 
-    def setup(self, style: str = "map", setup_args: dict = {}) -> None:
+    def setup(self, style: str = "map", setup_args: Dict[str, Any] = {}) -> None:
         assert style in ["map", "shard"]
         if style == "map":
             return self.setup_map(), {}
