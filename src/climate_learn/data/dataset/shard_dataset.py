@@ -213,9 +213,7 @@ class ShardDataset(IterableDataset):
         }
 
         self.task.set_normalize(inp_transforms, out_transforms, const_transforms)
-        self.climatology: Data = {
-            k: torch.mean(stacked_out_data[k], dim=0) for k in stacked_out_data
-        }
+        self.climatology: Data = mean_out_data
 
     def setup(self) -> None:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
@@ -253,9 +251,7 @@ class ShardDataset(IterableDataset):
         del setup_args["shuffle"]
         data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
         constants_data: Data = self.data.get_constants_data()
-        const_data: Data = self.task.create_constants_data(
-            constants_data, apply_transform=0
-        )
+        const_data: Data = self.task.create_constants_data(constants_data)
         ## We want last temporal data if we shard it
         chunks_iterated_till_now: int = self.n_chunks - 1
         if entire_data:
@@ -311,8 +307,6 @@ class ShardDataset(IterableDataset):
         while chunks_iterated_till_now < self.n_chunks:
             data_len: int = self.data.load_chunk(chunks_iterated_till_now)
             length: int = self.task.setup(data_len)
-
-            # TODO: shuffline logic can go here
             indices: Sequence[int] = list(range(length))
             random.Random(self.epoch).shuffle(indices)
             for index in indices:
