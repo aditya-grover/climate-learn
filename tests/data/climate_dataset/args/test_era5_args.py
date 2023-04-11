@@ -5,7 +5,8 @@ class TestERA5ArgsInstantiation:
     def test_initialization(self):
         ERA5Args(
             root_dir="my_data_path",
-            variables=["random_variable_1", "random_variable_2"],
+            variables=["geopotential", "2m_temperature"],
             years=range(2010, 2015),
+            constants=["random_constant"],
             split="train",
         )

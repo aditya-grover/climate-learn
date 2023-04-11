@@ -13,7 +13,7 @@ class TestStackedClimateDatasetArgsInstantiation:
         )
         data_arg2 = ERA5Args(
             root_dir="my_data_path",
-            variables=["random_variable_1", "random_variable_2"],
+            variables=["geopotential", "2m_temperature"],
             years=range(2010, 2015),
             split="train",
         )

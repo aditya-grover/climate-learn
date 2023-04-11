@@ -13,6 +13,9 @@ from climate_learn.data.climate_dataset import ClimateDataset
 from climate_learn.data.task import Task
 from climate_learn.data.dataset.args import ShardDatasetArgs
 
+Data = Dict[str, torch.tensor]
+Transform = Dict[str, transforms.Normalize]
+
 
 class ShardDataset(IterableDataset):
     def __init__(self, dataset_args: ShardDatasetArgs):
@@ -35,6 +38,13 @@ class ShardDataset(IterableDataset):
         self.task: Task = task_class(dataset_args.task_args)
         self.n_chunks = dataset_args.n_chunks
 
+        self.lat: Union[numpy.ndarray, None] = None
+        self.lon: Union[numpy.ndarray, None] = None
+        self.out_lat: Union[numpy.ndarray, None] = None
+        self.out_lon: Union[numpy.ndarray, None] = None
+        self.climatology: Union[Data, None] = None
+        self.epoch: int = 0
+
     def get_setup_args(self, seed: int) -> Dict[str, int]:
         setup_args: Dict[str, int] = {}
         worker_info = torch.utils.data.get_worker_info()
@@ -45,27 +55,23 @@ class ShardDataset(IterableDataset):
                 # Inside one of the worker process
                 sett = "Distributed is on; worker process"
                 info = f"worker id: {worker_info.id}, num_workers: {worker_info.num_workers}, rank: {rank}, world_size: {world_size}"
-                # print(f"{sett} {info}")
                 num_workers: int = worker_info.num_workers
                 rank = rank * num_workers + worker_info.id
                 world_size = world_size * num_workers
             else:
                 sett = "Distributed is on; main process"
                 info = f"rank: {rank}, world_size: {world_size}"
-                # print(f"{sett} {info}")
         else:
             if worker_info is not None:
                 # Not in a distributed setting; Inside one of the worker process
                 sett = "Distributed is off; worker process"
                 info = f"worker id: {worker_info.id}, num_workers: {worker_info.num_workers}"
-                # print(f"{sett} {info}")
                 rank: int = worker_info.id
                 world_size: int = worker_info.num_workers
             else:
                 # Not in a distributed setting; Inside main process
                 sett = "Distributed is off; main process"
                 info = f"Nothing to look at"
-                # print(f"{sett} {info}")
                 rank: int = 0
                 world_size: int = 1
         setup_args["world_size"] = world_size
@@ -76,23 +82,24 @@ class ShardDataset(IterableDataset):
         return setup_args
 
     def setup_transforms(self) -> None:
-        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
-        transform_data: Sequence[
-            Tuple[
-                Dict[str, torch.tensor],
-                Dict[str, torch.tensor],
-                Dict[str, torch.tensor],
-                Dict[str, torch.tensor],
-                int,
-            ]
-        ] = []
+        constants_data: Data = self.data.get_constants_data()
+        const_data: Data = self.task.create_constants_data(
+            constants_data, apply_transform=0
+        )
+        mean_const_data: Data = {k: torch.mean(const_data[k]) for k in const_data}
+        std_const_data: Data = {k: torch.std(const_data[k]) for k in const_data}
+        const_transforms: Transform = {
+            k: transforms.Normalize(mean_const_data[k], std_const_data[k])
+            for k in const_data
+        }
+        transform_data: Sequence[Tuple[Data, Data, Data, Data, int]] = []
         chunks_iterated_till_now: int = 0
         while chunks_iterated_till_now < self.n_chunks:
             data_len: int = self.data.load_chunk(chunks_iterated_till_now)
             length: int = self.task.setup(data_len)
             for index in range(length):
                 raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
-                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
+                raw_data: Data = self.data.get_item(raw_index)
                 inp_data, out_data = self.task.create_inp_out(
                     raw_data, constants_data, apply_transform=0
                 )
@@ -103,18 +110,26 @@ class ShardDataset(IterableDataset):
                     stacked_inp_data[k].append(inp_data[k])
                 for k in out_data:
                     stacked_out_data[k].append(out_data[k])
-            stacked_inp_data = {k: torch.stack(stacked_inp_data[k]) for k in inp_data}
-            stacked_out_data = {k: torch.stack(stacked_out_data[k]) for k in out_data}
+            stacked_inp_data: Data = {
+                k: torch.stack(stacked_inp_data[k]) for k in inp_data
+            }
+            stacked_out_data: Data = {
+                k: torch.stack(stacked_out_data[k]) for k in out_data
+            }
 
             # Taking mean over entire histories for forecasting
-            mean_inp_data = {
+            mean_inp_data: Data = {
                 k: torch.mean(stacked_inp_data[k]) for k in stacked_inp_data
             }
-            std_inp_data = {k: torch.std(stacked_inp_data[k]) for k in stacked_inp_data}
-            mean_out_data = {
+            std_inp_data: Data = {
+                k: torch.std(stacked_inp_data[k]) for k in stacked_inp_data
+            }
+            mean_out_data: Data = {
                 k: torch.mean(stacked_out_data[k]) for k in stacked_out_data
             }
-            std_out_data = {k: torch.std(stacked_out_data[k]) for k in stacked_out_data}
+            std_out_data: Data = {
+                k: torch.std(stacked_out_data[k]) for k in stacked_out_data
+            }
 
             transform_data.append(
                 [mean_inp_data, std_inp_data, mean_out_data, std_out_data, length]
@@ -131,10 +146,10 @@ class ShardDataset(IterableDataset):
             chunk_data[4] = torch.tensor(chunk_data[4] / length_gcd)
             reduced_total_length += chunk_data[4]
 
-        mean_inp_data: Dict[str, torch.tensor] = {
+        mean_inp_data: Data = {
             k: torch.tensor(0.0) for k in transform_data[0][0].keys()
         }
-        mean_out_data: Dict[str, torch.tensor] = {
+        mean_out_data: Data = {
             k: torch.tensor(0.0) for k in transform_data[0][2].keys()
         }
 
@@ -151,12 +166,8 @@ class ShardDataset(IterableDataset):
                 for k in mean_out_data
             }
 
-        std_inp_data: Dict[str, torch.tensor] = {
-            k: torch.tensor(0.0) for k in transform_data[0][1].keys()
-        }
-        std_out_data: Dict[str, torch.tensor] = {
-            k: torch.tensor(0.0) for k in transform_data[0][3].keys()
-        }
+        std_inp_data: Data = {k: torch.tensor(0.0) for k in transform_data[0][1].keys()}
+        std_out_data: Data = {k: torch.tensor(0.0) for k in transform_data[0][3].keys()}
 
         for chunk_data in transform_data:
             chunk_length = chunk_data[4]
@@ -181,36 +192,30 @@ class ShardDataset(IterableDataset):
                 for k in std_out_data
             }
 
-        std_inp_data = {k: torch.sqrt(std_inp_data[k]) for k in std_inp_data.keys()}
-        std_out_data = {k: torch.sqrt(std_out_data[k]) for k in std_out_data.keys()}
+        std_inp_data: Data = {
+            k: torch.sqrt(std_inp_data[k]) for k in std_inp_data.keys()
+        }
+        std_out_data: Data = {
+            k: torch.sqrt(std_out_data[k]) for k in std_out_data.keys()
+        }
 
         # Taking mean over entire histories for forecasting
         ## TODO: Need some sort of communication from all the process and then form assert
         ## for Standard deviation some sort of formula would need to be used for effective comm
 
-        self.inp_transforms: Dict[str, transforms.Normalize] = {
+        inp_transforms: Transform = {
             k: transforms.Normalize(mean_inp_data[k], std_inp_data[k])
             for k in stacked_inp_data
         }
-        self.out_transforms: Dict[str, transforms.Normalize] = {
+        out_transforms: Transform = {
             k: transforms.Normalize(mean_out_data[k], std_out_data[k])
             for k in stacked_out_data
         }
 
-        self.task.set_normalize(self.inp_transforms, self.out_transforms)
-        self.climatology: Dict[str, torch.tensor] = {
+        self.task.set_normalize(inp_transforms, out_transforms, const_transforms)
+        self.climatology: Data = {
             k: torch.mean(stacked_out_data[k], dim=0) for k in stacked_out_data
         }
-
-    def get_climatology(self) -> Dict[str, torch.tensor]:
-        return self.climatology
-
-    def set_normalize(
-        self,
-        inp_transforms: Dict[str, transforms.Normalize],
-        out_transforms: Dict[str, transforms.Normalize],
-    ) -> None:
-        self.task.set_normalize(inp_transforms, out_transforms)
 
     def setup(self) -> None:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
@@ -221,26 +226,36 @@ class ShardDataset(IterableDataset):
         ## HotFix (StackedClimateDataset returns a list instead of dict)
         ## TODO: Need some sort of communication from all the process and then form assert
         metadata = self.data.get_metadata()
+        ## Get rid of these attributes in future;
+        ## Once ModelModule becomes independent of DataModule
         if isinstance(metadata, list):  # For downscaling
-            self.lat: numpy.ndarray = metadata[0]["lat"]
-            self.lon: numpy.ndarray = metadata[0]["lon"]
-            self.out_lat: numpy.ndarray = metadata[1]["lat"]
-            self.out_lon: numpy.ndarray = metadata[1]["lon"]
+            self.lat = metadata[0]["lat"]
+            self.lon = metadata[0]["lon"]
+            self.out_lat = metadata[1]["lat"]
+            self.out_lon = metadata[1]["lon"]
         else:
-            self.lat: numpy.ndarray = metadata["lat"]
-            self.lon: numpy.ndarray = metadata["lon"]
-            self.out_lat: numpy.ndarray = metadata["lat"]
-            self.out_lon: numpy.ndarray = metadata["lon"]
+            self.lat = metadata["lat"]
+            self.lon = metadata["lon"]
+            self.out_lat = metadata["lat"]
+            self.out_lon = metadata["lon"]
         ## TODO: Need some sort of communication from all the process and then form assert
         _ = self.task.setup(data_len, variables_to_update)
         self.setup_transforms()
-        self.epoch: int = 0
+        self.epoch = 0
 
-    def get_data(self, entire_data: bool = False):
+    def get_climatology(self) -> Union[Data, None]:
+        return self.climatology
+
+    def get_data(
+        self, entire_data: bool = False
+    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
         del setup_args["shuffle"]
         data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
-        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        constants_data: Data = self.data.get_constants_data()
+        const_data: Data = self.task.create_constants_data(
+            constants_data, apply_transform=0
+        )
         ## We want last temporal data if we shard it
         chunks_iterated_till_now: int = self.n_chunks - 1
         if entire_data:
@@ -252,11 +267,11 @@ class ShardDataset(IterableDataset):
             indices: Sequence[int] = list(range(length))
             for index in indices:
                 raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
-                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
+                raw_data: Data = self.data.get_item(raw_index)
                 data.append(self.task.create_inp_out(raw_data, constants_data))
             chunks_iterated_till_now += 1
 
-        def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+        def handle_dict_features(t: Data) -> torch.tensor:
             ## Hotfix for the models to work with dict style data
             t = torch.stack(tuple(t.values()))
             ## Handles the case for forecasting input as it has history in it
@@ -267,18 +282,31 @@ class ShardDataset(IterableDataset):
 
         inp = torch.stack([handle_dict_features(data[i][0]) for i in range(len(data))])
         out = torch.stack([handle_dict_features(data[i][1]) for i in range(len(data))])
-        return inp, out
+        const = handle_dict_features(const_data)
+        return inp, out, const
 
-    def get_time(self):
+    def get_time(self) -> numpy.ndarray:
         raise NotImplementedError
 
-    def __iter__(self):
+    def get_transforms(self) -> Tuple[Transform, Transform, Transform]:
+        return self.task.get_transforms()
+
+    def set_normalize(
+        self,
+        inp_transforms: Transform,
+        out_transforms: Transform,
+        const_transforms: Transform,
+    ) -> None:
+        self.task.set_normalize(inp_transforms, out_transforms, const_transforms)
+
+    def __iter__(self) -> Tuple[Data, Data, Data]:
         ### TODO: get epoch number which then would be used to set seed
         ## Hacky solution for now; Ideally should get that from Trainer
         self.epoch += 1
         setup_args: Dict[str, int] = self.get_setup_args(seed=self.epoch)
         data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
-        constants_data: Dict[str, torch.tensor] = self.data.get_constants_data()
+        constants_data: Data = self.data.get_constants_data()
+        const_data: Data = self.task.create_constants_data(constants_data)
         chunks_iterated_till_now: int = 0
         while chunks_iterated_till_now < self.n_chunks:
             data_len: int = self.data.load_chunk(chunks_iterated_till_now)
@@ -289,8 +317,9 @@ class ShardDataset(IterableDataset):
             random.Random(self.epoch).shuffle(indices)
             for index in indices:
                 raw_index: Union[Sequence[int], int] = self.task.get_raw_index(index)
-                raw_data: Dict[str, torch.tensor] = self.data.get_item(raw_index)
-                yield self.task.create_inp_out(raw_data, constants_data)
+                raw_data: Data = self.data.get_item(raw_index)
+                inp_data, out_data = self.task.create_inp_out(raw_data, constants_data)
+                yield inp_data, out_data, const_data
             chunks_iterated_till_now += 1
 
 

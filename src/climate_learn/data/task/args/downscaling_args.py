@@ -16,7 +16,8 @@ class DownscalingArgs(TaskArgs):
         self,
         in_vars: Sequence[str],
         out_vars: Sequence[str],
-        constant_names: Sequence[str] = [],
+        constants: Sequence[str] = [],
         subsample: int = 1,
     ) -> None:
-        super().__init__(in_vars, out_vars, constant_names, subsample)
+        super().__init__(in_vars, out_vars, constants, subsample)
+        self.check_validity()

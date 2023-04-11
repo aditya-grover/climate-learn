@@ -9,6 +9,8 @@ from climate_learn.data.climate_dataset import *
 from climate_learn.data.task.task import Task
 from climate_learn.data.task.args import DownscalingArgs
 
+Data = Dict[str, torch.tensor]
+
 
 class Downscaling(Task):
     _args_class: Callable[..., DownscalingArgs] = DownscalingArgs
@@ -27,17 +29,20 @@ class Downscaling(Task):
         # )  # TODO add stronger typecheck
         # Assuming that variables_to_update is a list of dict
         # As it is coming from StackedClimateDataset
+        in_vars: Sequence[str] = []
+        out_vars: Sequence[str] = []
         for variable in variables_to_update[0]:
             if variable in self.in_vars:
-                self.in_vars.remove(variable)
                 for variable_to_add in variables_to_update[0][variable]:
-                    self.in_vars.append(variable_to_add)
+                    in_vars.append(variable_to_add)
 
         for variable in variables_to_update[1]:
             if variable in self.out_vars:
-                self.out_vars.remove(variable)
                 for variable_to_add in variables_to_update[1][variable]:
-                    self.out_vars.append(variable_to_add)
+                    out_vars.append(variable_to_add)
+        ## using dict instead of set to preserve insertion order
+        self.in_vars = list(dict.fromkeys(in_vars))
+        self.out_vars = list(dict.fromkeys(out_vars))
 
         return data_len // self.subsample
 
@@ -47,20 +52,42 @@ class Downscaling(Task):
     def get_time_index(self, index: int) -> int:
         return index * self.subsample
 
+    def create_constants_data(
+        self, constants_data: Data, apply_transform: bool = 1
+    ) -> Data:
+        ## Need constants data from the first dataset only
+        const_data: Data = {
+            k: constants_data[0][k] for k in self.constants
+        }  # [lowres_lat, lowres_lon]
+
+        # transforms.Normalize works only on image like data (C * H * W)
+        # hence adding channel via unsqueeze and
+        # then removing it after transformation
+        if apply_transform:
+            const_data = {
+                k: (self.const_transform[k](const_data[k].unsqueeze(0))).squeeze(0)
+                for k in self.constants
+            }
+        return const_data
+
     def create_inp_out(
         self,
-        raw_data: Dict[str, torch.tensor],
-        constants_data: Dict[str, torch.tensor],
+        raw_data: Data,
+        constants_data: Data,
         apply_transform: bool = 1,
-    ) -> Tuple[Dict[str, torch.tensor], Dict[str, torch.tensor]]:
-        inp_data: Dict[str, torch.tensor] = {
+    ) -> Tuple[Data, Data]:
+        ## First dataset contains the input
+        inp_data: Data = {
             k: raw_data[0][k] for k in self.in_vars
-        }  # [32, 64]
-        out_data: Dict[str, torch.tensor] = {
+        }  # [lowres_lat, lowres_lon]
+        ## Second dataset contains the output
+        out_data: Data = {
             k: raw_data[1][k] for k in self.out_vars
-        }  # [64, 128]
+        }  # [highres_lat, highres_lon]
 
-        # transforms.Normalize works only on image like data (C * H * W), hence adding channel via unsqueeze and then removing it after transformation
+        # transforms.Normalize works only on image like data (C * H * W)
+        # hence adding channel via unsqueeze and
+        # then removing it after transformation
         if apply_transform:
             inp_data = {
                 k: (self.inp_transform[k](inp_data[k].unsqueeze(0))).squeeze(0)
@@ -70,16 +97,6 @@ class Downscaling(Task):
                 k: (self.out_transform[k](out_data[k].unsqueeze(0))).squeeze(0)
                 for k in self.out_vars
             }
-
-        for constant in self.constant_names:
-            constant_data: Dict[str, torch.tensor] = constants_data[0][
-                constant
-            ]  # [32, 64]
-            if apply_transform:
-                constant_data = (
-                    self.constant_transform[constant](constant_data.unsqueeze(0))
-                ).squeeze(0)
-            inp_data[constant] = constant_data
 
         return inp_data, out_data
 

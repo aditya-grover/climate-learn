@@ -1,6 +1,4 @@
 # Standard library
-from abc import ABC
-import copy
 from typing import Callable, Dict, Sequence, Tuple, Union
 
 # Third party
@@ -21,6 +19,9 @@ from climate_learn.utils.datetime import Year, Hours
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
+
+DatasetArgs = Union[MapDatasetArgs, ShardDatasetArgs]
+Dataset = Union[MapDataset, ShardDataset]
 
 
 def collate_fn(
@@ -50,34 +51,11 @@ def collate_fn(
     return inp, out, variables, out_variables
 
 
-class DataModuleArgs(ABC):
-    def __init__(
-        self,
-        dataset_args: Union[MapDatasetArgs, ShardDatasetArgs],
-        train_start_year: int,
-        val_start_year: int,
-        test_start_year: int,
-        end_year: int = 2018,
-    ) -> None:
-        self.train_start_year: int = train_start_year
-        self.val_start_year: int = val_start_year
-        self.test_start_year: int = test_start_year
-        self.end_year: int = end_year
-
-        self.train_dataset_args: Union[
-            MapDatasetArgs, ShardDatasetArgs
-        ] = copy.deepcopy(dataset_args)
-        self.train_dataset_args.setup(self, "train")
-
-        self.val_dataset_args: Union[MapDatasetArgs, ShardDatasetArgs] = copy.deepcopy(
-            dataset_args
-        )
-        self.val_dataset_args.setup(self, "val")
-
-        self.test_dataset_args: Union[MapDatasetArgs, ShardDatasetArgs] = copy.deepcopy(
-            dataset_args
-        )
-        self.test_dataset_args.setup(self, "test")
+def get_data_class(dataset_args: DatasetArgs) -> Callable[..., Dataset]:
+    if isinstance(dataset_args._data_class, str):
+        return eval(dataset_args._data_class)
+    else:
+        return dataset_args._data_class
 
 
 class DataModule(LightningDataModule):
@@ -86,7 +64,9 @@ class DataModule(LightningDataModule):
 
     def __init__(
         self,
-        data_module_args: DataModuleArgs,
+        train_dataset_args: DatasetArgs,
+        val_dataset_args: DatasetArgs,
+        test_dataset_args: DatasetArgs,
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -131,56 +111,42 @@ class DataModule(LightningDataModule):
         :type root_highres_dir: str, optional
         """
         super().__init__()
-
-        assert (
-            data_module_args.end_year >= data_module_args.test_start_year
-            and data_module_args.test_start_year > data_module_args.val_start_year
-            and data_module_args.val_start_year > data_module_args.train_start_year
-        )
         self.save_hyperparameters(logger=False)
-        if isinstance(data_module_args.train_dataset_args._data_class, str):
-            data_class: Callable[..., Union[MapDataset, ShardDataset]] = eval(
-                data_module_args.train_dataset_args._data_class
-            )
-        else:
-            data_class: Callable[
-                ..., Union[MapDataset, ShardDataset]
-            ] = data_module_args.train_dataset_args._data_class
 
-        self.train_dataset: Union[MapDataset, ShardDataset] = data_class(
-            data_module_args.train_dataset_args
-        )
+        train_data_class = get_data_class(train_dataset_args)
+        self.train_dataset: Dataset = train_data_class(train_dataset_args)
 
-        data_class = MapDataset
-        self.val_dataset: Union[MapDataset, ShardDataset] = data_class(
-            data_module_args.val_dataset_args
-        )
+        val_data_class = get_data_class(val_dataset_args)
+        self.val_dataset: Dataset = val_data_class(val_dataset_args)
 
-        self.test_dataset: Union[MapDataset, ShardDataset] = data_class(
-            data_module_args.test_dataset_args
-        )
+        test_data_class = get_data_class(test_dataset_args)
+        self.test_dataset: Dataset = test_data_class(test_dataset_args)
 
         self.train_dataset.setup()
+        (
+            inp_transforms,
+            out_transforms,
+            const_transforms,
+        ) = self.train_dataset.get_transforms()
 
         self.val_dataset.setup()
-        self.val_dataset.set_normalize(
-            self.train_dataset.inp_transforms,
-            self.train_dataset.out_transforms,
-        )
+        self.val_dataset.set_normalize(inp_transforms, out_transforms, const_transforms)
 
         self.test_dataset.setup()
         self.test_dataset.set_normalize(
-            self.train_dataset.inp_transforms,
-            self.train_dataset.out_transforms,
+            inp_transforms, out_transforms, const_transforms
         )
 
-    def get_lat_lon(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_lat_lon(self) -> Tuple[Union[np.ndarray, None], Union[np.ndarray, None]]:
         return self.train_dataset.lat, self.train_dataset.lon
 
     def get_out_transforms(self) -> Union[transforms.Normalize, None]:
-        return self.train_dataset.out_transforms
+        _, out_transforms, _ = self.train_dataset.get_transforms()
+        return out_transforms
 
-    def get_climatology(self, split: str = "val") -> torch.Tensor:
+    def get_climatology(
+        self, split: str = "val"
+    ) -> Union[Dict[str, torch.tensor], None]:
         if split == "train":
             return self.train_dataset.get_climatology()
         elif split == "val":

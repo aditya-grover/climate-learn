@@ -6,6 +6,6 @@ class TestDownscalingArgsInstantiation:
         DownscalingArgs(
             in_vars=["random_variable_1"],
             out_vars=["random_variable_2"],
-            constant_names=["random_constant"],
+            constants=["random_constant"],
             subsample=3,
         )

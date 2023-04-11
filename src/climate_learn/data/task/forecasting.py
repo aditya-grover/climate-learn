@@ -8,13 +8,14 @@ import torch
 from climate_learn.data.task.task import Task
 from climate_learn.data.task.args import ForecastingArgs
 
+Data = Dict[str, torch.tensor]
+
 
 class Forecasting(Task):
     _args_class: Callable[..., ForecastingArgs] = ForecastingArgs
 
     def __init__(self, task_args: ForecastingArgs) -> None:
         super().__init__(task_args)
-
         self.history: int = task_args.history
         self.window: int = task_args.window
         self.pred_range: int = task_args.pred_range
@@ -23,15 +24,18 @@ class Forecasting(Task):
         self, data_len: int, variables_to_update: Dict[str, Sequence[str]] = {}
     ) -> int:
         # Assuming that variables_to_update is a dict
+        in_vars: Sequence[str] = []
+        out_vars: Sequence[str] = []
         for variable in variables_to_update:
             if variable in self.in_vars:
-                self.in_vars.remove(variable)
                 for variable_to_add in variables_to_update[variable]:
-                    self.in_vars.append(variable_to_add)
+                    in_vars.append(variable_to_add)
             if variable in self.out_vars:
-                self.out_vars.remove(variable)
                 for variable_to_add in variables_to_update[variable]:
-                    self.out_vars.append(variable_to_add)
+                    out_vars.append(variable_to_add)
+        ## using dict instead of set to preserve insertion order
+        self.in_vars = list(dict.fromkeys(in_vars))
+        self.out_vars = list(dict.fromkeys(out_vars))
 
         return (
             data_len - ((self.history - 1) * self.window + self.pred_range)
@@ -50,20 +54,38 @@ class Forecasting(Task):
     def get_time_index(self, index: int) -> int:
         return index * self.subsample + (self.history - 1) * self.window
 
+    def create_constants_data(
+        self, constants_data: Data, apply_transform: bool = 1
+    ) -> Data:
+        # Repeating constants along history dimension
+        const_data: Data = {
+            k: constants_data[k].repeat(self.history, 1, 1) for k in self.constants
+        }  # [history, lat, lon]
+
+        # transforms.Normalize works only on image like data (C * H * W)
+        # hence adding channel via unsqueeze and
+        # then removing it after transformation
+        if apply_transform:
+            const_data = {
+                k: (self.const_transform[k](const_data[k].unsqueeze(1))).squeeze(1)
+                for k in self.constants
+            }
+        return const_data
+
     def create_inp_out(
         self,
-        raw_data: Dict[str, torch.tensor],
-        constants_data: Dict[str, torch.tensor],
+        raw_data: Data,
+        constants_data: Data,
         apply_transform: bool = 1,
-    ) -> Tuple[Dict[str, torch.tensor], Dict[str, torch.tensor]]:
-        inp_data: Dict[str, torch.tensor] = {
+    ) -> Tuple[Data, Data]:
+        inp_data: Data = {
             k: raw_data[k][:-1] for k in self.in_vars
-        }  # [history, 32, 64]
-        out_data: Dict[str, torch.tensor] = {
-            k: raw_data[k][-1] for k in self.out_vars
-        }  # [32, 64]
+        }  # [history, lat, lon]
+        out_data: Data = {k: raw_data[k][-1] for k in self.out_vars}  # [lat, lon]
 
-        # transforms.Normalize works only on image like data (C * H * W), hence adding channel via unsqueeze and then removing it after transformation
+        # transforms.Normalize works only on image like data (C * H * W)
+        # hence adding channel via unsqueeze and
+        # then removing it after transformation
         if apply_transform:
             # Need to unsqueeze for inp_data as history is not the same as channel
             inp_data = {
@@ -74,16 +96,6 @@ class Forecasting(Task):
                 k: (self.out_transform[k](out_data[k].unsqueeze(0))).squeeze(0)
                 for k in self.out_vars
             }
-
-        for constant in self.constant_names:
-            constant_data: Dict[str, torch.tensor] = constants_data[constant].repeat(
-                self.history, 1, 1
-            )
-            if apply_transform:
-                constant_data = (
-                    self.constant_transform[constant](constant_data.unsqueeze(0))
-                ).squeeze(0)
-            inp_data[constant] = constant_data
 
         return inp_data, out_data
 
