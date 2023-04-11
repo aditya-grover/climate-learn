@@ -246,7 +246,7 @@ class ShardDataset(IterableDataset):
 
     def get_data(
         self, entire_data: bool = False
-    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    ) -> Tuple[torch.tensor, torch.tensor, Union[torch.tensor, None]]:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
         del setup_args["shuffle"]
         data_len, _ = self.data.setup(style="shard", setup_args=setup_args)
@@ -276,9 +276,16 @@ class ShardDataset(IterableDataset):
                 return torch.transpose(t, 0, 1)
             return t
 
-        inp = torch.stack([handle_dict_features(data[i][0]) for i in range(len(data))])
-        out = torch.stack([handle_dict_features(data[i][1]) for i in range(len(data))])
-        const = handle_dict_features(const_data)
+        inp: torch.tensor = torch.stack(
+            [handle_dict_features(data[i][0]) for i in range(len(data))]
+        )
+        out: torch.tensor = torch.stack(
+            [handle_dict_features(data[i][1]) for i in range(len(data))]
+        )
+        if const_data != {}:
+            const: torch.tensor = handle_dict_features(const_data)
+        else:
+            const = None
         return inp, out, const
 
     def get_time(self) -> numpy.ndarray:

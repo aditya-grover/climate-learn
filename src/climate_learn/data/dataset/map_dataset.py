@@ -125,7 +125,7 @@ class MapDataset(Dataset):
     def get_climatology(self) -> Union[Data, None]:
         return self.climatology
 
-    def get_data(self) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    def get_data(self) -> Tuple[torch.tensor, torch.tensor, Union[torch.tensor, None]]:
         constants_data: Data = self.data.get_constants_data()
         const_data: Data = self.task.create_constants_data(constants_data)
         data = []
@@ -149,7 +149,10 @@ class MapDataset(Dataset):
         out: torch.tensor = torch.stack(
             [handle_dict_features(data[i][1]) for i in range(len(data))]
         )
-        const: torch.tensor = handle_dict_features(const_data)
+        if const_data != {}:
+            const: torch.tensor = handle_dict_features(const_data)
+        else:
+            const = None
         return inp, out, const
 
     def get_time(self) -> numpy.ndarray:
