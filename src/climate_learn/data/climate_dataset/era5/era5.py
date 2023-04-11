@@ -14,7 +14,7 @@ import xarray as xr
 # Local application
 from climate_learn.data.climate_dataset.args import ERA5Args
 from climate_learn.data.climate_dataset import ClimateDataset
-from climate_learn.data.constants import (
+from climate_learn.data.climate_dataset.era5.constants import (
     CONSTANTS,
     DEFAULT_PRESSURE_LEVELS,
     NAME_LEVEL_TO_VAR_LEVEL,

@@ -38,13 +38,11 @@ def set_climatology(model_module, data_module):
         model_module.set_pred_range(data_module.hparams.pred_range)
     elif isinstance(data_module, DataModule):
         if isinstance(
-            data_module.hparams.data_module_args.train_dataset_args.task_args,
+            data_module.hparams.train_dataset_args.task_args,
             ForecastingArgs,
         ):
             model_module.set_pred_range(
-                Hours(
-                    data_module.hparams.data_module_args.train_dataset_args.task_args.pred_range
-                )
+                Hours(data_module.hparams.train_dataset_args.task_args.pred_range)
             )
         else:
             model_module.set_pred_range(Hours(1))

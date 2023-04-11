@@ -261,7 +261,7 @@ class ForecastLitModule(LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
     def fit_lin_reg_baseline(self, train_dataset, reg_hparam=0.0):
-        X_train, y_train = train_dataset.get_data()
+        X_train, y_train, _ = train_dataset.get_data()
         X_train = X_train.numpy()
         y_train = y_train.numpy()
         X_train = X_train.reshape(X_train.shape[0], -1)
