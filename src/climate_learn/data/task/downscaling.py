@@ -31,18 +31,43 @@ class Downscaling(Task):
         # As it is coming from StackedClimateDataset
         in_vars: Sequence[str] = []
         out_vars: Sequence[str] = []
-        for variable in variables_to_update[0]:
-            if variable in self.in_vars:
+        for variable in self.in_vars:
+            if variable in variables_to_update[0].keys():
                 for variable_to_add in variables_to_update[0][variable]:
                     in_vars.append(variable_to_add)
-
-        for variable in variables_to_update[1]:
-            if variable in self.out_vars:
+            else:
+                in_vars.append(variable)
+        for variable in self.out_vars:
+            if variable in variables_to_update[1].keys():
                 for variable_to_add in variables_to_update[1][variable]:
                     out_vars.append(variable_to_add)
+            else:
+                out_vars.append(variable)
         ## using dict instead of set to preserve insertion order
         self.in_vars = list(dict.fromkeys(in_vars))
         self.out_vars = list(dict.fromkeys(out_vars))
+
+        variables_available_input: Sequence[str] = []
+        for variables in variables_to_update[0].values():
+            variables_available_input.extend(variables)
+        variables_available_input = set(variables_available_input)
+
+        variables_available_output: Sequence[str] = []
+        for variables in variables_to_update[1].values():
+            variables_available_output.extend(variables)
+        variables_available_output = set(variables_available_output)
+
+        if not set(self.in_vars).issubset(variables_available_input):
+            RuntimeError(
+                f"The input variables required by the task: {self.in_vars} "
+                f"are not available in the dataset: {variables_available_input}"
+            )
+
+        if not set(self.out_vars).issubset(variables_available_output):
+            RuntimeError(
+                f"The output variables required by the task: {self.in_vars} "
+                f"are not available in the dataset: {variables_available_output}"
+            )
 
         return data_len // self.subsample
 
