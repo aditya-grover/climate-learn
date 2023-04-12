@@ -9,7 +9,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from climate_learn.data.tasks import Downscaling, Forecasting
+from climate_learn.data.task import Downscaling, Forecasting
+from climate_learn.data.dataset import MapDataset
 
 # TODO: include exceptions in docstrings
 
@@ -44,14 +45,15 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
 
     # dataset.setup()
     task_dataset = eval(f"data_module.{split}_dataset")
+    if not isinstance(task_dataset, MapDataset):
+        raise RuntimeError(f"visualize is supported only for Map style datasets")
 
     if type(samples) == int:
         idxs = random.sample(range(0, len(task_dataset)), samples)
     elif type(samples) == list:
+        time = task_dataset.get_time()
         idxs = [
-            np.searchsorted(
-                task_dataset.time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H"))
-            )
+            np.searchsorted(time, np.datetime64(datetime.strptime(dt, "%Y-%m-%d:%H")))
             for dt in samples
         ]
     else:
@@ -62,7 +64,15 @@ def visualize(model_module, data_module, split="test", samples=2, save_dir=None)
     fig, axes = plt.subplots(len(idxs), 4, figsize=(30, 3 * len(idxs)), squeeze=False)
 
     for index, idx in enumerate(idxs):
-        x, y, _, _ = task_dataset[idx]  # 1, 1, 32, 64
+        x, y, const = task_dataset[idx]  # 1, 1, 32, 64
+        ## Hotfix merging constants data with input data
+        x = {**x, **const}
+        x = torch.stack(tuple(x.values()))
+        ## Handles the case for forecasting input as it has history in it
+        if len(x.size()) == 4:
+            x = torch.transpose(x, 0, 1)
+        y = torch.stack(tuple(x.values()))
+
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = interpolate_input(x, y)

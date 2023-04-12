@@ -3,11 +3,11 @@ import argparse
 import os
 import subprocess
 
-# Local application
-from .constants import NAME_TO_CMIP
-
 # Third party
 import cdsapi
+
+# Local application
+from climate_learn.data.climate_dataset.era5.constants import NAME_TO_CMIP
 
 
 months = [str(i).rjust(2, "0") for i in range(1, 13)]
