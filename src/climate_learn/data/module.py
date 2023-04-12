@@ -44,9 +44,16 @@ def collate_fn(
             return torch.transpose(t, 0, 1)
         return t
 
-    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    ## As a hotfix inp is just stacking input and constants data
+    ## via {**inp_data, **const_data} i.e. merging both of them unto one dict
+    inp = torch.stack(
+        [
+            handle_dict_features({**batch[i][0], **batch[i][2]})
+            for i in range(len(batch))
+        ]
+    )
     out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
-    variables = list(batch[0][0].keys())
+    variables = list(batch[0][0].keys()) + list(batch[0][2].keys())
     out_variables = list(batch[0][1].keys())
     return inp, out, variables, out_variables
 
