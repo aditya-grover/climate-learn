@@ -21,7 +21,7 @@ class MapDatasetArgs(ABC):
         self.climate_dataset_args: ClimateDatasetArgs = climate_dataset_args
         self.task_args: TaskArgs = task_args
 
-    def create_copy(self, args: Dict[str, Any]) -> MapDatasetArgs:
+    def create_copy(self, args: Dict[str, Any] = {}) -> MapDatasetArgs:
         new_instance: MapDatasetArgs = copy.deepcopy(self)
         for arg in args:
             if arg == "climate_dataset_args":
