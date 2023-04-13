@@ -20,7 +20,7 @@ class StackedClimateDatasetArgs(ClimateDatasetArgs):
         self.split: str = data_args[0].split
         StackedClimateDatasetArgs.check_validity(self)
 
-    def create_copy(self, args: Dict[str, Any]) -> StackedClimateDatasetArgs:
+    def create_copy(self, args: Dict[str, Any] = {}) -> StackedClimateDatasetArgs:
         new_instance: StackedClimateDatasetArgs = copy.deepcopy(self)
         for arg in args:
             if arg == "child_data_args":

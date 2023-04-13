@@ -25,7 +25,7 @@ class ShardDatasetArgs(ABC):
         self.task_args: TaskArgs = task_args
         self.n_chunks: int = n_chunks
 
-    def create_copy(self, args: Dict[str, Any]) -> ShardDatasetArgs:
+    def create_copy(self, args: Dict[str, Any] = {}) -> ShardDatasetArgs:
         new_instance: ShardDatasetArgs = copy.deepcopy(self)
         for arg in args:
             if arg == "climate_dataset_args":

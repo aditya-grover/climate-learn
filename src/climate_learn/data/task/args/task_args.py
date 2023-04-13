@@ -25,7 +25,7 @@ class TaskArgs(ABC):
         self.subsample: int = subsample
         TaskArgs.check_validity(self)
 
-    def create_copy(self, args: Dict[str, Any]) -> TaskArgs:
+    def create_copy(self, args: Dict[str, Any] = {}) -> TaskArgs:
         new_instance: TaskArgs = copy.deepcopy(self)
         for arg in args:
             if hasattr(new_instance, arg):
