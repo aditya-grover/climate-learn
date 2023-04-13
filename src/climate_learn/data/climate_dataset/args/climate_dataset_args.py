@@ -41,12 +41,12 @@ class ClimateDatasetArgs(ABC):
             Useful for cases when need to create an almost identical copy of the
             current instance of the class but with few changes. The changes are
             passed by args, which is a dict. The keys of this dict should be the
-            attribute name and value should be the new value for the corresponding 
+            attribute name and value should be the new value for the corresponding
             attribute.
 
         .. highlight:: python
-        
-        :param args: A dict whose keys are the attribute names and values are the 
+
+        :param args: A dict whose keys are the attribute names and values are the
             new value for the corresponding attribute.
         :type args: Dict[str, Any]
         """
