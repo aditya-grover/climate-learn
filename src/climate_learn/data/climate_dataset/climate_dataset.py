@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Any, Callable, Dict, Sequence, Tuple, Union
 
 # Third party
-import numpy
+import numpy as np
 import torch
 
 # Local application
@@ -58,7 +58,7 @@ class ClimateDataset(ABC):
     def get_constants_data(self) -> Dict[str, torch.tensor]:
         raise NotImplementedError
 
-    def get_time(self) -> Union[numpy.ndarray, None]:
+    def get_time(self) -> Union[np.ndarray, None]:
         raise NotImplementedError
 
     def get_metadata(self) -> Dict[str, Any]:

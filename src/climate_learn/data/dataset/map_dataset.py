@@ -2,7 +2,7 @@
 from typing import Callable, Dict, Sequence, Tuple, Union
 
 # Third party
-import numpy
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
@@ -38,10 +38,10 @@ class MapDataset(Dataset):
             task_class: Callable[..., Task] = dataset_args.task_args._task_class
         self.task: Task = task_class(dataset_args.task_args)
 
-        self.lat: Union[numpy.ndarray, None] = None
-        self.lon: Union[numpy.ndarray, None] = None
-        self.out_lat: Union[numpy.ndarray, None] = None
-        self.out_lon: Union[numpy.ndarray, None] = None
+        self.lat: Union[np.ndarray, None] = None
+        self.lon: Union[np.ndarray, None] = None
+        self.out_lat: Union[np.ndarray, None] = None
+        self.out_lon: Union[np.ndarray, None] = None
         self.length: int = 0
         self.climatology: Union[Data, None] = None
 
@@ -155,11 +155,11 @@ class MapDataset(Dataset):
             const = None
         return inp, out, const
 
-    def get_time(self) -> numpy.ndarray:
+    def get_time(self) -> np.ndarray:
         time_indices: Sequence[int] = [
             self.task.get_time_index(index) for index in range(self.length)
         ]
-        time: Union[None, numpy.ndarray] = self.data.get_time()
+        time: Union[None, np.ndarray] = self.data.get_time()
         if time == None:
             raise RuntimeError(f"No data has been loaded into the memory yet.")
         return time[time_indices]

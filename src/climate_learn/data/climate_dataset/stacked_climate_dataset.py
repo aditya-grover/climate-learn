@@ -2,7 +2,7 @@
 from typing import Callable, Dict, Sequence, Tuple, Union
 
 # Third party
-import numpy
+import numpy as np
 import torch
 
 # Local application
@@ -59,9 +59,9 @@ class StackedClimateDataset(ClimateDataset):
     def get_constants_data(self) -> Sequence[Dict[str, torch.tensor]]:
         return [dataset.get_constants_data() for dataset in self.climate_datasets]
 
-    def get_time(self) -> Union[numpy.ndarray, None]:
+    def get_time(self) -> Union[np.ndarray, None]:
         ## Assuming that all datasets have same time
-        time: numpy.ndarray = self.climate_datasets[0].get_time()
+        time: np.ndarray = self.climate_datasets[0].get_time()
         isNone: bool = False
         for climate_dataset in self.climate_datasets:
             if climate_dataset.get_time() is None:
@@ -73,7 +73,7 @@ class StackedClimateDataset(ClimateDataset):
                 )
         return time
 
-    def get_metadata(self) -> Sequence[Dict[str, numpy.ndarray]]:
+    def get_metadata(self) -> Sequence[Dict[str, np.ndarray]]:
         return [dataset.get_metadata() for dataset in self.climate_datasets]
 
 
