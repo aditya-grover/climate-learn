@@ -130,21 +130,31 @@ class ShardDataset(IterableDataset):
             std_out_data: Data = {
                 k: torch.std(stacked_out_data[k]) for k in stacked_out_data
             }
+            climatology_data: Data = {
+                k: torch.mean(stacked_out_data[k], dim=0) for k in stacked_out_data
+            }
 
             transform_data.append(
-                [mean_inp_data, std_inp_data, mean_out_data, std_out_data, length]
+                [
+                    mean_inp_data,
+                    std_inp_data,
+                    mean_out_data,
+                    std_out_data,
+                    climatology_data,
+                    length,
+                ]
             )
             chunks_iterated_till_now += 1
 
         ### Using https://math.stackexchange.com/a/37131 to calculate mean and std from chunk mean and std
         # GCD used to prevent any numerical overflow
         length_gcd: int = numpy.gcd.reduce(
-            [chunk_data[4] for chunk_data in transform_data]
+            [chunk_data[5] for chunk_data in transform_data]
         )
         reduced_total_length: torch.tensor = torch.tensor(0.0)
         for chunk_data in transform_data:
-            chunk_data[4] = torch.tensor(chunk_data[4] / length_gcd)
-            reduced_total_length += chunk_data[4]
+            chunk_data[5] = torch.tensor(chunk_data[5] / length_gcd)
+            reduced_total_length += chunk_data[5]
 
         mean_inp_data: Data = {
             k: torch.tensor(0.0) for k in transform_data[0][0].keys()
@@ -152,9 +162,15 @@ class ShardDataset(IterableDataset):
         mean_out_data: Data = {
             k: torch.tensor(0.0) for k in transform_data[0][2].keys()
         }
+        climatology_data_shape: torch.Size = next(
+            iter(transform_data[0][4].values())
+        ).size()
+        climatology_data: Data = {
+            k: torch.zeros(climatology_data_shape) for k in transform_data[0][4].keys()
+        }
 
         for chunk_data in transform_data:
-            chunk_length = chunk_data[4]
+            chunk_length = chunk_data[5]
             mean_inp_data = {
                 k: mean_inp_data[k]
                 + (chunk_data[0][k] * chunk_length) / reduced_total_length
@@ -165,12 +181,17 @@ class ShardDataset(IterableDataset):
                 + (chunk_data[2][k] * chunk_length) / reduced_total_length
                 for k in mean_out_data
             }
+            climatology_data = {
+                k: climatology_data[k]
+                + (chunk_data[4][k] * chunk_length) / reduced_total_length
+                for k in climatology_data
+            }
 
         std_inp_data: Data = {k: torch.tensor(0.0) for k in transform_data[0][1].keys()}
         std_out_data: Data = {k: torch.tensor(0.0) for k in transform_data[0][3].keys()}
 
         for chunk_data in transform_data:
-            chunk_length = chunk_data[4]
+            chunk_length = chunk_data[5]
             chunk_std_inp = {
                 k: torch.square(chunk_data[1][k])
                 + torch.square(chunk_data[0][k] - mean_inp_data[k])
@@ -213,7 +234,7 @@ class ShardDataset(IterableDataset):
         }
 
         self.task.set_normalize(inp_transforms, out_transforms, const_transforms)
-        self.climatology: Data = mean_out_data
+        self.climatology: Data = climatology_data
 
     def setup(self) -> None:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
