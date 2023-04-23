@@ -92,7 +92,7 @@ class ERA5(ClimateDataset):
             all_constants = xr.open_mfdataset(ps, combine="by_coords")
             for name in self.constants:
                 self.constants_data[name] = torch.tensor(
-                    all_constants[NAME_TO_VAR[name]].values
+                    all_constants[NAME_TO_VAR[name]].values.astype(numpy.float32)
                 )
 
     def initialize_data_dict(self) -> Dict[str, Sequence]:
@@ -134,7 +134,8 @@ class ERA5(ClimateDataset):
         # using next(iter) isntead of list(data_dict.keys())[0] to get random element
         self.time = data_dict[next(iter(data_dict.keys()))].time.values
         data_dict: Dict[str, torch.tensor] = {
-            k: torch.from_numpy(data_dict[k].values) for k in data_dict.keys()
+            k: torch.from_numpy(data_dict[k].values.astype(numpy.float32))
+            for k in data_dict.keys()
         }
         return data_dict
 
