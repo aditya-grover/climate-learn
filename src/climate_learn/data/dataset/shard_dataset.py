@@ -3,7 +3,7 @@ import random
 from typing import Callable, Dict, Sequence, Tuple, Union
 
 # Third party
-import numpy
+import numpy as np
 import torch
 from torch.utils.data import IterableDataset
 from torchvision.transforms import transforms
@@ -38,10 +38,10 @@ class ShardDataset(IterableDataset):
         self.task: Task = task_class(dataset_args.task_args)
         self.n_chunks = dataset_args.n_chunks
 
-        self.lat: Union[numpy.ndarray, None] = None
-        self.lon: Union[numpy.ndarray, None] = None
-        self.out_lat: Union[numpy.ndarray, None] = None
-        self.out_lon: Union[numpy.ndarray, None] = None
+        self.lat: Union[np.ndarray, None] = None
+        self.lon: Union[np.ndarray, None] = None
+        self.out_lat: Union[np.ndarray, None] = None
+        self.out_lon: Union[np.ndarray, None] = None
         self.climatology: Union[Data, None] = None
         self.epoch: int = 0
 
@@ -148,7 +148,7 @@ class ShardDataset(IterableDataset):
 
         ### Using https://math.stackexchange.com/a/37131 to calculate mean and std from chunk mean and std
         # GCD used to prevent any numerical overflow
-        length_gcd: int = numpy.gcd.reduce(
+        length_gcd: int = np.gcd.reduce(
             [chunk_data[5] for chunk_data in transform_data]
         )
         reduced_total_length: torch.tensor = torch.tensor(0.0)
@@ -309,7 +309,7 @@ class ShardDataset(IterableDataset):
             const = None
         return inp, out, const
 
-    def get_time(self) -> numpy.ndarray:
+    def get_time(self) -> np.ndarray:
         raise NotImplementedError
 
     def get_transforms(self) -> Tuple[Transform, Transform, Transform]:

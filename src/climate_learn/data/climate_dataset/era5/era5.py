@@ -6,7 +6,7 @@ import random
 from typing import Callable, Dict, Iterable, Sequence, Tuple, Union
 
 # Third party
-import numpy
+import numpy as np
 import torch
 from tqdm import tqdm
 import xarray as xr
@@ -31,9 +31,9 @@ class ERA5(ClimateDataset):
         super().__init__(data_args)
         self.root_dir: str = data_args.root_dir
         self.years: Iterable[int] = data_args.years
-        self.lat: Union[numpy.ndarray, None] = None
-        self.lon: Union[numpy.ndarray, None] = None
-        self.time: Union[numpy.ndarray, None] = None
+        self.lat: Union[np.ndarray, None] = None
+        self.lon: Union[np.ndarray, None] = None
+        self.time: Union[np.ndarray, None] = None
         self.variables_map: Dict[str, Sequence[str]] = {}
         self.build_variables_map()
         self.constants_data: Dict[str, torch.tensor] = {}
@@ -92,7 +92,7 @@ class ERA5(ClimateDataset):
             all_constants = xr.open_mfdataset(ps, combine="by_coords")
             for name in self.constants:
                 self.constants_data[name] = torch.tensor(
-                    all_constants[NAME_TO_VAR[name]].values
+                    all_constants[NAME_TO_VAR[name]].values.astype(np.float32)
                 )
 
     def initialize_data_dict(self) -> Dict[str, Sequence]:
@@ -134,7 +134,8 @@ class ERA5(ClimateDataset):
         # using next(iter) isntead of list(data_dict.keys())[0] to get random element
         self.time = data_dict[next(iter(data_dict.keys()))].time.values
         data_dict: Dict[str, torch.tensor] = {
-            k: torch.from_numpy(data_dict[k].values) for k in data_dict.keys()
+            k: torch.from_numpy(data_dict[k].values.astype(np.float32))
+            for k in data_dict.keys()
         }
         return data_dict
 
@@ -241,12 +242,12 @@ class ERA5(ClimateDataset):
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
         return self.constants_data
 
-    def get_time(self) -> Union[numpy.ndarray, None]:
+    def get_time(self) -> Union[np.ndarray, None]:
         return self.time
 
     def get_metadata(
         self,
-    ) -> Dict[str, Union[numpy.ndarray, None]]:  # Dict where each value is a ndarray
+    ) -> Dict[str, Union[np.ndarray, None]]:  # Dict where each value is a ndarray
         return {"lat": self.lat, "lon": self.lon}
 
 
