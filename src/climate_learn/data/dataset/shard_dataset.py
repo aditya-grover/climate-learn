@@ -79,6 +79,7 @@ class ShardDataset(IterableDataset):
         setup_args["seed"] = seed
         setup_args["n_chunks"] = self.n_chunks
         setup_args["shuffle"] = True
+        setup_args["drop_last"] = True
         return setup_args
 
     def setup_transforms(self) -> None:
