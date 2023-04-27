@@ -66,6 +66,7 @@ class Trainer:
             precision=precision,
             max_epochs=max_epochs,
             callbacks=callbacks,
+            strategy="ddp_spawn",
         )
 
     def fit(self, model_module, data_module):

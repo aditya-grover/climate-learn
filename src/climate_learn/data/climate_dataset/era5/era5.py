@@ -74,7 +74,12 @@ class ERA5(ClimateDataset):
             self.root_dir, self.get_file_name_from_variable(self.variables[0])
         )
         ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
-        xr_data = xr.open_mfdataset(ps, combine="by_coords")
+        if len(ps) != 1:
+            raise RuntimeError(
+                f"Found {len(ps)} files corresponding to the {self.variables[0]}"
+                f" for the year {year}."
+            )
+        xr_data = xr.load_dataset(ps[0])
         self.lat = xr_data["lat"].values
         self.lon = xr_data["lon"].values
 
@@ -89,7 +94,12 @@ class ERA5(ClimateDataset):
             return
         if len(self.constants) > 0:
             ps = glob.glob(os.path.join(data_dir, "constants", "*.nc"))
-            all_constants = xr.open_mfdataset(ps, combine="by_coords")
+            if len(ps) != 1:
+                raise RuntimeError(
+                    f"Found {len(ps)} files corresponding to the constants ."
+                    f"Should be just one."
+                )
+            all_constants = xr.load_dataset(ps[0])
             for name in self.constants:
                 self.constants_data[name] = torch.tensor(
                     all_constants[NAME_TO_VAR[name]].values.astype(np.float32)
@@ -110,7 +120,11 @@ class ERA5(ClimateDataset):
             for var in self.variables:
                 dir_var = os.path.join(data_dir, self.get_file_name_from_variable(var))
                 ps = glob.glob(os.path.join(dir_var, f"*{year}*.nc"))
-                xr_data = xr.open_mfdataset(ps, combine="by_coords")
+                if len(ps) != 1:
+                    raise RuntimeError(
+                        f"Found {len(ps)} files corresponding to the {var} for the year {year}."
+                    )
+                xr_data = xr.load_dataset(ps[0])
                 xr_data = xr_data[NAME_TO_VAR[self.get_file_name_from_variable(var)]]
                 # np_data = xr_data.to_numpy()
                 if len(xr_data.shape) == 3:  # 8760, 32, 64
