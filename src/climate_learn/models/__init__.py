@@ -1,30 +1,119 @@
-from .components import *
-from .modules import *
-from climate_learn.data import IterDataModule, DataModule
-from climate_learn.data.task.args import ForecastingArgs
-from climate_learn.utils.datetime import Hours
+# Standard library
+from typing import Any, Callable, Dict, List, Optional, Union
+
+# Local application
+from ..data import IterDataModule, DataModule
+from ..data.task.args import ForecastingArgs
+from .modules import ForecastLitModule, DownscaleLitModule
+from ..utils.datetime import Hours
+
+# Third party
+import pytorch_lightning as pl
 import torch
 
 
-def load_model(name, task, model_kwargs, optim_kwargs):
-    if name == "vit":
-        model_cls = VisionTransformer
-    elif name == "resnet":
-        model_cls = ResNet
-    elif name == "unet":
-        model_cls = Unet
+def load_forecasting_module(
+    data_module: pl.LightningDataModule,
+    preset: Optional[str] = None,
+    model: Optional[str] = None,
+    model_kwargs: Optional[Dict[str, Any]] = None,
+    optim: Optional[str] = None,
+    optim_kwargs: Optional[Dict[str, Any]] = None,
+    net: Optional[torch.nn.Module] = None,
+    optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
+    train_loss: Optional[Union[Callable, List[Callable]]] = None,
+    val_loss: Optional[Union[Callable, List[Callable]]] = None,
+    test_loss: Optional[Union[Callable, List[Callable]]] = None
+):
+    _validate_model_kwargs(preset, model, model_kwargs, net)
+    if model == "climatology":
+        pass
+    elif model == "persistence":
+        pass
+    elif model == "linear-regression":
+        pass
+    elif model == "rasp-theurey-2020":
+        pass
+    elif model is not None:
+        raise NotImplementedError(
+            f"{model} is not an implemented model. If you think it should be,"
+            " please raise an issue at"
+            " https://github.com/aditya-grover/climate-learn/issues."
+        )
+    optimizer = _load_optimizer(optim, optim_kwargs, optimizer)
+    model_module = ForecastLitModule(net, optimizer, train_loss, val_loss, test_loss)
+    set_climatology(model_module, data_module)
+    return model_module
 
-    model = model_cls(**model_kwargs)
+def load_downscaling_module(
+    data_module: pl.LightningDataModule,
+    preset: Optional[str] = None,
+    model: Optional[str] = None,
+    model_kwargs: Optional[Dict[str, Any]] = None,
+    optim: Optional[str] = None,
+    optim_kwargs: Optional[Dict[str, Any]] = None,
+    net: Optional[torch.nn.Module] = None,
+    optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
+    train_loss: Optional[Union[Callable, List[Callable]]] = None,
+    val_loss: Optional[Union[Callable, List[Callable]]] = None,
+    test_loss: Optional[Union[Callable, List[Callable]]] = None
+):
+    _validate_model_kwargs(preset, model, model_kwargs, net)
+    if model == "bicubic":
+        pass
+    elif model is not None:
+        raise NotImplementedError(
+            f"{model} is not an implemented model. If you think it should be,"
+            " please raise an issue at"
+            " https://github.com/aditya-grover/climate-learn/issues."
+        )
+    optimizer = _load_optimizer(optim, optim_kwargs, optimizer)
+    model_module = DownscaleLitModule(net, optimizer, train_loss, val_loss, test_loss)
+    set_climatology(model_module, data_module)
+    return model_module
 
-    if task == "forecasting":
-        module = ForecastLitModule(model, **optim_kwargs)
-    elif task == "downscaling":
-        module = DownscaleLitModule(model, **optim_kwargs)
-    else:
-        raise NotImplementedError("Only support foreacasting and downscaling")
+def _validate_model_kwargs(
+    preset: Optional[str] = None,
+    model: Optional[str] = None,
+    model_kwargs: Optional[Dict[str, Any]] = None,
+    net: Optional[torch.nn.Module] = None
+):
+    if (preset is None) and (model is None) and (net is None):
+        raise RuntimeError("Please specify one of 'preset', 'model', or 'net'")
+    if preset:
+        if model is not None:
+            raise RuntimeWarning("Ignoring 'model' since 'preset' was specified")
+        model = preset
+    if model and net:
+        raise RuntimeWarning("Ignoring 'net' since one of 'preset' or 'model' was specified")
+    if net and model_kwargs:
+        raise RuntimeWarning("Ignoring 'model_kwargs' since 'net' was specified")
+    return
 
-    return module
-
+def _load_optimizer(
+    optim: Optional[str] = None,
+    optim_kwargs: Optional[Dict[str, Any]] = None,
+    optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
+):
+    if (optim is not None) and (optimizer is not None):
+        raise RuntimeError("Please specify one of 'optim' or 'optimizer'")
+    if optim and optimizer:
+        raise RuntimeWarning("Ignoring 'optimizer' since 'optim' was specified")
+    if optimizer and optim_kwargs:
+        raise RuntimeWarning("Ignoring 'optim_kwargs' since 'optimizer' was specified")
+    if optim == "SGD":
+        optimizer = None
+    elif optim == "Adam":
+        optimizer = None
+    elif optim == "AdamW":
+        optimizer = None
+    elif optim is not None:
+        raise NotImplementedError(
+            f"{optim} is not an implemented optimizer. If you think it should"
+            " be, please raise an issue at"
+            " https://github.com/aditya-grover/climate-learn/issues"
+        )
+    return optimizer
 
 def set_climatology(model_module, data_module):
     normalization = data_module.get_out_transforms()
