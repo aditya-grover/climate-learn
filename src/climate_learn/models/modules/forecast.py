@@ -1,11 +1,7 @@
-from typing import Any, Callable, Iterable
-import sys
-import numpy as np
-import pandas as pd
+from typing import Any, Callable, Dict, Iterable, List, Union
 import torch
-from pytorch_lightning import LightningModule
+import pytorch_lightning as pl
 from torchvision.transforms import transforms
-from sklearn.linear_model import Ridge
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .utils.metrics import (
@@ -15,33 +11,116 @@ from .utils.metrics import (
     lat_weighted_rmse,
 )
 
-OptimizerCallable = Callable[[Iterable], torch.optim.Optimizer]
-
-
-class ForecastLitModule(LightningModule):
+class ForecastLitModule(pl.LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: OptimizerCallable = torch.optim.Adam,
-        lr: float = 0.001,
-        weight_decay: float = 0.005,
-        warmup_epochs: int = 5,
-        max_epochs: int = 30,
-        warmup_start_lr: float = 1e-8,
-        eta_min: float = 1e-8,
+        optimizer: Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]],
+        train_loss: Union[Callable, List[Callable]],
+        val_loss: Union[Callable, List[Callable]],
+        test_loss: Union[Callable, List[Callable]]
     ):
         super().__init__()
-        self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
-        self.test_loss = [lat_weighted_rmse, lat_weighted_acc]
-        self.lr_baseline = None
-        self.train_loss = [lat_weighted_mse]
-        self.val_loss = [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc]
-        self.optim_cls = optimizer
+        self.optimizer = optimizer
+        self.train_loss = train_loss or [lat_weighted_mse]
+        self.val_loss = val_loss or [lat_weighted_mse_val, lat_weighted_rmse, lat_weighted_acc]
+        self.test_loss = test_loss or [lat_weighted_rmse, lat_weighted_acc]
+        if not isinstance(self.train_loss, Iterable):
+            self.train_loss = [self.train_loss]
+        if not isinstance(self.val_loss, Iterable):
+            self.val_loss = [self.val_loss]
+        if not isinstance(self.test_loss, Iterable):
+            self.test_loss = [self.test_loss]
 
     def forward(self, x):
-        with torch.no_grad():
-            return self.net.predict(x)
+        return self.net(x)
+
+    def training_step(self, batch: Any, batch_idx: int):
+        loss_dict = self.compute_training_loss(batch)
+        self.log_dict(
+            loss_dict,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+            batch_size=len(batch[0])
+        )
+        return loss_dict
+
+    def validation_step(self, batch: Any, batch_idx: int):
+        loss_dict = self.compute_validation_loss(batch)
+        self.log_dict(
+            loss_dict,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=False,
+            sync_dist=True,
+            batch_size=len(batch[0])
+        )
+
+    def test_step(self, batch: Any, batch_idx: int):
+        loss_dict = self.compute_test_loss(batch)
+        self.log_dict(
+            loss_dict,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            batch_size=len(batch[0])
+        )
+
+    def compute_training_loss(self, batch):
+        x, y, x_var_names, y_var_names = batch
+        yhat = self(x)
+        loss_fns = self.train_loss
+        loss_dict = {}
+        for lf in loss_fns:
+            loss = lf(
+                yhat,
+                y,
+                x_var_names,
+                y_var_names,
+                self.lat,
+                self.i
+            )
+            loss_dict[f"train/{lf.name}"] = 0
+        return loss_dict
+    
+    def compute_validation_loss(self, batch):
+        x, y, x_var_names, y_var_names = batch
+        yhat = self(x)
+        loss_fns = self.val_loss
+        loss_dict = {}
+        for lf in loss_fns:
+            loss = lf(
+                yhat,
+                y,
+                x_var_names,
+                y_var_names,
+                self.lat,
+                self.i
+            )
+            loss_dict[f"val/{lf.name}"] = 0
+        return loss_dict
+    
+    def compute_test_loss(self, batch):
+        x, y, x_var_names, y_var_names = batch
+        yhat = self(x)
+        loss_fns = self.test_loss
+        loss_dict = {}
+        for lf in loss_fns:
+            loss = lf(
+                yhat,
+                y,
+                x_var_names,
+                y_var_names,
+                self.lat,
+                self.i
+            )
+            loss_dict[f"test/{lf.name}"] = 0
+        return loss_dict
+
+    def configure_optimizers(self):
+        return self.optimizer
 
     def set_denormalization(self, mean, std):
         self.denormalization = transforms.Normalize(mean, std)
@@ -70,201 +149,3 @@ class ForecastLitModule(LightningModule):
             days = pred_range / 24
             log_postfix = f"{days:.1f}_days"
         return log_postfix
-
-    def training_step(self, batch: Any, batch_idx: int):
-        x, y, _, out_variables = batch
-        log_postfix = self.get_log_postfix()
-
-        loss_dict, _ = self.net.forward(
-            x,
-            y,
-            out_variables,
-            metric=self.train_loss,
-            lat=self.lat,
-            log_postfix=log_postfix,
-        )
-        loss_dict = loss_dict[0]
-        for var in loss_dict.keys():
-            self.log(
-                "train/" + var,
-                loss_dict[var],
-                on_step=True,
-                on_epoch=False,
-                prog_bar=True,
-                batch_size=len(x),
-            )
-        return loss_dict
-
-    def validation_step(self, batch: Any, batch_idx: int):
-        x, y, variables, out_variables = batch
-        log_postfix = self.get_log_postfix()
-
-        all_loss_dicts, _ = self.net.evaluate(
-            x,
-            y,
-            variables,
-            out_variables,
-            self.denormalization,
-            self.val_loss,
-            self.lat,
-            self.val_clim,
-            log_postfix,
-        )
-        loss_dict = {}
-        for d in all_loss_dicts:
-            for k in d.keys():
-                loss_dict[k] = d[k]
-
-        for var in loss_dict.keys():
-            self.log(
-                "val/" + var,
-                loss_dict[var],
-                on_step=False,
-                on_epoch=True,
-                prog_bar=False,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-        return loss_dict
-
-    def test_step(self, batch: Any, batch_idx: int):
-        x, y, variables, out_variables = batch
-        log_postfix = self.get_log_postfix()
-
-        all_loss_dicts, _ = self.net.evaluate(
-            x,
-            y,
-            variables,
-            out_variables,
-            self.denormalization,
-            self.test_loss,
-            self.lat,
-            self.test_clim,
-            log_postfix,
-        )
-
-        loss_dict = {}
-        for d in all_loss_dicts:
-            for k in d.keys():
-                loss_dict[k] = d[k]
-
-        for var in loss_dict.keys():
-            self.log(
-                "test/" + var,
-                loss_dict[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-
-        # rmse for climatology baseline
-        clim_pred = self.train_clim  # C, H, W
-        clim_pred = clim_pred.unsqueeze(0).repeat(y.shape[0], 1, 1, 1).to(y.device)
-        baseline_rmse = lat_weighted_rmse(
-            clim_pred,
-            y,
-            self.denormalization,
-            out_variables,
-            self.lat,
-            None,
-            log_postfix,
-            transform_pred=False,
-        )
-        for var in baseline_rmse.keys():
-            self.log(
-                "test_climatology_baseline/" + var,
-                baseline_rmse[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-
-        # rmse for persistence baseline
-        pers_pred = x[:, -1]  # B, C, H, W
-        baseline_rmse = lat_weighted_rmse(
-            pers_pred,
-            y,
-            self.denormalization,
-            out_variables,
-            self.lat,
-            None,
-            log_postfix,
-        )
-        for var in baseline_rmse.keys():
-            self.log(
-                "test_persistence_baseline/" + var,
-                baseline_rmse[var],
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                batch_size=len(x),
-            )
-
-        # rmse for linear regression baseline
-        # check if fit_lin_reg_baseline is called by checking whether self.lr_baseline is initialized
-        if self.lr_baseline:
-            lr_pred = self.lr_baseline.predict(
-                x.cpu().reshape((x.shape[0], -1))
-            ).reshape(y.shape)
-            lr_pred = torch.from_numpy(lr_pred).float().to(y.device)
-            baseline_rmse = lat_weighted_rmse(
-                lr_pred,
-                y,
-                self.denormalization,
-                out_variables,
-                self.lat,
-                None,
-                log_postfix,
-            )
-            for var in baseline_rmse.keys():
-                self.log(
-                    "test_ridge_regression_baseline/" + var,
-                    baseline_rmse[var],
-                    on_step=False,
-                    on_epoch=True,
-                    sync_dist=True,
-                    batch_size=len(x),
-                )
-
-        return loss_dict
-
-    def configure_optimizers(self):
-        decay = []
-        no_decay = []
-        for name, m in self.named_parameters():
-            if "pos_embed" in name:
-                no_decay.append(m)
-            else:
-                decay.append(m)
-
-        optimizer = self.optim_cls(
-            [
-                {
-                    "params": decay,
-                    "lr": self.hparams.lr,
-                    "weight_decay": self.hparams.weight_decay,
-                },
-                {"params": no_decay, "lr": self.hparams.lr, "weight_decay": 0},
-            ]
-        )
-
-        lr_scheduler = LinearWarmupCosineAnnealingLR(
-            optimizer,
-            self.hparams.warmup_epochs,
-            self.hparams.max_epochs,
-            self.hparams.warmup_start_lr,
-            self.hparams.eta_min,
-        )
-
-        return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
-
-    def fit_lin_reg_baseline(self, train_dataset, reg_hparam=0.0):
-        X_train, y_train, _ = train_dataset.get_data()
-        X_train = X_train.numpy()
-        y_train = y_train.numpy()
-        X_train = X_train.reshape(X_train.shape[0], -1)
-        y_train = y_train.reshape(y_train.shape[0], -1)
-        self.lr_baseline = Ridge(alpha=reg_hparam)
-        self.lr_baseline.fit(X_train, y_train)

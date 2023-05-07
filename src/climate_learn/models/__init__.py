@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from ..data import IterDataModule, DataModule
 from ..data.task.args import ForecastingArgs
 from .modules import ForecastLitModule, DownscaleLitModule
+from .modules.utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .components import (
     Climatology,
     Interpolation,
@@ -26,6 +27,7 @@ def load_forecasting_module(
     model_kwargs: Optional[Dict[str, Any]] = None,
     optim: Optional[str] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
+    lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
     train_loss: Optional[Union[Callable, List[Callable]]] = None,
@@ -72,7 +74,7 @@ def load_forecasting_module(
             " please raise an issue at"
             " https://github.com/aditya-grover/climate-learn/issues."
         )
-    optimizer = _load_optimizer(optim, optim_kwargs, optimizer)
+    optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
     model_module = ForecastLitModule(net, optimizer, train_loss, val_loss, test_loss)
     set_climatology(model_module, data_module)
     return model_module
@@ -84,6 +86,7 @@ def load_downscaling_module(
     model_kwargs: Optional[Dict[str, Any]] = None,
     optim: Optional[str] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
+    lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
     train_loss: Optional[Union[Callable, List[Callable]]] = None,
@@ -102,7 +105,7 @@ def load_downscaling_module(
             " please raise an issue at"
             " https://github.com/aditya-grover/climate-learn/issues."
         )
-    optimizer = _load_optimizer(optim, optim_kwargs, optimizer)
+    optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
     model_module = DownscaleLitModule(net, optimizer, train_loss, val_loss, test_loss)
     set_climatology(model_module, data_module)
     return model_module
@@ -126,8 +129,10 @@ def _validate_model_kwargs(
     return
 
 def _load_optimizer(
+    net: torch.nn.Module,
     optim: Optional[str] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
+    lr_kwargs: Optional[Dict[str, Any]] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
 ):
     if (optim is not None) and (optimizer is not None):
@@ -136,18 +141,26 @@ def _load_optimizer(
         raise RuntimeWarning("Ignoring 'optimizer' since 'optim' was specified")
     if optimizer and optim_kwargs:
         raise RuntimeWarning("Ignoring 'optim_kwargs' since 'optimizer' was specified")
-    if optim == "SGD":
-        optimizer = None
-    elif optim == "Adam":
-        optimizer = None
-    elif optim == "AdamW":
-        optimizer = None
+    if lr_kwargs and optimizer:
+        raise RuntimeWarning("Ignoring 'lr_kwargs' since 'optimizer was specified")
+    if optim.startswith("SGD"):
+        optimizer = torch.optim.SGD(net.parameters(), **optim_kwargs)
+    elif optim.startswith("Adam"):
+        optimizer = torch.optim.Adam(net.parameters(), **optim_kwargs)
+    elif optim.startswith("AdamW"):
+        optimizer = torch.optim.AdamW(net.parameters(), **optim_kwargs)
     elif optim is not None:
         raise NotImplementedError(
             f"{optim} is not an implemented optimizer. If you think it should"
             " be, please raise an issue at"
             " https://github.com/aditya-grover/climate-learn/issues"
         )
+    if optim.endswith("CosineAnnealingLR"):
+        lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **lr_kwargs)
+        optimizer = {
+            "optimizer": optimizer,
+            "lr_scheduler": lr_scheduler
+        }
     return optimizer
 
 def set_climatology(model_module, data_module):
