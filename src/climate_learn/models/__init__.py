@@ -5,6 +5,13 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from ..data import IterDataModule, DataModule
 from ..data.task.args import ForecastingArgs
 from .modules import ForecastLitModule, DownscaleLitModule
+from .components import (
+    Climatology,
+    Interpolation,
+    LinearRegression,
+    Persistence,
+    ResNet
+)
 from ..utils.datetime import Hours
 
 # Third party
@@ -25,15 +32,40 @@ def load_forecasting_module(
     val_loss: Optional[Union[Callable, List[Callable]]] = None,
     test_loss: Optional[Union[Callable, List[Callable]]] = None
 ):
+    in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
+    out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
+    history = data_module.hparams.train_dataset_args.task_args.history
     _validate_model_kwargs(preset, model, model_kwargs, net)
     if model == "climatology":
-        pass
+        train_climatology = data_module.get_climatology(split="train")
+        train_climatology = torch.stack(tuple(train_climatology.values()))
+        net = Climatology(train_climatology)
     elif model == "persistence":
-        pass
+        if not set(out_vars).issubset(in_vars):
+            raise RuntimeError(
+                "Persistence requires the output variables to be a subset of"
+                " the input variables."
+            )
+        net = Persistence()
     elif model == "linear-regression":
-        pass
+        train_climatology = data_module.get_climatology(split="train")
+        train_climatology = torch.stack(tuple(train_climatology.values()))
+        in_features = train_climatology.shape.flatten() * history
+        test_climatology = data_module.get_climatology(split="test")
+        test_climatology = torch.stack(tuple(train_climatology.values()))
+        out_features = test_climatology.shape.flatten()
+        net = LinearRegression(in_features, out_features)
     elif model == "rasp-theurey-2020":
-        pass
+        net = ResNet(
+            in_channels=len(in_vars),
+            history=3,
+            hidden_channels=128,
+            activation="leaky",
+            out_channels=len(out_vars),
+            norm=True,
+            dropout=0.1,
+            n_blocks=19
+        )
     elif model is not None:
         raise NotImplementedError(
             f"{model} is not an implemented model. If you think it should be,"
@@ -59,8 +91,11 @@ def load_downscaling_module(
     test_loss: Optional[Union[Callable, List[Callable]]] = None
 ):
     _validate_model_kwargs(preset, model, model_kwargs, net)
-    if model == "bicubic":
-        pass
+    if model in ("nearest", "linear", "bilinear"):
+        train_climatology = data_module.get_climatology(split="train")
+        train_climatology = torch.stack(tuple(train_climatology.values()))
+        size = train_climatology.shape
+        net = Interpolation(size, model)
     elif model is not None:
         raise NotImplementedError(
             f"{model} is not an implemented model. If you think it should be,"
