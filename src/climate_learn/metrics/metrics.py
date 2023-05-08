@@ -81,7 +81,8 @@ class LatitudeWeightedMetric(Metric):
         
         Casts latitude weights to the same device as `pred`.
         """
-        self.lat_weights.to(device=pred.device)
+        if self.lat_weighted:
+            self.lat_weights.to(device=pred.device)
 
 
 class ClimatologyBasedMetric(Metric):

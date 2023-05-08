@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .utils.metrics import mse, rmse, pearson, mean_bias
+from ...metrics.metrics import mse, rmse, pearson, mean_bias
 
 
 def interpolate_input(x: torch.Tensor, y: torch.Tensor):

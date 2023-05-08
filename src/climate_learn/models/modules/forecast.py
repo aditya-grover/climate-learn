@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from torchvision.transforms import transforms
 
 from .utils.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .utils.metrics import (
+from ...metrics.metrics import (
     lat_weighted_mse,
     lat_weighted_mse_val,
     lat_weighted_acc,

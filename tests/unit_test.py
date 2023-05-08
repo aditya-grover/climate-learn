@@ -3,7 +3,7 @@ import numpy as np
 from torch.distributions.normal import Normal
 from torch.nn.functional import one_hot
 import properscoring as ps
-from climate_learn.models.modules.utils.metrics import (
+from climate_learn.metrics.metrics import (
     lat_weighted_categorical_loss,
     lat_weighted_spread_skill_ratio,
     lat_weighted_crps_gaussian,
