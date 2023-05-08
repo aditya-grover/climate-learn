@@ -37,38 +37,6 @@ class ForecastLitModule(pl.LightningModule):
         return self.net(x)
 
     def training_step(self, batch: Any, batch_idx: int):
-        loss_dict = self.compute_training_loss(batch)
-        self.log_dict(
-            loss_dict,
-            on_step=True,
-            on_epoch=False,
-            prog_bar=True,
-            batch_size=len(batch[0])
-        )
-        return loss_dict
-
-    def validation_step(self, batch: Any, batch_idx: int):
-        loss_dict = self.compute_validation_loss(batch)
-        self.log_dict(
-            loss_dict,
-            on_step=False,
-            on_epoch=True,
-            prog_bar=False,
-            sync_dist=True,
-            batch_size=len(batch[0])
-        )
-
-    def test_step(self, batch: Any, batch_idx: int):
-        loss_dict = self.compute_test_loss(batch)
-        self.log_dict(
-            loss_dict,
-            on_step=False,
-            on_epoch=True,
-            sync_dist=True,
-            batch_size=len(batch[0])
-        )
-
-    def compute_training_loss(self, batch):
         x, y, x_var_names, y_var_names = batch
         yhat = self(x)
         loss_fns = self.train_loss
@@ -82,10 +50,23 @@ class ForecastLitModule(pl.LightningModule):
                 self.lat,
                 self.i
             )
-            loss_dict[f"train/{lf.name}"] = 0
+            loss_dict[f"train/{lf.name}"] = loss
+        self.log_dict(
+            loss_dict,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+            batch_size=len(batch[0])
+        )
         return loss_dict
+
+    def validation_step(self, batch: Any, batch_idx: int):
+        self.evaluate(batch)
+
+    def test_step(self, batch: Any, batch_idx: int):
+        self.evaluate(batch)
     
-    def compute_validation_loss(self, batch):
+    def evaluate(self, batch):
         x, y, x_var_names, y_var_names = batch
         yhat = self(x)
         loss_fns = self.val_loss
@@ -99,24 +80,14 @@ class ForecastLitModule(pl.LightningModule):
                 self.lat,
                 self.i
             )
-            loss_dict[f"val/{lf.name}"] = 0
-        return loss_dict
-    
-    def compute_test_loss(self, batch):
-        x, y, x_var_names, y_var_names = batch
-        yhat = self(x)
-        loss_fns = self.test_loss
-        loss_dict = {}
-        for lf in loss_fns:
-            loss = lf(
-                yhat,
-                y,
-                x_var_names,
-                y_var_names,
-                self.lat,
-                self.i
-            )
-            loss_dict[f"test/{lf.name}"] = 0
+            loss_dict[f"val/{lf.name}"] = loss
+        self.log_dict(
+            loss_dict,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            batch_size=len(batch[0])
+        )
         return loss_dict
 
     def configure_optimizers(self):
