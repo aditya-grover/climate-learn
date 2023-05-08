@@ -1,396 +1,303 @@
+# Standard Library
+from dataclasses import dataclass
+from typing import List, Optional, Union
+
+# Third party
 import numpy as np
+import numpy.typing as npt
 import torch
-from scipy import stats
-from torch.distributions.normal import Normal
+import torch.nn as nn
 
 
-### Training loss
+@dataclass
+class MetricsMetaInfo:
+    in_vars: List[str]
+    out_vars: List[str]
+    lat: npt.ArrayLike
+    lon: npt.ArrayLike
+    climatology: torch.Tensor
 
 
-def mse(pred, y, vars, lat=None, log_postfix=""):
+class Metric(nn.Module):
+    """Parent class for all ClimateLearn metrics."""
+    def __init__(
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
+    ):
+        r"""
+        .. highlight:: python
+
+        :param aggregate_only: If false, returns both the aggregate and
+            per-channel metrics. Otherwise, returns only the aggregate metric.
+            Default if `False`.
+        :type aggregate_only: bool
+        :param metainfo: Optional meta-information used by some metrics.
+        :type metainfo: MetricsMetaInfo|None
+        """
+        super().__init__()
+        self.aggregate_only = aggregate_only
+        self.metainfo = metainfo
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        :param pred: The predicted value(s).
+        :type pred: torch.Tensor
+        :param target: The ground truth target value(s).
+        :type target: torch.Tensor        
+
+        :return: A tensor. See child classes for specifics.
+        :rtype: torch.Tensor
+        """
+        raise NotImplementedError()
+
+
+class LatitudeWeightedMetric(Metric):
+    """Parent class for metrics that have a latitude-weighted version."""
+    def __init__(self, lat_weighted: bool = False, *args, **kwargs):
+        """
+        :param lat_weighted: Whether to use latitude-weighting.
+        :type lat_weighted: bool
+        """
+        super().__init__(args, kwargs)
+        self.lat_weighted = lat_weighted
+        if self.lat_weighted:
+            lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
+            lat_weights = lat_weights / lat_weights.mean()
+            lat_weights = torch.from_numpy(lat_weights).view(1, 1, -1, 1)
+            self.lat_weights = lat_weights
+
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> None:
+        r"""
+        .. highlight:: python
+        
+        Casts latitude weights to the same device as `pred`.
+        """
+        self.lat_weights.to(device=pred.device)
+
+
+class ClimatologyBasedMetric(Metric):
+    """Parent class for metrics that use climatology."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        climatology = self.metainfo.climatology
+        climatology = climatology.unsqueeze(0)
+        self.climatology = climatology
+
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> None:
+        r"""
+        .. highlight:: python
+        
+        Casts climatology to the same device as `pred`.
+        """
+        self.climatology.to(device=pred.device)    
+    
+
+class MSE(LatitudeWeightedMetric):
+    """Computes mean-squared error, with optional latitude-weighting."""
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            MSE, and the preceding elements are the channel-wise MSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().forward(pred, target)
+        error = (pred - target).square()
+        if self.lat_weighted:            
+            error = error * self.lat_weights
+        loss = error.mean()
+        if not self.aggregate_only:
+            per_channel_losses = error.mean([0,2,3])
+            loss = loss.unsqueeze(0)
+            loss = torch.cat((per_channel_losses, loss))
+        return loss
+
+
+class RMSE(LatitudeWeightedMetric):
+    """Computes root mean-squared error, with optional latitude-weighting."""
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().forward(pred, target)
+        error = (pred - target).square()
+        if self.lat_weighted:
+            error = error * self.lat_weights
+        loss = error.mean().sqrt()
+        if not self.aggregate_only:
+            per_channel_losses = error.mean([2,3]).sqrt().mean(0)
+            loss = loss.unsqueeze(0)
+            loss = torch.cat((per_channel_losses, loss))
+        return loss
+
+
+class ACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
     """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
+    Computes the anomaly correlation coefficient, with optional
+    latitude-weighting.
     """
-    error = (pred - y) ** 2
+    def __init__(self, *args, **kwargs):
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
 
-    loss_dict = {}
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
 
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"mse_{var}_{log_postfix}"] = error[:, i].mean()
-    loss_dict["loss"] = error.mean()
+        :param pred: The predicted values of shape [B,C,H,W]. These should be
+            denormalized.
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W]. These
+            should be denormalized.
+        :type target: torch.FloatTensor|torch.DoubleTensor
 
-    return loss_dict
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            ACC, and the preceding elements are the channel-wise ACCs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        LatitudeWeightedMetric.forward(self, pred, target)
+        ClimatologyBasedMetric.forward(self, pred, target)
+        pred = pred - self.climatology
+        target = target - self.climatology
+        pred_prime = pred - pred.mean([0,2,3])
+        target_prime = target - target.mean([0,2,3])
+        if self.lat_weighted:
+            numer = (self.lat_weights * pred_prime * target_prime).sum()
+            denom1 = (self.lat_weights * pred_prime.square()).sum()
+            denom2 = (self.lat_weights * target_prime.square()).sum()
+        else:
+            numer = (pred_prime * target_prime).sum()
+            denom1 = pred_prime.square().sum()
+            denom2 = target_prime.square().sum()
+        per_channel_losses = numer / (denom1 * denom2).sqrt()
+        loss = per_channel_losses.mean()
+        if not self.aggregate_only:
+            loss = loss.unsqueeze(0)
+            loss = torch.cat((per_channel_losses, loss))
+        return loss
+    
 
-
-def lat_weighted_mse(pred, y, vars, lat, log_postfix=""):
+class Pearson(Metric):
     """
-    y: [B, C, H, W]
-    pred: [C, C, H, W]
-    vars: list of variable names
-    lat: H
+    Computes the Pearson correlation coefficient, based on
+    https://discuss.pytorch.org/t/use-pearson-correlation-coefficient-as-cost-function/8739/10
     """
-    error = (pred - y) ** 2
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)
-    )  # (1, H, 1)
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
 
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_mse_{var}_{log_postfix}"] = (error[:, i] * w_lat).mean()
+        :param pred: The predicted values of shape [B,C,H,W]. These should be
+            denormalized.
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W]. These
+            should be denormalized.
+        :type target: torch.FloatTensor|torch.DoubleTensor
 
-    loss_dict["loss"] = torch.mean(error * w_lat.unsqueeze(1))
-    return loss_dict
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Pearson correlation coefficient, and the preceding elements are the
+            channel-wise Pearson correlation coefficients.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        def flatten_channel_wise(x: torch.Tensor) -> torch.Tensor:
+            """
+            :param x: A tensor of shape [B,C,H,W].
+            :type x: torch.Tensor
 
-
-### Forecasting metrics
-
-
-def lat_weighted_mse_val(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    lat: H
-    """
-    error = (pred - y) ** 2  # [B, C, H, W]
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(error.device)
-    )  # (1, H, 1)
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_mse_{var}_{log_postfix}"] = (error[:, i] * w_lat).mean()
-
-    loss_dict["w_mse"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def lat_weighted_rmse(
-    pred, y, transform, vars, lat, clim, log_postfix, transform_pred=True
-):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    lat: H
-    """
-    if transform_pred:
-        pred = transform(pred)
-    y = transform(y)
-
-    error = (pred - y) ** 2  # [B, C, H, W]
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=error.dtype, device=error.device)
-    )
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_rmse_{var}_{log_postfix}"] = torch.mean(
-                torch.sqrt(torch.mean(error[:, i] * w_lat, dim=(-2, -1)))
+            :return: A tensor of shape [C,B*H*W].
+            :rtype: torch.Tensor
+            """
+            return torch.stack(
+                [xi.flatten() for xi in torch.tensor_split(x, 2, 1)]
             )
-
-    loss_dict["w_rmse"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def lat_weighted_acc(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B C, H, W]
-    vars: list of variable names
-    lat: H
-    """
-
-    pred = transform(pred)
-    y = transform(y)
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=pred.dtype, device=pred.device)
-    )  # [1, H, 1]
-
-    # clim = torch.mean(y, dim=(0, 1), keepdim=True)
-    clim = clim.to(device=y.device).unsqueeze(0)
-    pred = pred - clim
-    y = y - clim
-    loss_dict = {}
-
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            pred_prime = pred[:, i] - torch.mean(pred[:, i])
-            y_prime = y[:, i] - torch.mean(y[:, i])
-            loss_dict[f"acc_{var}_{log_postfix}"] = torch.sum(
-                w_lat * pred_prime * y_prime
-            ) / torch.sqrt(
-                torch.sum(w_lat * pred_prime**2) * torch.sum(w_lat * y_prime**2)
-            )
-
-    loss_dict["acc"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-### uncertainty metrics
-
-
-def lat_weighted_nll(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: Normal
-    vars: list of variable names
-    lat: H
-    """
-    assert type(pred) == Normal
-
-    # apply Gaussian NLL Loss
-    loss = torch.nn.GaussianNLLLoss(reduction="none")
-    error = loss(pred.loc, y, pred.scale)
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=error.dtype, device=error.device)
-    )
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_nll_{var}_{log_postfix}"] = torch.mean(error[:, i] * w_lat)
-
-    loss_dict["w_nll"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def lat_weighted_crps_gaussian(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: Normal
-    vars: list of variable names
-    lat: H
-    """
-    mean, std = pred.loc, pred.scale
-    assert std is not None
-
-    z = (y - mean) / std
-
-    standard_normal = Normal(torch.zeros_like(y), torch.ones_like(y))
-    cdf = standard_normal.cdf(z)
-    pdf = torch.exp(standard_normal.log_prob(z))
-
-    crps = std * (z * (2 * cdf - 1) + 2 * pdf - 1 / np.sqrt(np.pi))
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=crps.dtype, device=crps.device)
-    )
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_crps_{var}_{log_postfix}"] = torch.mean(crps[:, i] * w_lat)
-
-    loss_dict["w_crps"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def lat_weighted_spread_skill_ratio(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: Normal
-    vars: list of variable names
-    lat: H
-    """
-    assert type(pred) == Normal
-
-    mean, variance = pred.loc, torch.square(pred.scale)
-
-    error = (mean - y) ** 2
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=error.dtype, device=error.device)
-    )
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            spread = torch.mean(
-                torch.sqrt(torch.mean(variance[:, i] * w_lat, dim=(-2, -1)))
-            )
-            rmse = torch.mean(torch.sqrt(torch.mean(error[:, i] * w_lat, dim=(-2, -1))))
-            loss_dict[f"w_spread_{var}_{log_postfix}"] = spread / rmse
-
-    loss_dict["w_spread"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def lat_weighted_categorical_loss(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W, 50]
-    pred: [B, 50, C, H, W]
-    vars: list of variable names
-    lat: H
-    """
-    loss = torch.nn.CrossEntropyLoss(reduction="none")
-    # y.shape = [B, C, H, W, 50]
-    # pred.shape = [B, 50, C, H, W]
-    # get the labels [B, C, H, W]
-    _, labels = y.max(dim=-1)
-    error = loss(pred, labels.to(pred.device))  # error.shape [B, C, H, W]
-
-    # lattitude weights
-    w_lat = np.cos(np.deg2rad(lat))
-    w_lat = w_lat / w_lat.mean()  # (H, )
-    w_lat = (
-        torch.from_numpy(w_lat)
-        .unsqueeze(0)
-        .unsqueeze(-1)
-        .to(dtype=error.dtype, device=error.device)
-    )
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"w_categorical_{var}_{log_postfix}"] = torch.mean(
-                error[:, i] * w_lat
-            )
-
-    loss_dict["w_categorical"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-### Downscaling metrics
-
-
-def mse_val(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    """
-    error = (pred - y) ** 2  # [B, C, H, W]
-
-    loss_dict = {}
-
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"mse_{var}"] = error[:, i].mean()
-
-    loss_dict["mse"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def rmse(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    """
-    pred = transform(pred)
-    y = transform(y)
-    pred = pred.to(torch.float32)
-    y = y.to(torch.float32)
-
-    error = (pred - y) ** 2  # [N, C, H, W]
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"rmse_{var}"] = torch.mean(
-                torch.sqrt(torch.mean(error[:, i], dim=(-2, -1)))
-            )
-
-    loss_dict["rmse"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def pearson(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    """
-    pred = transform(pred)
-    y = transform(y)
-    pred = pred.to(torch.float32)
-    y = y.to(torch.float32)
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"pearsonr_{var}"] = stats.pearsonr(
-                pred[:, i].flatten().cpu().numpy(), y[:, i].flatten().cpu().numpy()
-            )[0]
-
-    loss_dict["pearson"] = np.mean([loss_dict[k] for k in loss_dict.keys()])
-
-    return loss_dict
-
-
-def mean_bias(pred, y, transform, vars, lat, clim, log_postfix):
-    """
-    y: [B, C, H, W]
-    pred: [B, C, H, W]
-    vars: list of variable names
-    """
-    pred = transform(pred)
-    y = transform(y)
-    pred = pred.to(torch.float32)
-    y = y.to(torch.float32)
-
-    loss_dict = {}
-    with torch.no_grad():
-        for i, var in enumerate(vars):
-            loss_dict[f"mean_bias_{var}"] = y.mean() - pred.mean()
-
-    loss_dict["mean_bias"] = np.mean([loss_dict[k].cpu() for k in loss_dict.keys()])
-
-    return loss_dict
+        pred = flatten_channel_wise(pred)
+        target = flatten_channel_wise(target)
+        pred = pred - pred.mean(1, keepdims=True)
+        target = target - target.mean(1, keepdims=True)
+        per_channel_coeffs = self.cos(pred, target)
+        coeff = torch.mean(per_channel_coeffs)
+        if not self.aggregate_only:
+            coeff = coeff.unsqueeze(0)
+            coeff = torch.cat((per_channel_coeffs, coeff))
+        return coeff
+    
+
+class MeanBias(Metric):
+    """Computes the standard mean bias."""
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W]. These should be
+            denormalized.
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W]. These
+            should be denormalized.
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate mean
+            bias, and the preceding elements are the channel-wise mean bias.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        mean_bias = target.mean() - pred.mean()
+        if not self.aggregate_only:            
+            per_channel_mean_bias = target.mean([0,2,3]) - pred.mean([0,2,3])
+            mean_bias = mean_bias.unsqueeze(0)
+            mean_bias = torch.cat((per_channel_mean_bias, mean_bias))
+        return mean_bias
