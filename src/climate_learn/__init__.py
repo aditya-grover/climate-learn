@@ -3,7 +3,17 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 # Local application
 from .data import IterDataModule, DataModule
-from .metrics import ForecastingMetrics, DownscalingMetrics
+from .metrics import (
+    Denormalized,
+    MetricsMetaInfo,
+    LatWeightedMSE,
+    LatWeightedRMSE,    
+    LatWeightedACC,
+    MSE,
+    RMSE,
+    Pearson,
+    MeanBias
+)
 from .models import ForecastLitModule, DownscaleLitModule
 from .models.hub import MODEL_REGISTRY
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
@@ -26,9 +36,9 @@ def load_forecasting_module(
     lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Union[Callable, List[Callable]] = ForecastingMetrics.TRAIN_DEFAULT,
-    val_loss: Union[Callable, List[Callable]] = ForecastingMetrics.VAL_DEFAULT,
-    test_loss: Union[Callable, List[Callable]] = ForecastingMetrics.TEST_DEFAULT
+    train_loss: Optional[Union[Callable, List[Callable]]] = None,
+    val_loss: Optional[Union[Callable, List[Callable]]] = None,
+    test_loss: Optional[Union[Callable, List[Callable]]] = None
 ):
     in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
     out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
@@ -73,6 +83,43 @@ def load_forecasting_module(
                 n_blocks=19
             )
     optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
+    if train_loss is None:
+        train_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(), 
+            _get_climatology(data_module, "train")
+        )
+        train_loss = LatWeightedMSE(metainfo=train_metainfo)
+    if val_loss is None:
+        val_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(),
+            _get_climatology(data_module, "val")
+        )
+        val_loss = [
+            LatWeightedMSE(metainfo=val_metainfo),
+            LatWeightedRMSE(metainfo=val_metainfo),
+            Denormalized(
+                _get_denorm(data_module),
+                LatWeightedACC(metainfo=val_metainfo)
+            )
+        ]
+    if test_loss is None:
+        test_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(),
+            _get_climatology(data_module, "test")
+        )
+        test_loss = [
+            LatWeightedRMSE(metainfo=test_metainfo),
+            Denormalized(
+                _get_denorm(data_module),
+                LatWeightedACC(metainfo=test_metainfo)
+            )
+        ]
     model_module = ForecastLitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
 
@@ -86,10 +133,12 @@ def load_downscaling_module(
     lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Union[Callable, List[Callable]] = DownscalingMetrics.TRAIN_DEFAULT,
-    val_loss: Union[Callable, List[Callable]] = DownscalingMetrics.VAL_DEFAULT,
-    test_loss: Union[Callable, List[Callable]] = DownscalingMetrics.TEST_DEFAULT
+    train_loss: Optional[Union[Callable, List[Callable]]] = None,
+    val_loss: Optional[Union[Callable, List[Callable]]] = None,
+    test_loss: Optional[Union[Callable, List[Callable]]] = None
 ):
+    in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
+    out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
     requested_model = _validate_model_kwargs(preset, model, model_kwargs, net)
     if requested_model == PREDEFINED_MODEL:
         model_cls = MODEL_REGISTRY.get(model, None)
@@ -106,6 +155,50 @@ def load_downscaling_module(
             size = train_climatology.shape
             net = model_cls(size, interpolation_mode)
     optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
+    if train_loss is None:
+        train_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(), 
+            _get_climatology(data_module, "train")
+        )
+        train_loss = MSE(metainfo=train_metainfo)
+    if val_loss is None:
+        val_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(),
+            _get_climatology(data_module, "val")
+        )
+        val_loss = [
+            RMSE(metainfo=val_metainfo),
+            Denormalized(
+                _get_denorm(data_module),
+                Pearson(metainfo=val_metainfo)
+            ),
+            Denormalized(
+                _get_denorm(data_module),
+                MeanBias(metainfo=val_metainfo)
+            )
+        ]
+    if test_loss is None:
+        test_metainfo = MetricsMetaInfo(
+            in_vars,
+            out_vars,
+            *data_module.get_lat_lon(),
+            _get_climatology(data_module, "test")
+        )
+        test_loss = [
+            RMSE(metainfo=test_metainfo),
+            Denormalized(
+                _get_denorm(data_module),
+                Pearson(metainfo=test_metainfo)
+            ),
+            Denormalized(
+                _get_denorm(data_module),
+                MeanBias(metainfo=test_metainfo)
+            )
+        ]
     model_module = DownscaleLitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
 
