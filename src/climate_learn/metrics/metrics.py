@@ -104,7 +104,19 @@ class ClimatologyBasedMetric(Metric):
         Casts climatology to the same device as `pred`.
         """
         self.climatology.to(device=pred.device)    
-    
+
+
+class Denormalized(nn.Module):
+    """Wrapper for metrics which require denormalized inputs."""
+    def __init__(self, denorm: nn.Module, metric: Metric):
+        self.denorm = denorm
+        self.metric = metric
+
+    def forward(self, pred, target):
+        pred = self.denorm(pred)
+        target = self.denorm(target)
+        return self.metric(pred, target)
+
 
 class MSE(LatitudeWeightedMetric):
     """Computes mean-squared error, with optional latitude-weighting."""
@@ -175,9 +187,23 @@ class ACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
     Computes the anomaly correlation coefficient, with optional
     latitude-weighting.
     """
-    def __init__(self, *args, **kwargs):
-        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
-        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
+    def __init__(
+        self,
+        lat_weighted: bool = False,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
+    ):
+        LatitudeWeightedMetric.__init__(
+            self,
+            lat_weighted,
+            aggregate_only=aggregate_only,
+            metainfo=metainfo
+        )
+        ClimatologyBasedMetric.__init__(
+            self,
+            aggregate_only=aggregate_only,
+            metainfo=metainfo
+        )
 
     def forward(
         self,
