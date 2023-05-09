@@ -1,4 +1,7 @@
+# Standard library
 from typing import Any, Callable, Dict, Iterable, List, Union
+
+# Third party
 import torch
 import pytorch_lightning as pl
 
@@ -33,9 +36,13 @@ class ForecastLitModule(pl.LightningModule):
         yhat = self(x)
         loss_fns = self.train_loss
         loss_dict = {}
-        for lf in loss_fns:
+        for i, lf in enumerate(loss_fns):
             loss = lf(yhat, y)
-            loss_dict[f"train/{lf.name}"] = loss
+            if hasattr(lf, "name"):
+                name = lf.name
+            else:
+                name = f"loss_{i}"
+            loss_dict[f"train/{name}"] = loss
         self.log_dict(
             loss_dict,
             on_step=True,
@@ -56,9 +63,13 @@ class ForecastLitModule(pl.LightningModule):
         yhat = self(x)
         loss_fns = self.val_loss
         loss_dict = {}
-        for lf in loss_fns:
+        for i, lf in enumerate(loss_fns):
             loss = lf(yhat, y)
-            loss_dict[f"{stage}/{lf.name}"] = loss
+            if hasattr(lf, "name"):
+                name = lf.name
+            else:
+                name = f"loss_{i}"
+            loss_dict[f"{stage}/{name}"] = loss
         self.log_dict(
             loss_dict,
             on_step=False,
