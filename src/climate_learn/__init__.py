@@ -3,27 +3,21 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 # Local application
 from .data import IterDataModule, DataModule
-from .data.task.args import ForecastingArgs
-from .metrics import MetricsMetaInfo, Denormalized, MSE, RMSE, ACC
+from .metrics import ForecastingMetrics, DownscalingMetrics
 from .models import ForecastLitModule, DownscaleLitModule
+from .models.hub import MODEL_REGISTRY
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .models.hub import (
-    Climatology,
-    Interpolation,
-    LinearRegression,
-    Persistence,
-    ResNet
-)
-from .utils.datetime import Hours
 
 # Third party
-import pytorch_lightning as pl
 import torch
 from torchvision import transforms
 
+PREDEFINED_MODEL = 0
+USER_SPECIFIED_NET = 1
+
 
 def load_forecasting_module(
-    data_module: pl.LightningDataModule,
+    data_module: Union[DataModule, IterDataModule],
     preset: Optional[str] = None,
     model: Optional[str] = None,
     model_kwargs: Optional[Dict[str, Any]] = None,
@@ -32,93 +26,58 @@ def load_forecasting_module(
     lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Optional[Union[Callable, List[Callable]]] = None,
-    val_loss: Optional[Union[Callable, List[Callable]]] = None,
-    test_loss: Optional[Union[Callable, List[Callable]]] = None
+    train_loss: Union[Callable, List[Callable]] = ForecastingMetrics.TRAIN_DEFAULT,
+    val_loss: Union[Callable, List[Callable]] = ForecastingMetrics.VAL_DEFAULT,
+    test_loss: Union[Callable, List[Callable]] = ForecastingMetrics.TEST_DEFAULT
 ):
     in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
     out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
     history = data_module.hparams.train_dataset_args.task_args.history
-    _validate_model_kwargs(preset, model, model_kwargs, net)
-    if model == "climatology":
-        train_climatology = data_module.get_climatology(split="train")
-        train_climatology = torch.stack(tuple(train_climatology.values()))
-        net = Climatology(train_climatology)
-    elif model == "persistence":
-        if not set(out_vars).issubset(in_vars):
-            raise RuntimeError(
-                "Persistence requires the output variables to be a subset of"
-                " the input variables."
+    requested_model = _validate_model_kwargs(preset, model, model_kwargs, net)
+    if requested_model == PREDEFINED_MODEL:
+        model_cls = MODEL_REGISTRY.get(model, None)
+        if model_cls is None:
+            raise NotImplementedError(
+                f"{model} is not an implemented model. If you think it should be,"
+                " please raise an issue at"
+                " https://github.com/aditya-grover/climate-learn/issues."
             )
-        net = Persistence()
-    elif model == "linear-regression":
-        train_climatology = data_module.get_climatology(split="train")
-        train_climatology = torch.stack(tuple(train_climatology.values()))
-        in_features = train_climatology.shape.flatten() * history
-        test_climatology = data_module.get_climatology(split="test")
-        test_climatology = torch.stack(tuple(train_climatology.values()))
-        out_features = test_climatology.shape.flatten()
-        net = LinearRegression(in_features, out_features)
-    elif model == "rasp-theurey-2020":
-        net = ResNet(
-            in_channels=len(in_vars),
-            history=3,
-            hidden_channels=128,
-            activation="leaky",
-            out_channels=len(out_vars),
-            norm=True,
-            dropout=0.1,
-            n_blocks=19
-        )
-    elif model is not None:
-        raise NotImplementedError(
-            f"{model} is not an implemented model. If you think it should be,"
-            " please raise an issue at"
-            " https://github.com/aditya-grover/climate-learn/issues."
-        )
+        elif model == "climatology":
+            train_climatology = data_module.get_climatology(split="train")
+            train_climatology = torch.stack(tuple(train_climatology.values()))
+            net = model_cls(train_climatology)
+        elif model == "persistence":
+            if not set(out_vars).issubset(in_vars):
+                raise RuntimeError(
+                    "Persistence requires the output variables to be a subset of"
+                    " the input variables."
+                )
+            net = model_cls()
+        elif model == "linear-regression":
+            train_climatology = data_module.get_climatology(split="train")
+            train_climatology = torch.stack(tuple(train_climatology.values()))
+            in_features = train_climatology.shape.flatten() * history
+            test_climatology = data_module.get_climatology(split="test")
+            test_climatology = torch.stack(tuple(train_climatology.values()))
+            out_features = test_climatology.shape.flatten()
+            net = model_cls(in_features, out_features)
+        elif model == "rasp-theurey-2020":
+            net = model_cls(
+                in_channels=len(in_vars),
+                history=3,
+                hidden_channels=128,
+                activation="leaky",
+                out_channels=len(out_vars),
+                norm=True,
+                dropout=0.1,
+                n_blocks=19
+            )
     optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
-    if train_loss is None:
-        train_metainfo = MetricsMetaInfo(
-            in_vars,
-            out_vars,
-            *data_module.get_lat_lon(), 
-            _get_climatology(data_module, "train")
-        )
-        train_loss = MSE(lat_weighted=True, metainfo=train_metainfo)
-    if val_loss is None:
-        val_metainfo = MetricsMetaInfo(
-            in_vars,
-            out_vars,
-            *data_module.get_lat_lon(),
-            _get_climatology(data_module, "val")
-        )
-        val_loss = [
-            MSE(lat_weighted=True, metainfo=val_metainfo),
-            RMSE(lat_weighted=True, metainfo=val_metainfo),
-            Denormalized(
-                _get_denorm(data_module),
-                ACC(lat_weighted=True, metainfo=val_metainfo)
-            )
-        ]
-    if test_loss is None:
-        test_metainfo = MetricsMetaInfo(
-            in_vars,
-            out_vars,
-            *data_module.get_lat_lon(),
-            _get_climatology(data_module, "test")
-        )
-        test_loss = [
-            RMSE(lat_weighted=True, metainfo=test_metainfo),
-            Denormalized(
-                _get_denorm(data_module),
-                ACC(lat_weighted=True, metainfo=test_metainfo)
-            )
-        ]
     model_module = ForecastLitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
 
 def load_downscaling_module(
-    data_module: pl.LightningDataModule,
+    data_module: Union[DataModule, IterDataModule],
     preset: Optional[str] = None,
     model: Optional[str] = None,
     model_kwargs: Optional[Dict[str, Any]] = None,
@@ -127,22 +86,25 @@ def load_downscaling_module(
     lr_kwargs: Optional[Dict[str, Any]] = None,
     net: Optional[torch.nn.Module] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Optional[Union[Callable, List[Callable]]] = None,
-    val_loss: Optional[Union[Callable, List[Callable]]] = None,
-    test_loss: Optional[Union[Callable, List[Callable]]] = None
+    train_loss: Union[Callable, List[Callable]] = DownscalingMetrics.TRAIN_DEFAULT,
+    val_loss: Union[Callable, List[Callable]] = DownscalingMetrics.VAL_DEFAULT,
+    test_loss: Union[Callable, List[Callable]] = DownscalingMetrics.TEST_DEFAULT
 ):
-    _validate_model_kwargs(preset, model, model_kwargs, net)
-    if model in ("nearest", "linear", "bilinear"):
-        train_climatology = data_module.get_climatology(split="train")
-        train_climatology = torch.stack(tuple(train_climatology.values()))
-        size = train_climatology.shape
-        net = Interpolation(size, model)
-    elif model is not None:
-        raise NotImplementedError(
-            f"{model} is not an implemented model. If you think it should be,"
-            " please raise an issue at"
-            " https://github.com/aditya-grover/climate-learn/issues."
-        )
+    requested_model = _validate_model_kwargs(preset, model, model_kwargs, net)
+    if requested_model == PREDEFINED_MODEL:
+        model_cls = MODEL_REGISTRY.get(model, None)
+        if model_cls is None:
+            raise NotImplementedError(
+                f"{model} is not an implemented model. If you think it should be,"
+                " please raise an issue at"
+                " https://github.com/aditya-grover/climate-learn/issues."
+            )
+        elif model.endswith("interpolation"):
+            interpolation_mode = model.split("_")[0]            
+            train_climatology = data_module.get_climatology(split="train")
+            train_climatology = torch.stack(tuple(train_climatology.values()))
+            size = train_climatology.shape
+            net = model_cls(size, interpolation_mode)
     optimizer = _load_optimizer(net, optim, optim_kwargs, lr_kwargs, optimizer)
     model_module = DownscaleLitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
@@ -163,7 +125,10 @@ def _validate_model_kwargs(
         raise RuntimeWarning("Ignoring 'net' since one of 'preset' or 'model' was specified")
     if net and model_kwargs:
         raise RuntimeWarning("Ignoring 'model_kwargs' since 'net' was specified")
-    return
+    if model is not None:
+        return PREDEFINED_MODEL
+    elif net is not None:
+        return USER_SPECIFIED_NET
 
 def _load_optimizer(
     net: torch.nn.Module,

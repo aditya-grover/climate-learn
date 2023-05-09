@@ -1,8 +1,10 @@
 # Standard library
+from functools import partial
 from typing import Callable, Optional, Union
 
 # Local application
 from .metrics import *
+from .utils import MetricsMetaInfo
 
 # Third party
 import torch
@@ -22,6 +24,8 @@ def mse(
         metric = MSE(aggregate_only, metainfo=metainfo)
     return metric(pred, target)
 
+lat_mse = partial(mse, lat_weighted=True)
+
 def rmse(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
@@ -35,6 +39,8 @@ def rmse(
         metric = RMSE(aggregate_only, metainfo=metainfo)
     return metric(pred, target)
 
+lat_rmse = partial(rmse, lat_weighted=True)
+
 def acc(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
@@ -47,6 +53,8 @@ def acc(
     else:
         metric = ACC(aggregate_only, metainfo=metainfo)
     return metric(pred, target)
+
+lat_acc = partial(acc, lat_weighted=True)
 
 def pearson(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],

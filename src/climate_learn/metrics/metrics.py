@@ -1,28 +1,13 @@
 # Standard Library
-from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Optional, Union
+
+# Local application
+from .utils import register, MetricsMetaInfo
 
 # Third party
 import numpy as np
-import numpy.typing as npt
 import torch
 import torch.nn as nn
-
-
-def register(name):
-    def decorator(metric_class):
-        metric_class.name = name
-        return metric_class
-    return decorator
-
-
-@dataclass
-class MetricsMetaInfo:
-    in_vars: List[str]
-    out_vars: List[str]
-    lat: npt.ArrayLike
-    lon: npt.ArrayLike
-    climatology: torch.Tensor
 
 
 class Metric(nn.Module):
@@ -106,14 +91,26 @@ class ClimatologyBasedMetric(Metric):
         self.climatology.to(device=pred.device)    
 
 
+@register("denorm")
 class Denormalized(nn.Module):
-    """Wrapper for metrics which require denormalized inputs."""
-    def __init__(self, denorm: nn.Module, metric: Metric):
-        self.denorm = denorm
+    """
+    Wrapper for metrics which require denormalized inputs. The denormalization
+    can be lazily initialized.
+    """
+    def __init__(self, metric: Metric, denorm: Optional[nn.Module] = None):
         self.metric = metric
-        self.name = self.metric.name
+        self.denorm = denorm
 
-    def forward(self, pred, target):
+    def forward(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+        denorm: Optional[nn.Module] = None
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        if self.denorm is None and denorm is None:
+            raise RuntimeError("denormalization was not set")
+        elif self.denorm is None:
+            self.denorm = denorm
         pred = self.denorm(pred)
         target = self.denorm(target)
         return self.metric(pred, target)
@@ -140,7 +137,6 @@ class MSE(Metric):
             MSE, and the preceding elements are the channel-wise MSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().forward(pred, target)
         error = (pred - target).square() 
         loss = error.mean()
         if not self.aggregate_only:
@@ -203,7 +199,6 @@ class RMSE(Metric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().forward(pred, target)
         error = (pred - target).square()
         loss = error.mean().sqrt()
         if not self.aggregate_only:

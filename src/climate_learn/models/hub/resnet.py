@@ -1,11 +1,12 @@
-import torch
+# Local application
+from .components.cnn_blocks import PeriodicConv2D, ResidualBlock
+from .registry import register
+
+# Third party
 from torch import nn
-from .cnn_blocks import PeriodicConv2D, ResidualBlock
-
-# Largely based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
-# MIT License
 
 
+@register("resnet")
 class ResNet(nn.Module):
     def __init__(
         self,
@@ -37,65 +38,40 @@ class ResNet(nn.Module):
             raise NotImplementedError(f"Activation {activation} not implemented")
 
         insize = self.in_channels * history
-        # Project image into feature map
         self.image_proj = PeriodicConv2D(
-            insize, hidden_channels, kernel_size=7, padding=3
+            insize,
+            hidden_channels,
+            kernel_size=7,
+            padding=3
         )
-
-        blocks = []
-        for i in range(n_blocks):
-            blocks.append(
-                ResidualBlock(
-                    hidden_channels,
-                    hidden_channels,
-                    activation=activation,
-                    norm=True,
-                    dropout=dropout,
-                )
-            )
-
-        self.blocks = nn.ModuleList(blocks)
+        self.blocks = nn.ModuleList([
+            ResidualBlock(
+                hidden_channels,
+                hidden_channels,
+                activation=activation,
+                norm=True,
+                dropout=dropout
+            ) for _ in range(n_blocks)
+        ])
 
         if norm:
             self.norm = nn.BatchNorm2d(hidden_channels)
         else:
             self.norm = nn.Identity()
-        out_channels = self.out_channels
         self.final = PeriodicConv2D(
-            hidden_channels, out_channels, kernel_size=7, padding=3
+            hidden_channels,
+            out_channels,
+            kernel_size=7,
+            padding=3
         )
 
-    def predict(self, x):
-        if len(x.shape) == 5:  # history
-            x = x.flatten(1, 2)
-        # x.shape [128, 1, 32, 64]
-        x = self.image_proj(x)  # [128, 128, 32, 64]
-
-        for m in self.blocks:
-            x = m(x)
-
-        pred = self.final(self.activation(self.norm(x)))  # pred.shape [128, 50, 32, 64]
-
-        return pred
-
-    def forward(
-        self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat, log_postfix
-    ):
-        # B, C, H, W
-        pred = self.predict(x)
-        return (
-            [
-                m(pred, y, out_variables, lat=lat, log_postfix=log_postfix)
-                for m in metric
-            ],
-            x,
-        )
-
-    def evaluate(
-        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
-    ):
-        pred = self.predict(x)
-        return [
-            m(pred, y, transform, out_variables, lat, clim, log_postfix)
-            for m in metrics
-        ], pred
+    def forward(self, x):
+        if len(x.shape) == 5: # x.shape = [B,T,C,H,W]
+            x = x.flatten(1,2)
+        # x.shape = [B,T*C,H,W]
+        x = self.image_proj(x)
+        for block in self.blocks:
+            x = block(x)
+        yhat = self.final(self.activation(self.norm(x)))
+        # yhat.shape = [B,C,H,W]
+        return yhat

@@ -1,5 +1,11 @@
+# Local application
+from .registry import register
+
+# Third party
 from torch import nn
 
+
+@register("linear_regression")
 class LinearRegression(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()

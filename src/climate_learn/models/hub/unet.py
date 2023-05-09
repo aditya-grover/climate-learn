@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 import torch
 from torch import nn
 from torch.distributions.normal import Normal
-from .cnn_blocks import (
+from .components.cnn_blocks import (
     PeriodicConv2D,
     DownBlock,
     UpBlock,

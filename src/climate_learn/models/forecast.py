@@ -38,10 +38,7 @@ class ForecastLitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             loss = lf(yhat, y)
-            if hasattr(lf, "name"):
-                name = lf.name
-            else:
-                name = f"loss_{i}"
+            name = getattr(lf, "name", f"loss_{i}")
             loss_dict[f"train/{name}"] = loss
         self.log_dict(
             loss_dict,
@@ -65,10 +62,7 @@ class ForecastLitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             loss = lf(yhat, y)
-            if hasattr(lf, "name"):
-                name = lf.name
-            else:
-                name = f"loss_{i}"
+            name = getattr(lf, "name", f"loss_{i}")
             loss_dict[f"{stage}/{name}"] = loss
         self.log_dict(
             loss_dict,

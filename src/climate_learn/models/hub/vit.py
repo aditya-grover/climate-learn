@@ -13,7 +13,7 @@
 import torch
 import torch.nn as nn
 from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_
-from .utils.pos_embed import get_2d_sincos_pos_embed
+from .components.pos_embed import get_2d_sincos_pos_embed
 
 
 class VisionTransformer(nn.Module):
