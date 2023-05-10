@@ -1,3 +1,3 @@
 # Local application
 from .metrics import *
-from .registry import METRICS_REGISTRY
+from .utils import METRICS_REGISTRY, MetricsMetaInfo

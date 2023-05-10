@@ -1,5 +1,5 @@
 # Standard library
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 # Third party
 import torch
@@ -15,7 +15,10 @@ class LitModule(pl.LightningModule):
         lr_scheduler: LRScheduler._LRScheduler,
         train_loss: Callable,
         val_loss: List[Callable],
-        test_loss: List[Callable]
+        test_loss: List[Callable],
+        train_target_transform: Optional[Callable] = None,
+        val_target_transforms: Optional[List[Callable]] = None,
+        test_target_transforms: Optional[List[Callable]] = None
     ):
         super().__init__()
         self.net = net
@@ -24,6 +27,9 @@ class LitModule(pl.LightningModule):
         self.train_loss = train_loss
         self.val_loss = val_loss
         self.test_loss = test_loss
+        self.train_target_transform = train_target_transform
+        self.val_target_transform = val_target_transforms
+        self.test_target_transform = test_target_transforms
 
     def forward(self, x):
         return self.net(x)
@@ -31,6 +37,9 @@ class LitModule(pl.LightningModule):
     def training_step(self, batch: Any, batch_idx: int):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
+        if self.train_target_transform:
+            yhat = self.train_target_transform(yhat)
+            y = self.train_target_transform(y)
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")
         if losses.dim() == 0:  # aggregate loss only
@@ -50,18 +59,27 @@ class LitModule(pl.LightningModule):
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int):
-        self.evaluate(batch)
+        self.evaluate(batch, "val")
 
     def test_step(self, batch: Any, batch_idx: int):
-        self.evaluate(batch,)
+        self.evaluate(batch, "test")
     
-    def evaluate(self, batch):
+    def evaluate(self, batch, stage):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
         loss_fns = self.val_loss
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
-            losses = lf(yhat, y)
+            if stage == "val" and self.val_target_transform is not None:
+                yhat_T = self.val_target_transform[i](yhat)
+                y_T = self.val_target_transform[i](y)
+            elif stage == "test" and self.test_target_transform is not None:
+                yhat_T = self.test_target_transform[i](yhat)
+                y_T = self.val_target_transform[i](y)
+            else:
+                yhat_T = yhat
+                y_T = y
+            losses = lf(yhat_T, y_T)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[loss_name] = losses

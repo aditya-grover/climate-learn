@@ -1,1 +1,1 @@
-from .loaders import load_forecasting_module, load_downscaling_module
+from .loaders import *

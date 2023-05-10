@@ -14,3 +14,12 @@ class MetricsMetaInfo:
     lat: npt.ArrayLike
     lon: npt.ArrayLike
     climatology: torch.Tensor
+
+
+METRICS_REGISTRY = {}
+def register(name):
+    def decorator(metric_class):
+        METRICS_REGISTRY[name] = metric_class
+        metric_class.name = name
+        return metric_class
+    return decorator

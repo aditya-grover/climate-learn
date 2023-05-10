@@ -2,23 +2,15 @@
 from typing import Optional, Union
 
 # Local application
-from .utils import MetricsMetaInfo
+from .utils import MetricsMetaInfo, register
 
 # Third party
 import numpy as np
 import torch
 import torch.nn as nn
 
-# Decorator for assigning canonical names to the metrics
-# which are used by the Lightning logger
-def register(name):
-    def wrapper(metric_class: Metric):
-        metric_class.name = name
-        return metric_class
-    return wrapper
 
-
-class Metric(nn.Module):
+class Metric:
     """Parent class for all ClimateLearn metrics."""
     def __init__(
         self,
@@ -35,11 +27,10 @@ class Metric(nn.Module):
         :param metainfo: Optional meta-information used by some metrics.
         :type metainfo: MetricsMetaInfo|None
         """
-        super().__init__()
         self.aggregate_only = aggregate_only
         self.metainfo = metainfo
 
-    def forward(
+    def __call__(
         self,
         pred: torch.Tensor,
         target: torch.Tensor
@@ -65,7 +56,7 @@ class LatitudeWeightedMetric(Metric):
         lat_weights = torch.from_numpy(lat_weights).view(1, 1, -1, 1)
         self.lat_weights = lat_weights
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -86,7 +77,7 @@ class ClimatologyBasedMetric(Metric):
         climatology = climatology.unsqueeze(0)
         self.climatology = climatology
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -96,33 +87,31 @@ class ClimatologyBasedMetric(Metric):
         
         Casts climatology to the same device as `pred`.
         """
-        self.climatology = self.climatology.to(device=pred.device)    
+        self.climatology = self.climatology.to(device=pred.device)
 
 
-class Denormalized(nn.Module):
-    """
-    Wrapper for metrics which require denormalized inputs.
-    """
-    def __init__(self, denorm: nn.Module, metric: Metric):
-        super().__init__()
-        self.denorm = denorm
+class TransformedMetric:
+    """Class which composes transforms and a metric."""
+    def __init__(self, transforms, metric):
+        self.transforms = transforms
         self.metric = metric
         self.name = metric.name
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
-    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
-        pred = self.denorm(pred)
-        target = self.denorm(target)
+    ) -> None:
+        for transform in self.transforms:
+            pred = transform(pred)
+            target = transform(target)
         return self.metric(pred, target)
 
 
 @register("mse")
 class MSE(Metric):
     """Computes standard mean-squared error."""
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -152,7 +141,7 @@ class MSE(Metric):
 @register("lat_mse")
 class LatWeightedMSE(LatitudeWeightedMetric):
     """Computes latitude-weighted mean-squared error."""
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -170,7 +159,7 @@ class LatWeightedMSE(LatitudeWeightedMetric):
             MSE, and the preceding elements are the channel-wise MSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().forward(pred, target)
+        super().__call__(pred, target)
         error = (pred - target).square()
         error = error * self.lat_weights
         loss = error.mean()
@@ -184,7 +173,7 @@ class LatWeightedMSE(LatitudeWeightedMetric):
 @register("rmse")
 class RMSE(Metric):
     """Computes standard root mean-squared error."""
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -214,7 +203,7 @@ class RMSE(Metric):
 @register("lat_rmse")
 class LatWeightedRMSE(LatitudeWeightedMetric):
     """Computes latitude-weighted root mean-squared error."""
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -232,7 +221,7 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().forward(pred, target)
+        super().__call__(pred, target)
         error = (pred - target).square()
         error = error * self.lat_weights
         loss = error.mean().sqrt()
@@ -251,7 +240,7 @@ class ACC(ClimatologyBasedMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -271,7 +260,7 @@ class ACC(ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().forward(self, pred, target)
+        super().__call__(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
         pred_prime = pred - pred.mean([0,2,3], keepdims=True)
@@ -296,7 +285,7 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
         LatitudeWeightedMetric.__init__(self, *args, **kwargs)
         ClimatologyBasedMetric.__init__(self, *args, **kwargs)
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -316,8 +305,8 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        LatitudeWeightedMetric.forward(self, pred, target)
-        ClimatologyBasedMetric.forward(self, pred, target)
+        LatitudeWeightedMetric.__call__(self, pred, target)
+        ClimatologyBasedMetric.__call__(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
         pred_prime = pred - pred.mean([0,2,3], keepdims=True)
@@ -343,7 +332,7 @@ class Pearson(Metric):
         super().__init__(args, kwargs)
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
@@ -390,7 +379,7 @@ class Pearson(Metric):
 @register("mean_bias")
 class MeanBias(Metric):
     """Computes the standard mean bias."""
-    def forward(
+    def __call__(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor]
