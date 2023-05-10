@@ -1,9 +1,8 @@
-from math import log
-from typing import List, Tuple, Union
+# Standard library
+from typing import Iterable
 
-import torch
-from torch import nn
-from torch.distributions.normal import Normal
+# Local application
+from .utils import register
 from .components.cnn_blocks import (
     PeriodicConv2D,
     DownBlock,
@@ -13,30 +12,30 @@ from .components.cnn_blocks import (
     Upsample,
 )
 
-# Large based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
-# MIT License
+# Third party
+import torch
+from torch import nn
 
 
+@register("unet")
 class Unet(nn.Module):
     def __init__(
         self,
         in_channels,
+        out_channels,
         history=1,
         hidden_channels=64,
         activation="leaky",
-        out_channels=None,
         norm: bool = True,
         dropout: float = 0.1,
-        ch_mults: Union[Tuple[int, ...], List[int]] = (1, 2, 2, 4),
-        is_attn: Union[Tuple[bool, ...], List[bool]] = (False, False, False, False),
+        ch_mults: Iterable[int] = (1, 2, 2, 4),
+        is_attn: Iterable[bool] = (False, False, False, False),
         mid_attn: bool = False,
         n_blocks: int = 2,
     ) -> None:
         super().__init__()
         self.prob_type = None
-        self.in_channels = in_channels
-        if out_channels is None:
-            out_channels = in_channels
+        self.in_channels = in_channels * history
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
 
@@ -51,19 +50,16 @@ class Unet(nn.Module):
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
 
-        # Number of resolutions
-        n_resolutions = len(ch_mults)
-
-        insize = self.in_channels * history
-        n_channels = hidden_channels
-        # Project image into feature map
-        self.image_proj = PeriodicConv2D(insize, n_channels, kernel_size=7, padding=3)
+        self.image_proj = PeriodicConv2D(
+            self.in_channels, self.hidden_channels, kernel_size=7, padding=3
+        )
 
         # #### First half of U-Net - decreasing resolution
         down = []
         # Number of channels
-        out_channels = in_channels = n_channels
+        out_channels = in_channels = self.hidden_channels
         # For each resolution
+        n_resolutions = len(ch_mults)
         for i in range(n_resolutions):
             # Number of output channels at this resolution
             out_channels = in_channels * ch_mults[i]
@@ -136,24 +132,23 @@ class Unet(nn.Module):
         self.up = nn.ModuleList(up)
 
         if norm:
-            self.norm = nn.BatchNorm2d(n_channels)
+            self.norm = nn.BatchNorm2d(self.hidden_channels)
         else:
             self.norm = nn.Identity()
-        out_channels = self.out_channels
-        self.final = PeriodicConv2D(in_channels, out_channels, kernel_size=7, padding=3)
+        self.final = PeriodicConv2D(
+            in_channels, self.out_channels, kernel_size=7, padding=3
+        )
 
-    def predict(self, x):
-        if len(x.shape) == 5:  # history
+    def forward(self, x):
+        if len(x.shape) == 5:  # x.shape = [B,T,C,H,W]
             x = x.flatten(1, 2)
+        # x.shape = [B,T*C,H,W]
         x = self.image_proj(x)
-
         h = [x]
         for m in self.down:
             x = m(x)
             h.append(x)
-
         x = self.middle(x)
-
         for m in self.up:
             if isinstance(m, Upsample):
                 x = m(x)
@@ -162,29 +157,5 @@ class Unet(nn.Module):
                 s = h.pop()
                 x = torch.cat((x, s), dim=1)
                 x = m(x)
-
-        pred = self.final(self.activation(self.norm(x)))
-
-        return pred
-
-    def forward(
-        self, x: torch.Tensor, y: torch.Tensor, out_variables, metric, lat, log_postfix
-    ):
-        # B, C, H, W
-        pred = self.predict(x)
-        return (
-            [
-                m(pred, y, out_variables, lat=lat, log_postfix=log_postfix)
-                for m in metric
-            ],
-            x,
-        )
-
-    def evaluate(
-        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
-    ):
-        pred = self.predict(x)
-        return [
-            m(pred, y, transform, out_variables, lat, clim, log_postfix)
-            for m in metrics
-        ], pred
+        yhat = self.final(self.activation(self.norm(x)))
+        return yhat

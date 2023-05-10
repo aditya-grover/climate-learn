@@ -1,10 +1,12 @@
 # Local application
 from .components.cnn_blocks import PeriodicConv2D, ResidualBlock
+from .utils import register
 
 # Third party
 from torch import nn
 
 
+@register("resnet")
 class ResNet(nn.Module):
     def __init__(
         self,
