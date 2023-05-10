@@ -35,7 +35,7 @@ class Trainer:
             filename="epoch_{epoch:03d}",
             auto_insert_metric_name=False,
         )
-        summary_callback = RichModelSummary(max_depth=-1)
+        summary_callback = RichModelSummary(max_depth=2)
         progress_callback = RichProgressBar()
 
         callbacks = [

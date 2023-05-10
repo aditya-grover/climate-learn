@@ -1,11 +1,7 @@
-# Local application
-from .registry import register
-
 # Third party
 from torch import nn
 
 
-@register("climatology")
 class Climatology(nn.Module):
     def __init__(self, clim):
         super().__init__()

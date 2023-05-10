@@ -1,28 +1,24 @@
 # Local application
 from .components.cnn_blocks import PeriodicConv2D, ResidualBlock
-from .registry import register
 
 # Third party
 from torch import nn
 
 
-@register("resnet")
 class ResNet(nn.Module):
     def __init__(
         self,
         in_channels,
+        out_channels,
         history=1,
         hidden_channels=128,
         activation="leaky",
-        out_channels=None,
         norm: bool = True,
         dropout: float = 0.1,
         n_blocks: int = 2,
     ) -> None:
         super().__init__()
-        self.in_channels = in_channels
-        if out_channels is None:
-            out_channels = in_channels
+        self.in_channels = in_channels * history
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
 
@@ -37,9 +33,8 @@ class ResNet(nn.Module):
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
 
-        insize = self.in_channels * history
         self.image_proj = PeriodicConv2D(
-            insize,
+            self.in_channels,
             hidden_channels,
             kernel_size=7,
             padding=3

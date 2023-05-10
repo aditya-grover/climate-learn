@@ -1,11 +1,7 @@
-# Local application
-from .registry import register
-
 # Third party
 from torch import nn
 
 
-@register("persistence")
 class Persistence(nn.Module):
     def __init__(self):
         super().__init__()

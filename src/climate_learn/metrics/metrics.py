@@ -2,12 +2,20 @@
 from typing import Optional, Union
 
 # Local application
-from .utils import register, MetricsMetaInfo
+from .utils import MetricsMetaInfo
 
 # Third party
 import numpy as np
 import torch
 import torch.nn as nn
+
+# Decorator for assigning canonical names to the metrics
+# which are used by the Lightning logger
+def register(name):
+    def wrapper(metric_class: Metric):
+        metric_class.name = name
+        return metric_class
+    return wrapper
 
 
 class Metric(nn.Module):
