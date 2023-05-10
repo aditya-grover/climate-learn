@@ -51,7 +51,7 @@ class Metric(nn.Module):
 class LatitudeWeightedMetric(Metric):
     """Parent class for latitude-weighted metrics."""
     def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
         lat_weights = lat_weights / lat_weights.mean()
         lat_weights = torch.from_numpy(lat_weights).view(1, 1, -1, 1)
@@ -67,13 +67,13 @@ class LatitudeWeightedMetric(Metric):
         
         Casts latitude weights to the same device as `pred`.
         """
-        self.lat_weights.to(device=pred.device)
+        self.lat_weights = self.lat_weights.to(device=pred.device)
 
 
 class ClimatologyBasedMetric(Metric):
     """Parent class for metrics that use climatology."""
     def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         climatology = self.metainfo.climatology
         climatology = climatology.unsqueeze(0)
         self.climatology = climatology
@@ -88,29 +88,24 @@ class ClimatologyBasedMetric(Metric):
         
         Casts climatology to the same device as `pred`.
         """
-        self.climatology.to(device=pred.device)    
+        self.climatology = self.climatology.to(device=pred.device)    
 
 
-@register("denorm")
 class Denormalized(nn.Module):
     """
-    Wrapper for metrics which require denormalized inputs. The denormalization
-    can be lazily initialized.
+    Wrapper for metrics which require denormalized inputs.
     """
-    def __init__(self, metric: Metric, denorm: Optional[nn.Module] = None):
-        self.metric = metric
+    def __init__(self, denorm: nn.Module, metric: Metric):
+        super().__init__()
         self.denorm = denorm
+        self.metric = metric
+        self.name = metric.name
 
     def forward(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
-        target: Union[torch.FloatTensor, torch.DoubleTensor],
-        denorm: Optional[nn.Module] = None
+        target: Union[torch.FloatTensor, torch.DoubleTensor]
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
-        if self.denorm is None and denorm is None:
-            raise RuntimeError("denormalization was not set")
-        elif self.denorm is None:
-            self.denorm = denorm
         pred = self.denorm(pred)
         target = self.denorm(target)
         return self.metric(pred, target)
@@ -246,7 +241,7 @@ class ACC(ClimatologyBasedMetric):
     Computes standard anomaly correlation coefficient.
     """
     def __init__(self, *args, **kwargs):
-        super().__init__(self, args, kwargs)
+        super().__init__(self, *args, **kwargs)
 
     def forward(
         self,
@@ -271,11 +266,11 @@ class ACC(ClimatologyBasedMetric):
         super().forward(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
-        pred_prime = pred - pred.mean([0,2,3])
-        target_prime = target - target.mean([0,2,3])
-        numer = (pred_prime * target_prime).sum()
-        denom1 = pred_prime.square().sum()
-        denom2 = target_prime.square().sum()
+        pred_prime = pred - pred.mean([0,2,3], keepdims=True)
+        target_prime = target - target.mean([0,2,3], keepdims=True)
+        numer = (pred_prime * target_prime).sum([0,2,3])
+        denom1 = pred_prime.square().sum([0,2,3])
+        denom2 = target_prime.square().sum([0,2,3])
         per_channel_losses = numer / (denom1 * denom2).sqrt()
         loss = per_channel_losses.mean()
         if not self.aggregate_only:
@@ -290,8 +285,8 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
     Computes latitude-weighted anomaly correlation coefficient.
     """
     def __init__(self, *args, **kwargs):
-        LatitudeWeightedMetric.__init__(self, args, kwargs)
-        ClimatologyBasedMetric.__init__(self, args, kwargs)
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
 
     def forward(
         self,
@@ -317,11 +312,11 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
         ClimatologyBasedMetric.forward(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
-        pred_prime = pred - pred.mean([0,2,3])
-        target_prime = target - target.mean([0,2,3])
-        numer = (self.lat_weights * pred_prime * target_prime).sum()
-        denom1 = (self.lat_weights * pred_prime.square()).sum()
-        denom2 = (self.lat_weights * target_prime.square()).sum()
+        pred_prime = pred - pred.mean([0,2,3], keepdims=True)
+        target_prime = target - target.mean([0,2,3], keepdims=True)
+        numer = (self.lat_weights * pred_prime * target_prime).sum([0,2,3])
+        denom1 = (self.lat_weights * pred_prime.square()).sum([0,2,3])
+        denom2 = (self.lat_weights * target_prime.square()).sum([0,2,3])
         per_channel_losses = numer / (denom1 * denom2).sqrt()
         loss = per_channel_losses.mean()
         if not self.aggregate_only:

@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import (
 )
 
 import logging
+from warnings import warn
 
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
@@ -59,17 +60,30 @@ class Trainer:
 
             callbacks.append(early_stop_callback)
 
-        self.trainer = LitTrainer(
-            logger=logger,
-            accelerator=accelerator,
-            devices=devices,
-            precision=precision,
-            max_epochs=max_epochs,
-            callbacks=callbacks,
-            strategy="ddp_spawn",
-        )
+        try:
+            self.trainer = LitTrainer(
+                logger=logger,
+                accelerator=accelerator,
+                devices=devices,
+                precision=precision,
+                max_epochs=max_epochs,
+                callbacks=callbacks,
+                strategy="ddp_spawn",
+            )
+        except:
+            warn("Could not initialize with DPP spawn strategy, using None")
+            self.trainer = LitTrainer(
+                logger=logger,
+                accelerator=accelerator,
+                devices=devices,
+                precision=precision,
+                max_epochs=max_epochs,
+                callbacks=callbacks
+            )
 
     def fit(self, model_module, data_module):
+        if model_module.optimizer is None:
+            raise RuntimeError("model module has no optimizer - maybe it has no parameters?")
         self.trainer.fit(model_module, data_module)
 
     def test(self, model_module, data_module):

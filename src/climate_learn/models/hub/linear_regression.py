@@ -5,7 +5,7 @@ from .registry import register
 from torch import nn
 
 
-@register("linear_regression")
+@register("linear-regression")
 class LinearRegression(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()

@@ -1,5 +1,6 @@
 # Standard library
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Union
+import warnings
 
 # Local application
 from .data import IterDataModule, DataModule
@@ -14,16 +15,14 @@ from .metrics import (
     Pearson,
     MeanBias
 )
-from .models import ForecastLitModule, DownscaleLitModule
+from .models import LitModule
 from .models.hub import MODEL_REGISTRY
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 
 # Third party
 import torch
+import torch.nn as nn
 from torchvision import transforms
-
-PREDEFINED_MODEL = 0
-USER_SPECIFIED_NET = 1
 
 
 def load_forecasting_module(
@@ -34,17 +33,17 @@ def load_forecasting_module(
     optim: Optional[str] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
     lr_kwargs: Optional[Dict[str, Any]] = None,
-    net: Optional[torch.nn.Module] = None,
-    optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Optional[Union[Callable, List[Callable]]] = None,
-    val_loss: Optional[Union[Callable, List[Callable]]] = None,
-    test_loss: Optional[Union[Callable, List[Callable]]] = None
+    net: Optional[nn.Module] = None,
+    optimizer: Optional[Dict[str, torch.optim.Optimizer]] = None,
+    train_loss: Optional[Iterable[Callable]] = None,
+    val_loss: Optional[Iterable[Callable]] = None,
+    test_loss: Optional[Iterable[Callable]] = None
 ):
     in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
     out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
     history = data_module.hparams.train_dataset_args.task_args.history
-    requested_model = _validate_model_kwargs(preset, model, model_kwargs, net)
-    if requested_model == PREDEFINED_MODEL:
+    model = _validate_model_kwargs(preset, model, model_kwargs, net)
+    if model:
         model_cls = MODEL_REGISTRY.get(model, None)
         if model_cls is None:
             raise NotImplementedError(
@@ -52,7 +51,7 @@ def load_forecasting_module(
                 " please raise an issue at"
                 " https://github.com/aditya-grover/climate-learn/issues."
             )
-        elif model == "climatology":
+        if model == "climatology":
             train_climatology = data_module.get_climatology(split="train")
             train_climatology = torch.stack(tuple(train_climatology.values()))
             net = model_cls(train_climatology)
@@ -66,10 +65,10 @@ def load_forecasting_module(
         elif model == "linear-regression":
             train_climatology = data_module.get_climatology(split="train")
             train_climatology = torch.stack(tuple(train_climatology.values()))
-            in_features = train_climatology.shape.flatten() * history
+            in_features = train_climatology.flatten().shape * history
             test_climatology = data_module.get_climatology(split="test")
-            test_climatology = torch.stack(tuple(train_climatology.values()))
-            out_features = test_climatology.shape.flatten()
+            test_climatology = torch.stack(tuple(test_climatology.values()))
+            out_features = test_climatology.flatten().shape
             net = model_cls(in_features, out_features)
         elif model == "rasp-theurey-2020":
             net = model_cls(
@@ -90,7 +89,7 @@ def load_forecasting_module(
             *data_module.get_lat_lon(), 
             _get_climatology(data_module, "train")
         )
-        train_loss = LatWeightedMSE(metainfo=train_metainfo)
+        train_loss = nn.ModuleList([LatWeightedMSE(metainfo=train_metainfo)])
     if val_loss is None:
         val_metainfo = MetricsMetaInfo(
             in_vars,
@@ -98,14 +97,14 @@ def load_forecasting_module(
             *data_module.get_lat_lon(),
             _get_climatology(data_module, "val")
         )
-        val_loss = [
+        val_loss = nn.ModuleList([
             LatWeightedMSE(metainfo=val_metainfo),
             LatWeightedRMSE(metainfo=val_metainfo),
             Denormalized(
                 _get_denorm(data_module),
                 LatWeightedACC(metainfo=val_metainfo)
             )
-        ]
+        ])
     if test_loss is None:
         test_metainfo = MetricsMetaInfo(
             in_vars,
@@ -113,14 +112,14 @@ def load_forecasting_module(
             *data_module.get_lat_lon(),
             _get_climatology(data_module, "test")
         )
-        test_loss = [
+        test_loss = nn.ModuleList([
             LatWeightedRMSE(metainfo=test_metainfo),
             Denormalized(
                 _get_denorm(data_module),
                 LatWeightedACC(metainfo=test_metainfo)
             )
-        ]
-    model_module = ForecastLitModule(net, optimizer, train_loss, val_loss, test_loss)
+        ])
+    model_module = LitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
 
 def load_downscaling_module(
@@ -131,16 +130,16 @@ def load_downscaling_module(
     optim: Optional[str] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
     lr_kwargs: Optional[Dict[str, Any]] = None,
-    net: Optional[torch.nn.Module] = None,
-    optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
-    train_loss: Optional[Union[Callable, List[Callable]]] = None,
-    val_loss: Optional[Union[Callable, List[Callable]]] = None,
-    test_loss: Optional[Union[Callable, List[Callable]]] = None
+    net: Optional[nn.Module] = None,
+    optimizer: Optional[Dict[str, torch.optim.Optimizer]] = None,
+    train_loss: Optional[Iterable[Callable]] = None,
+    val_loss: Optional[Iterable[Callable]] = None,
+    test_loss: Optional[Iterable[Callable]] = None
 ):
     in_vars = data_module.hparams.train_dataset_args.task_args.in_vars
     out_vars = data_module.hparams.train_dataset_args.task_args.out_vars
-    requested_model = _validate_model_kwargs(preset, model, model_kwargs, net)
-    if requested_model == PREDEFINED_MODEL:
+    model = _validate_model_kwargs(preset, model, model_kwargs, net)
+    if model:
         model_cls = MODEL_REGISTRY.get(model, None)
         if model_cls is None:
             raise NotImplementedError(
@@ -161,8 +160,8 @@ def load_downscaling_module(
             out_vars,
             *data_module.get_lat_lon(), 
             _get_climatology(data_module, "train")
-        )
-        train_loss = MSE(metainfo=train_metainfo)
+        )        
+        train_loss = nn.ModuleList([MSE(metainfo=train_metainfo)])
     if val_loss is None:
         val_metainfo = MetricsMetaInfo(
             in_vars,
@@ -170,7 +169,7 @@ def load_downscaling_module(
             *data_module.get_lat_lon(),
             _get_climatology(data_module, "val")
         )
-        val_loss = [
+        val_loss = nn.ModuleList([
             RMSE(metainfo=val_metainfo),
             Denormalized(
                 _get_denorm(data_module),
@@ -180,7 +179,7 @@ def load_downscaling_module(
                 _get_denorm(data_module),
                 MeanBias(metainfo=val_metainfo)
             )
-        ]
+        ])
     if test_loss is None:
         test_metainfo = MetricsMetaInfo(
             in_vars,
@@ -188,7 +187,7 @@ def load_downscaling_module(
             *data_module.get_lat_lon(),
             _get_climatology(data_module, "test")
         )
-        test_loss = [
+        test_loss = nn.ModuleList([
             RMSE(metainfo=test_metainfo),
             Denormalized(
                 _get_denorm(data_module),
@@ -198,8 +197,8 @@ def load_downscaling_module(
                 _get_denorm(data_module),
                 MeanBias(metainfo=test_metainfo)
             )
-        ]
-    model_module = DownscaleLitModule(net, optimizer, train_loss, val_loss, test_loss)
+        ])
+    model_module = LitModule(net, optimizer, train_loss, val_loss, test_loss)
     return model_module
 
 def _validate_model_kwargs(
@@ -212,16 +211,13 @@ def _validate_model_kwargs(
         raise RuntimeError("Please specify one of 'preset', 'model', or 'net'")
     if preset:
         if model is not None:
-            raise RuntimeWarning("Ignoring 'model' since 'preset' was specified")
+            warnings.warn("Ignoring 'model' since 'preset' was specified")
         model = preset
     if model and net:
-        raise RuntimeWarning("Ignoring 'net' since one of 'preset' or 'model' was specified")
+        warnings.warn("Ignoring 'net' since one of 'preset' or 'model' was specified")
     if net and model_kwargs:
-        raise RuntimeWarning("Ignoring 'model_kwargs' since 'net' was specified")
-    if model is not None:
-        return PREDEFINED_MODEL
-    elif net is not None:
-        return USER_SPECIFIED_NET
+        warnings.warn("Ignoring 'model_kwargs' since 'net' was specified")
+    return model
 
 def _load_optimizer(
     net: torch.nn.Module,
@@ -230,14 +226,19 @@ def _load_optimizer(
     lr_kwargs: Optional[Dict[str, Any]] = None,
     optimizer: Optional[Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]]] = None,
 ):
+    if len(list(net.parameters())) == 0:
+        warnings.warn("Net has no trainable parameters")
+        return None
     if (optim is not None) and (optimizer is not None):
         raise RuntimeError("Please specify one of 'optim' or 'optimizer'")
     if optim and optimizer:
-        raise RuntimeWarning("Ignoring 'optimizer' since 'optim' was specified")
+        warnings.warn("Ignoring 'optimizer' since 'optim' was specified")
     if optimizer and optim_kwargs:
-        raise RuntimeWarning("Ignoring 'optim_kwargs' since 'optimizer' was specified")
+        warnings.warn("Ignoring 'optim_kwargs' since 'optimizer' was specified")
     if lr_kwargs and optimizer:
-        raise RuntimeWarning("Ignoring 'lr_kwargs' since 'optimizer was specified")
+        warnings.warn("Ignoring 'lr_kwargs' since 'optimizer was specified")
+    if optim_kwargs is None:
+        optim_kwargs = {}
     if optim.startswith("SGD"):
         optimizer = torch.optim.SGD(net.parameters(), **optim_kwargs)
     elif optim.startswith("Adam"):
@@ -251,6 +252,8 @@ def _load_optimizer(
             " https://github.com/aditya-grover/climate-learn/issues"
         )
     if optim.endswith("CosineAnnealingLR"):
+        if lr_kwargs is None:
+            lr_kwargs = {}
         lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **lr_kwargs)
         optimizer = {
             "optimizer": optimizer,

@@ -5,7 +5,6 @@ from typing import List
 # Local application
 import numpy.typing as npt
 import torch
-import torch.nn as nn
 
 
 @dataclass
@@ -15,7 +14,6 @@ class MetricsMetaInfo:
     lat: npt.ArrayLike
     lon: npt.ArrayLike
     climatology: torch.Tensor
-    denormalization: nn.Module
 
 
 METRICS_REGISTRY = {}

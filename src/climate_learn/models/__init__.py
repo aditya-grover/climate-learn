@@ -1,2 +1,1 @@
-from .forecast import ForecastLitModule
-from .downscale import DownscaleLitModule
+from .module import LitModule
