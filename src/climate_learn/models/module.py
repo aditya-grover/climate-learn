@@ -1,8 +1,9 @@
 # Standard library
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List
 
 # Third party
 import torch
+import torch.optim.lr_scheduler as LRScheduler
 import pytorch_lightning as pl
 
 
@@ -10,7 +11,8 @@ class LitModule(pl.LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: Union[torch.optim.Optimizer, Dict[str, torch.optim.Optimizer]],
+        optimizer: torch.optim.Optimizer,
+        lr_scheduler: LRScheduler._LRScheduler,
         train_loss: Callable,
         val_loss: List[Callable],
         test_loss: List[Callable]
@@ -18,11 +20,10 @@ class LitModule(pl.LightningModule):
         super().__init__()
         self.net = net
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.train_loss = train_loss
         self.val_loss = val_loss
         self.test_loss = test_loss
-        # Index of the train loss which is the optimization objective
-        self.optim_objective_idx = 0
 
     def forward(self, x):
         return self.net(x)
@@ -79,4 +80,6 @@ class LitModule(pl.LightningModule):
         return loss_dict
 
     def configure_optimizers(self):
-        return self.optimizer
+        if self.lr_scheduler is None:
+            return self.optimizer
+        return {"optimizer": self.optimizer, "lr_scheduler": self.lr_scheduler}
