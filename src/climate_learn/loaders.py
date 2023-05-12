@@ -214,9 +214,7 @@ def load_preset(task, data_module, preset):
         history, in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
         if preset.lower() == "climatology":
-            train_climatology = data_module.get_climatology(split="train")
-            train_climatology = torch.stack(tuple(train_climatology.values()))
-            model = Climatology(train_climatology)
+            model = Climatology(get_climatology(data_module, "train"))
             optimizer = lr_scheduler = None
         elif preset == "persistence":
             if not set(out_vars).issubset(in_vars):
