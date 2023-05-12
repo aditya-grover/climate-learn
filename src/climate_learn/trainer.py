@@ -18,7 +18,15 @@ logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
 class Trainer(pl.Trainer):
     """Wrapper for Lightning's trainer."""
-    def __init__(self, early_stopping=None, patience=0, summary_depth=-1, seed=0, **kwargs):
+
+    def __init__(
+        self,
+        early_stopping=None,
+        patience=0,
+        summary_depth=-1,
+        seed=0,
+        **kwargs
+    ):
         pl.seed_everything(seed)
         if "accelerator" not in kwargs and torch.cuda.is_available():
             print(
@@ -44,9 +52,7 @@ class Trainer(pl.Trainer):
             ]
             if early_stopping:
                 early_stop_callback = EarlyStopping(
-                    monitor=early_stopping,
-                    patience=patience,
-                    verbose=False
+                    monitor=early_stopping, patience=patience, verbose=False
                 )
                 callbacks.append(early_stop_callback)
         if "strategy" not in kwargs:

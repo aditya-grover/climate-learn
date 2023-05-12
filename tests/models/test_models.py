@@ -68,8 +68,5 @@ class TestDownscalingModels:
 
     @pytest.mark.parametrize("mode", ["linear", "bilinear", "nearest"])
     def test_interpolation(self, mode):
-        model = Interpolation(
-            (self.in_width, self.in_height),
-            mode
-        )
+        model = Interpolation((self.in_width, self.in_height), mode)
         assert model(self.x).shape == self.y.shape
