@@ -20,7 +20,7 @@ from .metrics import MetricsMetaInfo, METRICS_REGISTRY
 # Third party
 import torch
 import torch.nn as nn
-import torch.optim.lr_scheduler as LRScheduler
+from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 
 
 def load_model_module(
@@ -31,7 +31,7 @@ def load_model_module(
     model_kwargs: Optional[Dict[str, Any]] = None,
     optim: Optional[Union[str, torch.optim.Optimizer]] = None,
     optim_kwargs: Optional[Dict[str, Any]] = None,
-    sched: Optional[Union[str, LRScheduler._LRScheduler]] = None,
+    sched: Optional[Union[str, LRScheduler]] = None,
     sched_kwargs: Optional[Dict[str, Any]] = None,
     train_loss: Optional[Union[str, Callable]] = None,
     val_loss: Optional[Union[Iterable[str], Iterable[Callable]]] = None,

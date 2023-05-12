@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 # Third party
 import torch
-import torch.optim.lr_scheduler as LRScheduler
+from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 
 
@@ -12,7 +12,7 @@ class LitModule(pl.LightningModule):
         self,
         net: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        lr_scheduler: LRScheduler._LRScheduler,
+        lr_scheduler: LRScheduler,
         train_loss: Callable,
         val_loss: List[Callable],
         test_loss: List[Callable],
