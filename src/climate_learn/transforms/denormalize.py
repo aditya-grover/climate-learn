@@ -15,6 +15,8 @@ class Denormalize:
     def __init__(self, data_module: Union[DataModule, IterDataModule]):
         super().__init__()
         norm = data_module.get_out_transforms()
+        if norm is None:
+            raise RuntimeError("norm was 'None', did you setup the data module?")
         # Hotfix to work with dict style data
         mean_norm = torch.tensor([norm[k].mean for k in norm.keys()])
         std_norm = torch.tensor([norm[k].std for k in norm.keys()])
