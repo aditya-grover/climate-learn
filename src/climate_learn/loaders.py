@@ -95,7 +95,7 @@ def load_model_module(
         print(f"Loading training loss: {train_loss}")
         clim = get_climatology(data_module, "train")
         metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-        train_loss = load_loss(train_loss, metainfo)
+        train_loss = load_loss(train_loss, True, metainfo)
     elif isinstance(train_loss, Callable):
         print("Using custom training loss")
     else:
@@ -109,7 +109,7 @@ def load_model_module(
         val_losses = []
         for vl in val_loss:
             print(f"Loading validation loss: {vl}")
-            val_losses.append(load_loss(vl, metainfo))
+            val_losses.append(load_loss(vl, False, metainfo))
     elif all([isinstance(vl, Callable) for vl in val_loss]):
         print("Using custom validation losses")
         val_losses = val_loss
@@ -122,7 +122,7 @@ def load_model_module(
         test_losses = []
         for vl in test_loss:
             print(f"Loading test loss: {vl}")
-            test_losses.append(load_loss(vl, metainfo))
+            test_losses.append(load_loss(vl, False, metainfo))
     elif all([isinstance(vl, Callable) for vl in test_loss]):
         print("Using custom test losses")
         test_losses = test_loss
@@ -217,7 +217,7 @@ def load_preset(task, data_module, preset):
             train_climatology = data_module.get_climatology(split="train")
             train_climatology = torch.stack(tuple(train_climatology.values()))
             model = Climatology(train_climatology)
-            optimizer = None
+            optimizer = lr_scheduler = None
         elif preset == "persistence":
             if not set(out_vars).issubset(in_vars):
                 raise RuntimeError(
@@ -254,8 +254,8 @@ def load_preset(task, data_module, preset):
     elif task == "downscaling":
         in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
-        if preset.lower() in ("linear_interpolation", "bilinear_interpolation", "nearest_interpolation"):
-            interpolation_mode = preset.split("_")[0]
+        if preset.lower() in ("linear-interpolation", "bilinear-interpolation", "nearest-interpolation"):
+            interpolation_mode = preset.split("-")[0]
             model = Interpolation(out_height*out_width, interpolation_mode)
             optimizer = lr_scheduler = None
         else:
@@ -312,7 +312,7 @@ def load_lr_scheduler(
         )
     return lr_scheduler
 
-def load_loss(loss_name, metainfo):
+def load_loss(loss_name, aggregate_only, metainfo):
     loss_cls = METRICS_REGISTRY.get(loss_name, None)
     if loss_cls is None:
         raise NotImplementedError(
@@ -321,7 +321,7 @@ def load_loss(loss_name, metainfo):
             " https://gtihub.com/aditya-grover/climate-learn/issues"
         )
     loss = loss_cls(
-        aggregate_only=True,
+        aggregate_only=aggregate_only,
         metainfo=metainfo
     )
     return loss
