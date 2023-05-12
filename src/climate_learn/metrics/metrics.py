@@ -1,5 +1,5 @@
 # Standard Library
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 # Local application
 from .utils import MetricsMetaInfo, register
@@ -14,14 +14,16 @@ class Metric:
     """Parent class for all ClimateLearn metrics."""
 
     def __init__(
-        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
     ):
         r"""
         .. highlight:: python
 
         :param aggregate_only: If false, returns both the aggregate and
             per-channel metrics. Otherwise, returns only the aggregate metric.
-            Default if `False`.
+            Default is `False`.
         :type aggregate_only: bool
         :param metainfo: Optional meta-information used by some metrics.
         :type metainfo: MetricsMetaInfo|None
@@ -45,8 +47,12 @@ class Metric:
 class LatitudeWeightedMetric(Metric):
     """Parent class for latitude-weighted metrics."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
+    ):
+        super().__init__(aggregate_only, metainfo)
         lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
         lat_weights = lat_weights / lat_weights.mean()
         lat_weights = torch.from_numpy(lat_weights).view(1, 1, -1, 1)
@@ -68,8 +74,12 @@ class LatitudeWeightedMetric(Metric):
 class ClimatologyBasedMetric(Metric):
     """Parent class for metrics that use climatology."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
+    ):
+        super().__init__(aggregate_only, metainfo)
         climatology = self.metainfo.climatology
         climatology = climatology.unsqueeze(0)
         self.climatology = climatology
@@ -88,10 +98,10 @@ class ClimatologyBasedMetric(Metric):
 
 
 class TransformedMetric:
-    """Class which composes transforms and a metric."""
+    """Class which composes a transform and a metric."""
 
-    def __init__(self, transforms, metric):
-        self.transforms = transforms
+    def __init__(self, transform: Callable, metric: Metric):
+        self.transform = transform
         self.metric = metric
         self.name = metric.name
 
@@ -100,9 +110,8 @@ class TransformedMetric:
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> None:
-        for transform in self.transforms:
-            pred = transform(pred)
-            target = transform(target)
+        pred = self.transform(pred)
+        target = self.transform(target)
         return self.metric(pred, target)
 
 
