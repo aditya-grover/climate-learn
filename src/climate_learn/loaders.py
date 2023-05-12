@@ -34,11 +34,11 @@ def load_model_module(
     sched: Optional[Union[str, LRScheduler]] = None,
     sched_kwargs: Optional[Dict[str, Any]] = None,
     train_loss: Optional[Union[str, Callable]] = None,
-    val_loss: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
-    test_loss: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
+    val_loss: Optional[Iterable[Union[str, Callable]]] = None,
+    test_loss: Optional[Iterable[Union[str, Callable]]] = None,
     train_target_transform: Optional[Union[str, Callable]] = None,
-    val_target_transform: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
-    test_target_transform: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
+    val_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
+    test_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
 ):
     # Load the model
     if preset is None and model is None:
@@ -99,29 +99,29 @@ def load_model_module(
     # Load validation loss
     if not isinstance(val_loss, Iterable):
         raise TypeError("'val_loss' must be an iterable")
-    elif all([isinstance(vl, str) for vl in val_loss]):
-        clim = get_climatology(data_module, "val")
-        metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-        val_losses = []
-        for vl in val_loss:
+    val_losses = []
+    for vl in val_loss:
+        if isinstance(vl, str):
+            clim = get_climatology(data_module, "val")
+            metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
             print(f"Loading validation loss: {vl}")
             val_losses.append(load_loss(vl, False, metainfo))
-    elif all([isinstance(vl, Callable) for vl in val_loss]):
-        print("Using custom validation losses")
-        val_losses = val_loss
+        elif isinstance(vl, Callable):
+            print("Using custom validation loss")
+            val_losses.append(vl)
     # Load test loss
     if not isinstance(test_loss, Iterable):
         raise TypeError("'test_loss' must be an iterable")
-    elif all([isinstance(vl, str) for vl in test_loss]):
-        clim = get_climatology(data_module, "val")
-        metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-        test_losses = []
-        for vl in test_loss:
-            print(f"Loading test loss: {vl}")
-            test_losses.append(load_loss(vl, False, metainfo))
-    elif all([isinstance(vl, Callable) for vl in test_loss]):
-        print("Using custom test losses")
-        test_losses = test_loss
+    test_losses = []
+    for tl in test_loss:
+        if isinstance(tl, str):
+            clim = get_climatology(data_module, "test")
+            metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
+            print(f"Loading validation loss: {tl}")
+            test_losses.append(load_loss(tl, False, metainfo))
+        elif isinstance(tl, Callable):
+            print("Using custom validation loss")
+            test_losses.append(tl)
     # Load training transform
     if isinstance(train_target_transform, str):
         print(f"Loading training transform: {train_target_transform}")
@@ -134,28 +134,30 @@ def load_model_module(
     else:
         raise TypeError("'train_target_transform' must be str, callable, or None")
     # Load validation transform
-    if all([isinstance(vt, str) for vt in val_target_transform]):
-        val_transforms = []
+    val_transforms = []
+    if isinstance(val_target_transform, Iterable):
         for vt in val_target_transform:
-            print(f"Loading validation transform: {vt}")
-            val_transforms.append(load_transform(vt, data_module))
-    elif all([isinstance(vt, Callable) for vt in val_target_transform]):
-        print("Using custom validation transform")
-        val_transforms = val_target_transform
-    elif val_target_transform is not None:
+            if isinstance(vt, str):
+                print(f"Loading validation transform: {vt}")
+                val_transforms.append(load_transform(vt, data_module))
+            elif isinstance(vt, Callable):
+                print("Using custom validation transform")
+                val_transforms.append(vt)
+    elif val_target_transform is None:
         val_transforms = val_target_transform
     else:
         raise TypeError("'val_target_transform' must be str, callable, or None")
     # Load test transform
-    if all([isinstance(tt, str) for tt in test_target_transform]):
-        test_transforms = []
+    test_transforms = []
+    if isinstance(test_target_transform, Iterable):
         for tt in test_target_transform:
-            print(f"Loading test transform: {tt}")
-            test_transforms.append(load_transform(tt, data_module))
-    elif all([isinstance(tt, Callable) for tt in test_target_transform]):
-        print("Using custom test transform")
-        test_transforms = test_target_transform
-    elif test_target_transform is not None:
+            if isinstance(tt, str):
+                print(f"Loading validation transform: {tt}")
+                test_transforms.append(load_transform(tt, data_module))
+            elif isinstance(tt, Callable):
+                print("Using custom validation transform")
+                test_transforms.append(tt)
+    elif test_target_transform is None:
         test_transforms = test_target_transform
     else:
         raise TypeError("'test_target_transform' must be str, callable, or None")
