@@ -12,17 +12,14 @@ from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_
 class VisionTransformer(nn.Module):
     def __init__(
         self,
-        img_size=[128, 256],
+        img_size,
+        in_channels,
+        out_channels,
+        history,
         patch_size=16,
         drop_path=0.1,
         drop_rate=0.1,
         learn_pos_emb=False,
-        in_vars=[
-            "2m_temperature",
-            "10m_u_component_of_wind",
-            "10m_v_component_of_wind",
-        ],
-        out_vars=["2m_temperature"],
         embed_dim=1024,
         depth=24,
         decoder_depth=8,
@@ -32,16 +29,14 @@ class VisionTransformer(nn.Module):
         super().__init__()
 
         self.img_size = img_size
-        self.n_channels = len(in_vars)
+        self.in_channels = in_channels * history
+        self.out_channels = out_channels
         self.patch_size = patch_size
-
-        self.in_vars = in_vars
-        self.out_vars = out_vars
 
         # --------------------------------------------------------------------------
         # ViT encoder
         self.patch_embed = PatchEmbed(
-            img_size, patch_size, len(self.in_vars), embed_dim
+            img_size, patch_size, self.in_channels, embed_dim
         )
         self.num_patches = self.patch_embed.num_patches  # 128
 
@@ -118,7 +113,7 @@ class VisionTransformer(nn.Module):
 
         h = self.img_size[0] // p
         w = self.img_size[1] // p
-        c = len(self.in_vars)
+        c = self.in_channels
         x = imgs.reshape(shape=(imgs.shape[0], c, h, p, w, p))
         x = torch.einsum("nchpwq->nhwpqc", x)
         x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * c))
@@ -130,7 +125,7 @@ class VisionTransformer(nn.Module):
         imgs: (N, 3, H, W)
         """
         p = self.patch_size
-        c = len(self.out_vars)
+        c = self.out_channels
         h = self.img_size[0] // p
         w = self.img_size[1] // p
         assert h * w == x.shape[1]
@@ -160,9 +155,8 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward(self, x, y, out_variables, metric, lat, log_postfix):
-        if len(x.shape) == 5:  # history
-            x = x.flatten(1, 2)
+    def forward(self, x):
+        x = x.flatten(1, 2) # flatten history
         embeddings = self.forward_encoder(x)  # B, L, D
         preds = self.head(embeddings)
         return self.unpatchify(preds)
