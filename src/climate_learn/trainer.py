@@ -19,12 +19,7 @@ class Trainer(pl.Trainer):
     """Wrapper for Lightning's trainer."""
 
     def __init__(
-        self,
-        early_stopping=None,
-        patience=0,
-        summary_depth=-1,
-        seed=0,
-        **kwargs
+        self, early_stopping=None, patience=0, summary_depth=-1, seed=0, **kwargs
     ):
         pl.seed_everything(seed)
         if "logger" not in kwargs:

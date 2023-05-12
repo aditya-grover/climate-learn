@@ -14,9 +14,7 @@ class Metric:
     """Parent class for all ClimateLearn metrics."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         r"""
         .. highlight:: python
@@ -48,9 +46,7 @@ class LatitudeWeightedMetric(Metric):
     """Parent class for latitude-weighted metrics."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
@@ -75,9 +71,7 @@ class ClimatologyBasedMetric(Metric):
     """Parent class for metrics that use climatology."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         climatology = self.metainfo.climatology

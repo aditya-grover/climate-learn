@@ -11,7 +11,7 @@ from .models.hub import (
     Interpolation,
     LinearRegression,
     Persistence,
-    ResNet
+    ResNet,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
