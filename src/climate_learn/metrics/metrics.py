@@ -58,7 +58,7 @@ class LatitudeWeightedMetric(Metric):
         lat_weights = torch.from_numpy(lat_weights).view(1, 1, -1, 1)
         self.lat_weights = lat_weights
 
-    def __call__(
+    def cast_to_device(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
@@ -84,7 +84,7 @@ class ClimatologyBasedMetric(Metric):
         climatology = climatology.unsqueeze(0)
         self.climatology = climatology
 
-    def __call__(
+    def cast_to_device(
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
@@ -168,7 +168,7 @@ class LatWeightedMSE(LatitudeWeightedMetric):
             MSE, and the preceding elements are the channel-wise MSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().__call__(pred, target)
+        super().cast_to_device(pred, target)
         error = (pred - target).square()
         error = error * self.lat_weights
         loss = error.mean()
@@ -232,7 +232,7 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().__call__(pred, target)
+        super().cast_to_device(pred, target)
         error = (pred - target).square()
         error = error * self.lat_weights
         loss = error.mean().sqrt()
@@ -272,7 +272,7 @@ class ACC(ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().__call__(self, pred, target)
+        super().cast_to_device(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
         pred_prime = pred - pred.mean([0, 2, 3], keepdims=True)
@@ -318,8 +318,8 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        LatitudeWeightedMetric.__call__(self, pred, target)
-        ClimatologyBasedMetric.__call__(self, pred, target)
+        LatitudeWeightedMetric.cast_to_device(self, pred, target)
+        ClimatologyBasedMetric.cast_to_device(self, pred, target)
         pred = pred - self.climatology
         target = target - self.climatology
         pred_prime = pred - pred.mean([0, 2, 3], keepdims=True)
