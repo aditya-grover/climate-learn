@@ -251,7 +251,6 @@ def load_preset(task, data_module, preset):
         in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
         if preset.lower() in (
-            "linear-interpolation",
             "bilinear-interpolation",
             "nearest-interpolation",
         ):

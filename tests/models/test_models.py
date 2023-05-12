@@ -67,7 +67,7 @@ class TestDownscalingModels:
     x = torch.randn((num_batches, num_channels, in_width, in_height))
     y = torch.randn((num_batches, num_channels, out_width, out_height))
 
-    @pytest.mark.parametrize("mode", ["linear", "bilinear", "nearest"])
+    @pytest.mark.parametrize("mode", ["bilinear", "nearest"])
     def test_interpolation(self, mode):
-        model = Interpolation((self.in_width, self.in_height), mode)
+        model = Interpolation((self.out_width, self.out_height), mode)
         assert model(self.x).shape == self.y.shape
