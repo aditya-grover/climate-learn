@@ -18,7 +18,7 @@ class LitModule(pl.LightningModule):
         test_loss: List[Callable],
         train_target_transform: Optional[Callable] = None,
         val_target_transforms: Optional[List[Callable]] = None,
-        test_target_transforms: Optional[List[Callable]] = None
+        test_target_transforms: Optional[List[Callable]] = None,
     ):
         super().__init__()
         self.net = net
@@ -53,7 +53,7 @@ class LitModule(pl.LightningModule):
                 prog_bar=True,
                 on_step=True,
                 on_epoch=False,
-                batch_size=x.shape[0]
+                batch_size=x.shape[0],
             )
             loss = losses[-1]
         return loss
@@ -63,7 +63,7 @@ class LitModule(pl.LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         self.evaluate(batch, "test")
-    
+
     def evaluate(self, batch, stage):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
@@ -84,7 +84,7 @@ class LitModule(pl.LightningModule):
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[loss_name] = losses
             else:  # per channel + aggregate
-                for var_name, loss in zip(out_variables, losses):                
+                for var_name, loss in zip(out_variables, losses):
                     name = f"{loss_name}:{var_name}"
                     loss_dict[name] = loss
                 loss_dict[loss_name] = losses[-1]
@@ -93,7 +93,7 @@ class LitModule(pl.LightningModule):
             on_step=False,
             on_epoch=True,
             sync_dist=True,
-            batch_size=len(batch[0])
+            batch_size=len(batch[0]),
         )
         return loss_dict
 

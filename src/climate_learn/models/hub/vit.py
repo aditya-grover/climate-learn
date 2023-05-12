@@ -35,9 +35,7 @@ class VisionTransformer(nn.Module):
 
         # --------------------------------------------------------------------------
         # ViT encoder
-        self.patch_embed = PatchEmbed(
-            img_size, patch_size, self.in_channels, embed_dim
-        )
+        self.patch_embed = PatchEmbed(img_size, patch_size, self.in_channels, embed_dim)
         self.num_patches = self.patch_embed.num_patches  # 128
 
         self.pos_embed = nn.Parameter(
@@ -156,7 +154,7 @@ class VisionTransformer(nn.Module):
         return x
 
     def forward(self, x):
-        x = x.flatten(1, 2) # flatten history
+        x = x.flatten(1, 2)  # flatten history
         embeddings = self.forward_encoder(x)  # B, L, D
         preds = self.head(embeddings)
         return self.unpatchify(preds)

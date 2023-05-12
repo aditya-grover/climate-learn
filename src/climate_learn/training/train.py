@@ -78,12 +78,14 @@ class Trainer:
                 devices=devices,
                 precision=precision,
                 max_epochs=max_epochs,
-                callbacks=callbacks
+                callbacks=callbacks,
             )
 
     def fit(self, model_module, data_module):
         if model_module.optimizer is None:
-            raise RuntimeError("model module has no optimizer - maybe it has no parameters?")
+            raise RuntimeError(
+                "model module has no optimizer - maybe it has no parameters?"
+            )
         self.trainer.fit(model_module, data_module)
 
     def test(self, model_module, data_module):

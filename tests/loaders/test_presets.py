@@ -14,18 +14,20 @@ FORECASTING_PRESETS = [
     "climatology",
     "persistence",
     "linear-regression",
-    "rasp-theurey-2020"
+    "rasp-theurey-2020",
 ]
 
 DOWNSCALING_PRESETS = [
     "linear-interpolation",
     "bilinear-interpolation",
-    "nearest-interpolation"
+    "nearest-interpolation",
 ]
+
 
 @dataclass
 class MockTensor:
     shape: Tuple[int, ...]
+
 
 class MockDataModule:
     def __init__(
@@ -37,7 +39,7 @@ class MockDataModule:
         height: int,
         width: int,
         in_vars: Optional[List[str]] = None,
-        out_vars: Optional[List[str]] = None
+        out_vars: Optional[List[str]] = None,
     ):
         if in_vars is None:
             in_vars = [f"var{i}" for i in range(num_in_vars)]
@@ -62,9 +64,7 @@ class MockDataModule:
 def test_known_forecasting_presets(preset):
     mock_dm = MockDataModule(32, 3, 2, 2, 32, 64)
     model, optimizer, lr_scheduler = cl.load_preset(
-        "forecasting",
-        mock_dm,
-        preset=preset
+        "forecasting", mock_dm, preset=preset
     )
     if preset == FORECASTING_PRESETS[0]:
         assert isinstance(model, cl.models.hub.Climatology)
@@ -88,8 +88,10 @@ illegal_persistence_dms = [
     # len(out_vars) > len(in_vars)
     MockDataModule(32, 3, 2, 4, 32, 64),
     # not out_vars.issubset(in_vars)
-    MockDataModule(32, 3, 2, 2, 32, 64, ["a", "b"], ["c", "d"])
+    MockDataModule(32, 3, 2, 2, 32, 64, ["a", "b"], ["c", "d"]),
 ]
+
+
 @pytest.mark.parametrize("mock_dm", illegal_persistence_dms)
 def test_illegal_persistence(mock_dm):
     with pytest.raises(RuntimeError) as exc_info:
@@ -104,9 +106,7 @@ def test_illegal_persistence(mock_dm):
 def test_known_downscaling_presets(preset):
     mock_dm = MockDataModule(32, 0, 3, 3, 32, 64)
     model, optimizer, lr_scheduler = cl.load_preset(
-        "downscaling",
-        mock_dm,
-        preset=preset
+        "downscaling", mock_dm, preset=preset
     )
     if preset in DOWNSCALING_PRESETS[:3]:
         assert isinstance(model, cl.models.hub.Interpolation)

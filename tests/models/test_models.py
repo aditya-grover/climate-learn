@@ -9,7 +9,7 @@ from climate_learn.models.hub import (
     ResNet,
     Unet,
     VisionTransformer,
-    Interpolation
+    Interpolation,
 )
 
 # Third party
@@ -22,19 +22,8 @@ class TestForecastingModels:
     num_channels = 2
     width = 32
     height = 64
-    x = torch.randn((
-        num_batches,
-        history,
-        num_channels,
-        width,
-        height
-    ))
-    y = torch.randn((
-        num_batches,
-        num_channels,
-        width,
-        height
-    ))
+    x = torch.randn((num_batches, history, num_channels, width, height))
+    y = torch.randn((num_batches, num_channels, width, height))
 
     def test_climatology(self):
         clim = torch.zeros((self.num_channels, self.width, self.height))
@@ -52,19 +41,11 @@ class TestForecastingModels:
         assert model(self.x).shape == self.y.shape
 
     def test_resnet(self):
-        model = ResNet(
-            self.num_channels,
-            self.num_channels,
-            self.history
-        )
+        model = ResNet(self.num_channels, self.num_channels, self.history)
         assert model(self.x).shape == self.y.shape
 
     def test_unet(self):
-        model = Unet(
-            self.num_channels,
-            self.num_channels,
-            self.history
-        )
+        model = Unet(self.num_channels, self.num_channels, self.history)
         assert model(self.x).shape == self.y.shape
 
     def test_vit(self):
@@ -72,6 +53,6 @@ class TestForecastingModels:
             (self.width, self.height),
             self.num_channels,
             self.num_channels,
-            self.history
+            self.history,
         )
         assert model(self.x).shape == self.y.shape

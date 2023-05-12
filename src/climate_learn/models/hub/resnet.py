@@ -36,35 +36,32 @@ class ResNet(nn.Module):
             raise NotImplementedError(f"Activation {activation} not implemented")
 
         self.image_proj = PeriodicConv2D(
-            self.in_channels,
-            hidden_channels,
-            kernel_size=7,
-            padding=3
+            self.in_channels, hidden_channels, kernel_size=7, padding=3
         )
-        self.blocks = nn.ModuleList([
-            ResidualBlock(
-                hidden_channels,
-                hidden_channels,
-                activation=activation,
-                norm=True,
-                dropout=dropout
-            ) for _ in range(n_blocks)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                ResidualBlock(
+                    hidden_channels,
+                    hidden_channels,
+                    activation=activation,
+                    norm=True,
+                    dropout=dropout,
+                )
+                for _ in range(n_blocks)
+            ]
+        )
 
         if norm:
             self.norm = nn.BatchNorm2d(hidden_channels)
         else:
             self.norm = nn.Identity()
         self.final = PeriodicConv2D(
-            hidden_channels,
-            out_channels,
-            kernel_size=7,
-            padding=3
+            hidden_channels, out_channels, kernel_size=7, padding=3
         )
 
     def forward(self, x):
-        if len(x.shape) == 5: # x.shape = [B,T,C,H,W]
-            x = x.flatten(1,2)
+        if len(x.shape) == 5:  # x.shape = [B,T,C,H,W]
+            x = x.flatten(1, 2)
         # x.shape = [B,T*C,H,W]
         x = self.image_proj(x)
         for block in self.blocks:

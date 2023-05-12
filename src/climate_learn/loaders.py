@@ -11,7 +11,7 @@ from .models.hub import (
     Persistence,
     LinearRegression,
     ResNet,
-    Interpolation
+    Interpolation,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -37,12 +37,8 @@ def load_model_module(
     val_loss: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
     test_loss: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
     train_target_transform: Optional[Union[str, Callable]] = None,
-    val_target_transform: Optional[
-        Union[Iterable[str], Iterable[Callable]]
-    ] = None,
-    test_target_transform: Optional[
-        Union[Iterable[str], Iterable[Callable]]
-    ] = None
+    val_target_transform: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
+    test_target_transform: Optional[Union[Iterable[str], Iterable[Callable]]] = None,
 ):
     # Load the model
     if preset is None and model is None:
@@ -80,7 +76,7 @@ def load_model_module(
     if preset is None and sched is None:
         raise RuntimeError("Please specify 'preset' or 'sched'")
     elif preset:
-            print("Using preset learning rate scheduler")            
+        print("Using preset learning rate scheduler")
     elif isinstance(sched, str):
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
@@ -90,7 +86,7 @@ def load_model_module(
         raise TypeError("'sched' must be str or torch.optim.lr_scheduler._LRScheduler")
     # Load training loss
     in_vars, out_vars = get_data_variables(data_module)
-    lat, lon = data_module.get_lat_lon()    
+    lat, lon = data_module.get_lat_lon()
     if isinstance(train_loss, str):
         print(f"Loading training loss: {train_loss}")
         clim = get_climatology(data_module, "train")
@@ -133,7 +129,7 @@ def load_model_module(
     elif isinstance(train_target_transform, Callable):
         print("Using custom training transform")
         train_transform = train_target_transform
-    elif train_target_transform is None:        
+    elif train_target_transform is None:
         train_transform = train_target_transform
     else:
         raise TypeError("'train_target_transform' must be str, callable, or None")
@@ -173,9 +169,10 @@ def load_model_module(
         test_losses,
         train_transform,
         val_transforms,
-        test_transforms
+        test_transforms,
     )
     return model_module
+
 
 load_forecasting_module = partial(
     load_model_module,
@@ -185,7 +182,7 @@ load_forecasting_module = partial(
     test_loss=["lat_rmse", "lat_acc"],
     train_target_transform=None,
     val_target_transform=["denormalize", "denormalize"],
-    test_target_transform=["denormalize", "denormalize"]
+    test_target_transform=["denormalize", "denormalize"],
 )
 
 load_downscaling_module = partial(
@@ -196,13 +193,14 @@ load_downscaling_module = partial(
     test_loss=["rmse", "pearson", "mean_bias"],
     train_target_transform=None,
     val_target_transform=["denormalize", "denormalize"],
-    test_target_transform=["denormalize", "denormalize"]
+    test_target_transform=["denormalize", "denormalize"],
 )
 
 
 def load_preset(task, data_module, preset):
     in_vars, out_vars = get_data_variables(data_module)
     in_shape, out_shape = get_data_dims(data_module)
+
     def raise_not_impl():
         raise NotImplementedError(
             f"{preset} is not an implemented preset for the {task} task. If"
@@ -241,12 +239,10 @@ def load_preset(task, data_module, preset):
                 activation="leaky",
                 norm=True,
                 dropout=0.1,
-                n_blocks=19
+                n_blocks=19,
             )
             optimizer = load_optimizer(
-                model,
-                "Adam",
-                {"lr": 1e-5, "weight_decay": 1e-5}
+                model, "Adam", {"lr": 1e-5, "weight_decay": 1e-5}
             )
             lr_scheduler = None
         else:
@@ -254,23 +250,22 @@ def load_preset(task, data_module, preset):
     elif task == "downscaling":
         in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
-        if preset.lower() in ("linear-interpolation", "bilinear-interpolation", "nearest-interpolation"):
+        if preset.lower() in (
+            "linear-interpolation",
+            "bilinear-interpolation",
+            "nearest-interpolation",
+        ):
             interpolation_mode = preset.split("-")[0]
-            model = Interpolation(out_height*out_width, interpolation_mode)
+            model = Interpolation(out_height * out_width, interpolation_mode)
             optimizer = lr_scheduler = None
         else:
             raise_not_impl()
     return model, optimizer, lr_scheduler
 
-def load_optimizer(
-    net: torch.nn.Module,
-    optim: str,
-    optim_kwargs: Dict[str, Any] = {}
-):
+
+def load_optimizer(net: torch.nn.Module, optim: str, optim_kwargs: Dict[str, Any] = {}):
     if len(list(net.parameters())) == 0:
-        warnings.warn(
-            "Net has no trainable parameters, setting optimizer to `None`"
-        )
+        warnings.warn("Net has no trainable parameters, setting optimizer to `None`")
         optimizer = None
     if optim.lower() == "sgd":
         optimizer = torch.optim.SGD(net.parameters(), **optim_kwargs)
@@ -286,15 +281,12 @@ def load_optimizer(
         )
     return optimizer
 
+
 def load_lr_scheduler(
-    sched: str,
-    optimizer: torch.optim.Optimizer,
-    sched_kwargs: Dict[str, Any] = {}
+    sched: str, optimizer: torch.optim.Optimizer, sched_kwargs: Dict[str, Any] = {}
 ):
     if optimizer is None:
-        warnings.warn(
-            "Optimizer is `None`, setting LR scheduler to `None` too"
-        )
+        warnings.warn("Optimizer is `None`, setting LR scheduler to `None` too")
         lr_scheduler = None
     if sched == "constant":
         lr_scheduler = LRScheduler.ConstantLR(optimizer, **sched_kwargs)
@@ -303,7 +295,7 @@ def load_lr_scheduler(
     elif sched == "exponential":
         lr_scheduler = LRScheduler.ExponentialLR(optimizer, **sched_kwargs)
     elif sched == "linear-warmup-cosine-annealing":
-        lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **sched_kwargs)    
+        lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **sched_kwargs)
     else:
         raise NotImplementedError(
             f"{sched} is not an implemented learning rate scheduler. If you"
@@ -311,6 +303,7 @@ def load_lr_scheduler(
             " https://github.com/aditya-grover/climate-learn/issues"
         )
     return lr_scheduler
+
 
 def load_loss(loss_name, aggregate_only, metainfo):
     loss_cls = METRICS_REGISTRY.get(loss_name, None)
@@ -320,11 +313,9 @@ def load_loss(loss_name, aggregate_only, metainfo):
             " please raise an issue at"
             " https://gtihub.com/aditya-grover/climate-learn/issues"
         )
-    loss = loss_cls(
-        aggregate_only=aggregate_only,
-        metainfo=metainfo
-    )
+    loss = loss_cls(aggregate_only=aggregate_only, metainfo=metainfo)
     return loss
+
 
 def load_transform(transform_name, data_module):
     transform_cls = TRANSFORMS_REGISTRY.get(transform_name, None)
@@ -336,18 +327,21 @@ def load_transform(transform_name, data_module):
         )
     transform = transform_cls(data_module)
     return transform
-        
+
+
 def get_data_dims(data_module):
     for batch in data_module.train_dataloader():
         x, y, _, _ = batch
         break
     return x.shape, y.shape
 
+
 def get_data_variables(data_module):
     for batch in data_module.train_dataloader():
         _, _, in_vars, out_vars = batch
         break
     return in_vars, out_vars
+
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
