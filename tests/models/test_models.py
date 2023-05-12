@@ -1,12 +1,12 @@
 # Local application
 from climate_learn.models.hub import (
     Climatology,
-    Persistence,
+    Interpolation,
     LinearRegression,
+    Persistence,
     ResNet,
     Unet,
     VisionTransformer,
-    Interpolation,
 )
 
 # Third party

@@ -4,11 +4,11 @@ from typing import Iterable
 # Local application
 from .utils import register
 from .components.cnn_blocks import (
-    PeriodicConv2D,
     DownBlock,
-    UpBlock,
-    MiddleBlock,
     Downsample,
+    MiddleBlock,
+    PeriodicConv2D,
+    UpBlock,
     Upsample,
 )
 

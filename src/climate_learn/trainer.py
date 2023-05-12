@@ -7,10 +7,10 @@ from warnings import warn
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
+    EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,
-    EarlyStopping,
 )
 
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)

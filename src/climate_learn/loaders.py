@@ -5,17 +5,17 @@ import warnings
 
 # Local application
 from .data import DataModule, IterDataModule
-from .models import MODEL_REGISTRY, LitModule
+from .models import LitModule, MODEL_REGISTRY
 from .models.hub import (
     Climatology,
-    Persistence,
-    LinearRegression,
-    ResNet,
     Interpolation,
+    LinearRegression,
+    Persistence,
+    ResNet
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
-from .metrics import METRICS_REGISTRY, MetricsMetaInfo
+from .metrics import MetricsMetaInfo, METRICS_REGISTRY
 
 # Third party
 import torch

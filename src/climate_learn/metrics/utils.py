@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import List
 
-# Local application
+# Third party
 import numpy.typing as npt
 import torch
 
