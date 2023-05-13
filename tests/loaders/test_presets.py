@@ -1,10 +1,6 @@
-# Standard library
-from dataclasses import dataclass
-from itertools import repeat
-from typing import List, Optional, Tuple
-
 # Local application
 import climate_learn as cl
+from .utils import MockDataModule
 
 # Third party
 import torch
@@ -18,51 +14,15 @@ FORECASTING_PRESETS = [
 ]
 
 DOWNSCALING_PRESETS = [
-    "linear-interpolation",
     "bilinear-interpolation",
     "nearest-interpolation",
 ]
 
 
-@dataclass
-class MockTensor:
-    shape: Tuple[int, ...]
-
-
-class MockDataModule:
-    def __init__(
-        self,
-        num_batches: int,
-        history: int,
-        num_in_vars: int,
-        num_out_vars: int,
-        height: int,
-        width: int,
-        in_vars: Optional[List[str]] = None,
-        out_vars: Optional[List[str]] = None,
-    ):
-        if in_vars is None:
-            in_vars = [f"var{i}" for i in range(num_in_vars)]
-        if out_vars is None:
-            out_vars = [f"var{i}" for i in range(num_out_vars)]
-        if history == 0:
-            x = MockTensor((num_batches, num_in_vars, height, width))
-        else:
-            x = MockTensor((num_batches, history, num_in_vars, height, width))
-        y = MockTensor((num_batches, num_out_vars, height, width))
-        batch = (x, y, in_vars, out_vars)
-        self.batches = repeat(batch)
-
-    def train_dataloader(self, *args, **kwargs):
-        return self.batches
-
-    def get_climatology(self, *args, **kwargs):
-        return {"a": torch.zeros(2, 2), "b": torch.zeros(2, 2)}
-
-
 @pytest.mark.parametrize("preset", FORECASTING_PRESETS)
 def test_known_forecasting_presets(preset):
     mock_dm = MockDataModule(32, 3, 2, 2, 32, 64)
+    mock_dm.setup()
     model, optimizer, lr_scheduler = cl.load_preset(
         "forecasting", mock_dm, preset=preset
     )
@@ -94,6 +54,7 @@ illegal_persistence_dms = [
 
 @pytest.mark.parametrize("mock_dm", illegal_persistence_dms)
 def test_illegal_persistence(mock_dm):
+    mock_dm.setup()
     with pytest.raises(RuntimeError) as exc_info:
         cl.load_preset("forecasting", mock_dm, preset="persistence")
     assert str(exc_info.value) == (
@@ -105,6 +66,7 @@ def test_illegal_persistence(mock_dm):
 @pytest.mark.parametrize("preset", DOWNSCALING_PRESETS)
 def test_known_downscaling_presets(preset):
     mock_dm = MockDataModule(32, 0, 3, 3, 32, 64)
+    mock_dm.setup()
     model, optimizer, lr_scheduler = cl.load_preset(
         "downscaling", mock_dm, preset=preset
     )

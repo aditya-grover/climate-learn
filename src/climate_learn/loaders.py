@@ -40,6 +40,10 @@ def load_model_module(
     val_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
     test_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
 ):
+    # Temporary fix, per this discussion:
+    # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
+    if data_module.get_lat_lon() is None:
+        raise RuntimeError("Data module has not been set up yet.")
     # Load the model
     if preset is None and model is None:
         raise RuntimeError("Please specify 'preset' or 'model'")
@@ -336,10 +340,7 @@ def get_data_dims(data_module):
 
 
 def get_data_variables(data_module):
-    for batch in data_module.train_dataloader():
-        _, _, in_vars, out_vars = batch
-        break
-    return in_vars, out_vars
+    return data_module.in_vars, data_module.out_vars
 
 
 def get_climatology(data_module, split):
