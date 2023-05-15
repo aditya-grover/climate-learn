@@ -46,7 +46,7 @@ class LitModule(pl.LightningModule):
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
             loss_dict[loss_name] = loss
-        else:  # per channel + aggregate            
+        else:  # per channel + aggregate
             for var_name, loss in zip(out_variables, losses):
                 loss_dict[f"{loss_name}:{var_name}"] = loss
             loss = losses[-1]

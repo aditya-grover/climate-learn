@@ -171,9 +171,7 @@ def load_model_module(
                 print("Using custom validation transform")
                 test_transforms.append(tt)
             else:
-                raise TypeError(
-                    "each 'test_transform' must be str or Callable"
-                )
+                raise TypeError("each 'test_transform' must be str or Callable")
     elif test_target_transform is None:
         test_transforms = test_target_transform
     else:

@@ -57,6 +57,6 @@ class MockDataModule:
         if self.setup_complete:
             return {"a": torch.zeros(2, 2), "b": torch.zeros(2, 2)}
         raise RuntimeError("Please call setup() first")
-    
+
     def get_lat_lon(self):
         return self.lat, self.lon
