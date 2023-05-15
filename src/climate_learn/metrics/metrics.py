@@ -198,7 +198,7 @@ class RMSE(Metric):
         error = (pred - target).square()
         loss = error.mean().sqrt()
         if not self.aggregate_only:
-            per_channel_losses = error.mean([2, 3]).sqrt().mean(0)
+            per_channel_losses = error.mean([0, 2, 3]).sqrt()
             loss = loss.unsqueeze(0)
             loss = torch.cat((per_channel_losses, loss))
         return loss
@@ -231,7 +231,7 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
         error = error * self.lat_weights
         loss = error.mean().sqrt()
         if not self.aggregate_only:
-            per_channel_losses = error.mean([2, 3]).sqrt().mean(0)
+            per_channel_losses = error.mean([0, 2, 3]).sqrt()
             loss = loss.unsqueeze(0)
             loss = torch.cat((per_channel_losses, loss))
         return loss

@@ -5,6 +5,7 @@ from typing import Callable, Optional, Union
 # Local application
 from .metrics import *
 from .utils import MetricsMetaInfo
+from ..transforms import Denormalize
 
 # Third party
 import torch
@@ -79,10 +80,10 @@ def mean_bias(
 
 
 def denormalized(
-    denorm: nn.Module,
+    denorm: Callable,
     metric: Callable[[torch.Tensor], torch.Tensor],
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
-    metric = Denormalized(denorm, metric)
+    metric = TransformedMetric(denorm, metric)
     return metric(pred, target)
