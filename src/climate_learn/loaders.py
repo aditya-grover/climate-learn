@@ -272,6 +272,11 @@ def load_preset(task, data_module, preset):
             "bilinear-interpolation",
             "nearest-interpolation",
         ):
+            if set(out_vars) != set(in_vars):
+                raise RuntimeError(
+                    "Interpolation requires the output variables to match the"
+                    " input variables."
+                )
             interpolation_mode = preset.split("-")[0]
             model = Interpolation(out_height * out_width, interpolation_mode)
             optimizer = lr_scheduler = None
