@@ -84,7 +84,7 @@ def load_model_module(
     elif isinstance(sched, str):
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
-    elif isinstance(sched, LRScheduler._LRScheduler):
+    elif isinstance(sched, LRScheduler):
         print("Using custom learning rate scheduler")
     else:
         raise TypeError("'sched' must be str or torch.optim.lr_scheduler._LRScheduler")
@@ -113,6 +113,8 @@ def load_model_module(
         elif isinstance(vl, Callable):
             print("Using custom validation loss")
             val_losses.append(vl)
+        else:
+            raise TypeError("each 'val_loss' must be str or Callable")
     # Load test loss
     if not isinstance(test_loss, Iterable):
         raise TypeError("'test_loss' must be an iterable")
@@ -126,6 +128,8 @@ def load_model_module(
         elif isinstance(tl, Callable):
             print("Using custom validation loss")
             test_losses.append(tl)
+        else:
+            raise TypeError("each 'test_loss' must be str or Callable")
     # Load training transform
     if isinstance(train_target_transform, str):
         print(f"Loading training transform: {train_target_transform}")
@@ -147,10 +151,15 @@ def load_model_module(
             elif isinstance(vt, Callable):
                 print("Using custom validation transform")
                 val_transforms.append(vt)
+            else:
+                raise TypeError("each 'val_transform' must be str or Callable")
     elif val_target_transform is None:
         val_transforms = val_target_transform
     else:
-        raise TypeError("'val_target_transform' must be str, callable, or None")
+        raise TypeError(
+            "'val_target_transform' must be an iterable of strings/callables,"
+            " or None"
+        )
     # Load test transform
     test_transforms = []
     if isinstance(test_target_transform, Iterable):
@@ -161,10 +170,17 @@ def load_model_module(
             elif isinstance(tt, Callable):
                 print("Using custom validation transform")
                 test_transforms.append(tt)
+            else:
+                raise TypeError(
+                    "each 'test_transform' must be str or Callable"
+                )
     elif test_target_transform is None:
         test_transforms = test_target_transform
     else:
-        raise TypeError("'test_target_transform' must be str, callable, or None")
+        raise TypeError(
+            "'test_target_transform' must be an iterable of strings/callables,"
+            " or None"
+        )
     # Instantiate Lightning Module
     model_module = LitModule(
         model,
@@ -292,11 +308,11 @@ def load_lr_scheduler(
         warnings.warn("Optimizer is `None`, setting LR scheduler to `None` too")
         lr_scheduler = None
     if sched == "constant":
-        lr_scheduler = LRScheduler.ConstantLR(optimizer, **sched_kwargs)
+        lr_scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer, **sched_kwargs)
     elif sched == "linear":
-        lr_scheduler = LRScheduler.LinearLR(optimizer, **sched_kwargs)
+        lr_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, **sched_kwargs)
     elif sched == "exponential":
-        lr_scheduler = LRScheduler.ExponentialLR(optimizer, **sched_kwargs)
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, **sched_kwargs)
     elif sched == "linear-warmup-cosine-annealing":
         lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **sched_kwargs)
     else:
@@ -345,6 +361,8 @@ def get_data_variables(data_module):
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
+    if clim is None:
+        raise RuntimeError("Climatology has not yet been set.")
     # Hotfix to work with dict style data
     clim = torch.stack(tuple(clim.values()))
     return clim
