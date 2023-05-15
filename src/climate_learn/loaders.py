@@ -42,7 +42,7 @@ def load_model_module(
 ):
     # Temporary fix, per this discussion:
     # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
-    if data_module.get_lat_lon() is None:
+    if data_module.get_lat_lon() == (None, None):
         raise RuntimeError("Data module has not been set up yet.")
     # Load the model
     if preset is None and model is None:
