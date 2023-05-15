@@ -28,8 +28,8 @@ class LitModule(pl.LightningModule):
         self.val_loss = val_loss
         self.test_loss = test_loss
         self.train_target_transform = train_target_transform
-        self.val_target_transform = val_target_transforms
-        self.test_target_transform = test_target_transforms
+        self.val_target_transforms = val_target_transforms
+        self.test_target_transforms = test_target_transforms
 
     def forward(self, x):
         return self.net(x)
@@ -42,20 +42,21 @@ class LitModule(pl.LightningModule):
             y = self.train_target_transform(y)
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")
+        loss_dict = {}
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
-        else:  # per channel + aggregate
-            loss_dict = {}
+            loss_dict[loss_name] = loss
+        else:  # per channel + aggregate            
             for var_name, loss in zip(out_variables, losses):
                 loss_dict[f"{loss_name}:{var_name}"] = loss
-            self.log_dict(
-                loss_dict,
-                prog_bar=True,
-                on_step=True,
-                on_epoch=False,
-                batch_size=x.shape[0],
-            )
             loss = losses[-1]
+        self.log_dict(
+            loss_dict,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=False,
+            batch_size=x.shape[0],
+        )
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int):
@@ -67,15 +68,20 @@ class LitModule(pl.LightningModule):
     def evaluate(self, batch, stage):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
-        loss_fns = self.val_loss
+        if stage == "val":
+            loss_fns = self.val_loss
+        elif stage == "test":
+            loss_fns = self.test_loss
+        else:
+            raise RuntimeError("Invalid evaluation stage")
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
-            if stage == "val" and self.val_target_transform is not None:
-                yhat_T = self.val_target_transform[i](yhat)
-                y_T = self.val_target_transform[i](y)
-            elif stage == "test" and self.test_target_transform is not None:
-                yhat_T = self.test_target_transform[i](yhat)
-                y_T = self.val_target_transform[i](y)
+            if stage == "val" and self.val_target_transforms is not None:
+                yhat_T = self.val_target_transforms[i](yhat)
+                y_T = self.val_target_transforms[i](y)
+            elif stage == "test" and self.test_target_transforms is not None:
+                yhat_T = self.test_target_transforms[i](yhat)
+                y_T = self.val_target_transforms[i](y)
             else:
                 yhat_T = yhat
                 y_T = y
