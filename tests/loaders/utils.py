@@ -51,12 +51,12 @@ class MockDataModule:
     def train_dataloader(self):
         if self.setup_complete:
             return self.batches
-        raise RuntimeError("Please call setup() first")
+        return None
 
     def get_climatology(self, *args, **kwargs):
         if self.setup_complete:
             return {"a": torch.zeros(2, 2), "b": torch.zeros(2, 2)}
-        raise RuntimeError("Please call setup() first")
+        return None
 
     def get_lat_lon(self):
         return self.lat, self.lon

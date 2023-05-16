@@ -5,7 +5,6 @@ from typing import Callable, Optional, Union
 # Local application
 from .metrics import *
 from .utils import MetricsMetaInfo
-from ..transforms import Denormalize
 
 # Third party
 import torch
