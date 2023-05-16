@@ -12,8 +12,13 @@ class LinearRegression(nn.Module):
         self.linear = nn.Linear(in_features, out_features)
 
     def forward(self, x):
-        target_shape = x[:, 0].shape  # not including time dimension
-        x = x.flatten(1)  # flatten along all but the batch dimension
+        # x.shape = [B,T,C,H,W]
+        batch_size = x.shape[0]
+        height = x.shape[2]
+        width = x.shape[3]
+        # x.shape = [B,T*C*H*W]
+        x = x.flatten(1)
+        # yhat.shape = [B,C*H*W]
         yhat = self.linear(x)
-        yhat = yhat.reshape(target_shape)
+        yhat = yhat.view(batch_size, -1, height, width)
         return yhat
