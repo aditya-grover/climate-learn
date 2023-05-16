@@ -42,7 +42,8 @@ def load_model_module(
 ):
     # Temporary fix, per this discussion:
     # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
-    if data_module.get_lat_lon() == (None, None):
+    lat, lon = data_module.get_lat_lon()
+    if lat is None and lon is None:
         raise RuntimeError("Data module has not been set up yet.")
     # Load the model
     if preset is None and model is None:
@@ -359,7 +360,9 @@ def get_data_dims(data_module):
 
 
 def get_data_variables(data_module):
-    return data_module.in_vars, data_module.out_vars
+    in_vars = data_module.train_dataset.task.in_vars
+    out_vars = data_module.train_dataset.task.out_vars
+    return in_vars, out_vars
 
 
 def get_climatology(data_module, split):

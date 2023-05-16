@@ -45,7 +45,7 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
-            loss_dict[loss_name] = loss
+            loss_dict[f"{loss_name}:aggregate"] = loss
         else:  # per channel + aggregate
             loss_dict[f"{loss_name}:aggregate_loss"] = losses[-1]
             for var_name, loss in zip(out_variables, losses):
@@ -89,12 +89,12 @@ class LitModule(pl.LightningModule):
             losses = lf(yhat_T, y_T)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
-                loss_dict[loss_name] = losses
+                loss_dict[f"{loss_name}:agggregate"] = losses
             else:  # per channel + aggregate
                 for var_name, loss in zip(out_variables, losses):
                     name = f"{loss_name}:{var_name}"
                     loss_dict[name] = loss
-                loss_dict[loss_name] = losses[-1]
+                loss_dict[f"{loss_name}:aggregate"] = losses[-1]
         self.log_dict(
             loss_dict,
             on_step=False,

@@ -1,6 +1,5 @@
 # Standard library
 import logging
-import sys
 from warnings import warn
 
 # Third party
@@ -45,7 +44,7 @@ class Trainer(pl.Trainer):
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
         if "strategy" not in kwargs:
-            if sys.stdout.isatty():
+            if in_notebook():
                 warn("In interactive environment: cannot use DDP spawn strategy")
                 kwargs["strategy"] = None
             else:
@@ -58,3 +57,20 @@ class Trainer(pl.Trainer):
                 "Model module has no optimizer - maybe it has no parameters?"
             )
         self.trainer.fit(model_module, *args, **kwargs)
+
+    def test(self, model_module, *args, **kwargs):
+        self.trainer.test(model_module, *args, **kwargs)
+
+
+# https://stackoverflow.com/a/22424821
+def in_notebook():
+    try:
+        from IPython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            return False
+    except ImportError:
+        return False
+    except AttributeError:
+        return False
+    return True
