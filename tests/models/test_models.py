@@ -66,7 +66,7 @@ class TestForecastingModels:
             target = self.y_diff_channels
         model = Unet(self.num_channels, out_channels, self.history)
         assert model(self.x).shape == target.shape
-    
+
     @pytest.mark.skip(reason="ViT is broken, will fix in future PR")
     @pytest.mark.parametrize("same_out_channels", [True, False])
     def test_vit(self, same_out_channels):
