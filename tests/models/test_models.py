@@ -18,42 +18,71 @@ class TestForecastingModels:
     num_batches = 32
     history = 3
     num_channels = 2
+    out_channels = 1
     width, height = 32, 64
-    x = torch.randn((num_batches, history, num_channels, width, height))
-    y = torch.randn((num_batches, num_channels, width, height))
+    x = torch.randn((num_batches, history, num_channels, height, width))
+    y_same_channels = torch.randn((num_batches, num_channels, height, width))
+    y_diff_channels = torch.randn((num_batches, out_channels, height, width))
 
     def test_climatology(self):
-        clim = torch.zeros((self.num_channels, self.width, self.height))
+        clim = torch.zeros((self.num_channels, self.height, self.width))
         model = Climatology(clim)
-        assert model(self.x).shape == self.y.shape
+        assert model(self.x).shape == self.y_same_channels.shape
 
     def test_persistence(self):
         model = Persistence()
-        assert model(self.x).shape == self.y.shape
+        assert model(self.x).shape == self.y_same_channels.shape
 
-    def test_linear_regresion(self):
+    @pytest.mark.parametrize("same_out_channels", [True, False])
+    def test_linear_regresion(self, same_out_channels: bool):
         in_ftrs = self.history * self.num_channels * self.width * self.height
-        out_ftrs = self.num_channels * self.width * self.height
+        if same_out_channels:
+            out_ftrs = self.num_channels * self.width * self.height
+            target = self.y_same_channels
+        else:
+            out_ftrs = self.out_channels * self.width * self.height
+            target = self.y_diff_channels
         model = LinearRegression(in_ftrs, out_ftrs)
-        assert model(self.x).shape == self.y.shape
+        assert model(self.x).shape == target.shape
 
-    def test_resnet(self):
-        model = ResNet(self.num_channels, self.num_channels, self.history)
-        assert model(self.x).shape == self.y.shape
+    @pytest.mark.parametrize("same_out_channels", [True, False])
+    def test_resnet(self, same_out_channels: bool):
+        if same_out_channels:
+            out_channels = self.num_channels
+            target = self.y_same_channels
+        else:
+            out_channels = self.out_channels
+            target = self.y_diff_channels
+        model = ResNet(self.num_channels, out_channels, self.history)
+        assert model(self.x).shape == target.shape
 
-    def test_unet(self):
-        model = Unet(self.num_channels, self.num_channels, self.history)
-        assert model(self.x).shape == self.y.shape
-
+    @pytest.mark.parametrize("same_out_channels", [True, False])
+    def test_unet(self, same_out_channels: bool):
+        if same_out_channels:
+            out_channels = self.num_channels
+            target = self.y_same_channels
+        else:
+            out_channels = self.out_channels
+            target = self.y_diff_channels
+        model = Unet(self.num_channels, out_channels, self.history)
+        assert model(self.x).shape == target.shape
+    
     @pytest.mark.skip(reason="ViT is broken, will fix in future PR")
-    def test_vit(self):
+    @pytest.mark.parametrize("same_out_channels", [True, False])
+    def test_vit(self, same_out_channels):
+        if same_out_channels:
+            out_channels = self.num_channels
+            target = self.y_same_channels
+        else:
+            out_channels = self.out_channels
+            target = self.y_diff_channels
         model = VisionTransformer(
             (self.width, self.height),
             self.num_channels,
-            self.num_channels,
+            out_channels,
             self.history,
         )
-        assert model(self.x).shape == self.y.shape
+        assert model(self.x).shape == target.shape
 
 
 class TestDownscalingModels:

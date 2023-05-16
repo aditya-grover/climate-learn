@@ -14,11 +14,11 @@ class LinearRegression(nn.Module):
     def forward(self, x):
         # x.shape = [B,T,C,H,W]
         batch_size = x.shape[0]
-        height = x.shape[2]
-        width = x.shape[3]
+        height = x.shape[3]
+        width = x.shape[4]
         # x.shape = [B,T*C*H*W]
         x = x.flatten(1)
         # yhat.shape = [B,C*H*W]
         yhat = self.linear(x)
-        yhat = yhat.view(batch_size, -1, height, width)
+        yhat = yhat.reshape(batch_size, -1, height, width)
         return yhat
