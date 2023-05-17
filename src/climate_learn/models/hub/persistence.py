@@ -21,8 +21,8 @@ class Persistence(nn.Module):
     def forward(self, x):
         # x.shape = [B,T,in_channels,H,W]
         if self.channels:
-            yhat = x[:,-1,self.channels]
+            yhat = x[:, -1, self.channels]
         else:
-            yhat = x[:,-1]
+            yhat = x[:, -1]
         # yhat.shape = [B,out_channels,H,W]
         return yhat

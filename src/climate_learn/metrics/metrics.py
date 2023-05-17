@@ -14,9 +14,7 @@ class Metric:
     """Parent class for all ClimateLearn metrics."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         r"""
         .. highlight:: python
@@ -48,9 +46,7 @@ class LatitudeWeightedMetric(Metric):
     """Parent class for latitude-weighted metrics."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
@@ -59,8 +55,7 @@ class LatitudeWeightedMetric(Metric):
         self.lat_weights = lat_weights
 
     def cast_to_device(
-        self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor]
+        self, pred: Union[torch.FloatTensor, torch.DoubleTensor]
     ) -> None:
         r"""
         .. highlight:: python
@@ -74,9 +69,7 @@ class ClimatologyBasedMetric(Metric):
     """Parent class for metrics that use climatology."""
 
     def __init__(
-        self,
-        aggregate_only: bool = False,
-        metainfo: Optional[MetricsMetaInfo] = None
+        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         climatology = self.metainfo.climatology
@@ -84,8 +77,7 @@ class ClimatologyBasedMetric(Metric):
         self.climatology = climatology
 
     def cast_to_device(
-        self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor]
+        self, pred: Union[torch.FloatTensor, torch.DoubleTensor]
     ) -> None:
         r"""
         .. highlight:: python
@@ -280,14 +272,9 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
         """
         LatitudeWeightedMetric.cast_to_device(self, pred)
         ClimatologyBasedMetric.cast_to_device(self, pred)
-        loss = acc(
-            pred,
-            target,
-            self.climatology,
-            self.aggregate_only,
-            self.lat_weights
+        return acc(
+            pred, target, self.climatology, self.aggregate_only, self.lat_weights
         )
-        return loss
 
 
 @register("pearson")

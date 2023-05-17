@@ -10,7 +10,7 @@ def mse(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
     aggregate_only: bool = False,
-    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None
+    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     error = (pred - target).square()
     if lat_weights is not None:
@@ -27,7 +27,7 @@ def rmse(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
     aggregate_only: bool = False,
-    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None
+    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     error = (pred - target).square()
     if lat_weights is not None:
@@ -45,7 +45,7 @@ def acc(
     target: Union[torch.FloatTensor, torch.DoubleTensor],
     climatology: Optional[Union[torch.FloatTensor, torch.DoubleTensor]],
     aggregate_only: bool = False,
-    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None
+    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     pred = pred - climatology
     target = target - climatology
@@ -70,7 +70,7 @@ def acc(
 def pearson(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
-    aggregate_only: bool = False
+    aggregate_only: bool = False,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     pred = _flatten_channel_wise(pred)
     target = _flatten_channel_wise(target)
@@ -87,7 +87,7 @@ def pearson(
 def mean_bias(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],
-    aggregate_only: bool = False
+    aggregate_only: bool = False,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     result = target.mean() - pred.mean()
     if not aggregate_only:
