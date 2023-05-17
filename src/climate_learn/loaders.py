@@ -241,7 +241,8 @@ def load_preset(task, data_module, preset):
                     "Persistence requires the output variables to be a subset of"
                     " the input variables."
                 )
-            model = Persistence()
+            channels = [in_vars.index(o) for o in out_vars]
+            model = Persistence(channels)
             optimizer = lr_scheduler = None
         elif preset.lower() == "linear-regression":
             in_features = history * in_channels * in_height * in_width

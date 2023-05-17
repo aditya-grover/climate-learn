@@ -29,9 +29,15 @@ class TestForecastingModels:
         model = Climatology(clim)
         assert model(self.x).shape == self.y_same_channels.shape
 
-    def test_persistence(self):
-        model = Persistence()
-        assert model(self.x).shape == self.y_same_channels.shape
+    @pytest.mark.parametrize("same_out_channels", [True, False])
+    def test_persistence(self, same_out_channels: bool):
+        if same_out_channels:
+            model = Persistence()
+            target = self.y_same_channels
+        else:
+            model = Persistence(range(self.out_channels))
+            target = self.y_diff_channels
+        assert model(self.x).shape == target.shape
 
     @pytest.mark.parametrize("same_out_channels", [True, False])
     def test_linear_regresion(self, same_out_channels: bool):
