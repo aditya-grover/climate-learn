@@ -63,7 +63,6 @@ def test_illegal_persistence(mock_dm):
     )
 
 
-
 @pytest.mark.parametrize("preset", DOWNSCALING_PRESETS)
 def test_known_downscaling_presets(preset):
     mock_dm = MockDataModule(32, 0, 3, 3, 32, 64)
