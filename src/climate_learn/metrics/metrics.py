@@ -3,18 +3,20 @@ from typing import Callable, Optional, Union
 
 # Local application
 from .utils import MetricsMetaInfo, register
+from .functional import *
 
 # Third party
 import numpy as np
 import torch
-import torch.nn as nn
 
 
 class Metric:
     """Parent class for all ClimateLearn metrics."""
 
     def __init__(
-        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
     ):
         r"""
         .. highlight:: python
@@ -46,7 +48,9 @@ class LatitudeWeightedMetric(Metric):
     """Parent class for latitude-weighted metrics."""
 
     def __init__(
-        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         lat_weights = np.cos(np.deg2rad(self.metainfo.lat))
@@ -56,8 +60,7 @@ class LatitudeWeightedMetric(Metric):
 
     def cast_to_device(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
-        target: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor]
     ) -> None:
         r"""
         .. highlight:: python
@@ -71,7 +74,9 @@ class ClimatologyBasedMetric(Metric):
     """Parent class for metrics that use climatology."""
 
     def __init__(
-        self, aggregate_only: bool = False, metainfo: Optional[MetricsMetaInfo] = None
+        self,
+        aggregate_only: bool = False,
+        metainfo: Optional[MetricsMetaInfo] = None
     ):
         super().__init__(aggregate_only, metainfo)
         climatology = self.metainfo.climatology
@@ -80,8 +85,7 @@ class ClimatologyBasedMetric(Metric):
 
     def cast_to_device(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
-        target: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor]
     ) -> None:
         r"""
         .. highlight:: python
@@ -131,13 +135,7 @@ class MSE(Metric):
             MSE, and the preceding elements are the channel-wise MSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        error = (pred - target).square()
-        loss = error.mean()
-        if not self.aggregate_only:
-            per_channel_losses = error.mean([0, 2, 3])
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
-        return loss
+        return mse(pred, target, self.aggregate_only)
 
 
 @register("lat_mse")
@@ -162,15 +160,8 @@ class LatWeightedMSE(LatitudeWeightedMetric):
             MSE, and the preceding elements are the channel-wise MSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().cast_to_device(pred, target)
-        error = (pred - target).square()
-        error = error * self.lat_weights
-        loss = error.mean()
-        if not self.aggregate_only:
-            per_channel_losses = error.mean([0, 2, 3])
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
-        return loss
+        super().cast_to_device(pred)
+        return mse(pred, target, self.aggregate_only, self.lat_weights)
 
 
 @register("rmse")
@@ -195,13 +186,7 @@ class RMSE(Metric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        error = (pred - target).square()
-        loss = error.mean().sqrt()
-        if not self.aggregate_only:
-            per_channel_losses = error.mean([0, 2, 3]).sqrt()
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
-        return loss
+        return rmse(pred, target, self.aggregate_only)
 
 
 @register("lat_rmse")
@@ -226,15 +211,8 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().cast_to_device(pred, target)
-        error = (pred - target).square()
-        error = error * self.lat_weights
-        loss = error.mean().sqrt()
-        if not self.aggregate_only:
-            per_channel_losses = error.mean([0, 2, 3]).sqrt()
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
-        return loss
+        super().cast_to_device(pred)
+        return rmse(pred, target, self.aggregate_only, self.lat_weights)
 
 
 @register("acc")
@@ -266,20 +244,8 @@ class ACC(ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        super().cast_to_device(self, pred, target)
-        pred = pred - self.climatology
-        target = target - self.climatology
-        pred_prime = pred - pred.mean([0, 2, 3], keepdims=True)
-        target_prime = target - target.mean([0, 2, 3], keepdims=True)
-        numer = (pred_prime * target_prime).sum([0, 2, 3])
-        denom1 = pred_prime.square().sum([0, 2, 3])
-        denom2 = target_prime.square().sum([0, 2, 3])
-        per_channel_losses = numer / (denom1 * denom2).sqrt()
-        loss = per_channel_losses.mean()
-        if not self.aggregate_only:
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
-        return loss
+        super().cast_to_device(pred)
+        return acc(pred, target, self.climatology, self.aggregate_only)
 
 
 @register("lat_acc")
@@ -312,20 +278,15 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
             ACC, and the preceding elements are the channel-wise ACCs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        LatitudeWeightedMetric.cast_to_device(self, pred, target)
-        ClimatologyBasedMetric.cast_to_device(self, pred, target)
-        pred = pred - self.climatology
-        target = target - self.climatology
-        pred_prime = pred - pred.mean([0, 2, 3], keepdims=True)
-        target_prime = target - target.mean([0, 2, 3], keepdims=True)
-        numer = (self.lat_weights * pred_prime * target_prime).sum([0, 2, 3])
-        denom1 = (self.lat_weights * pred_prime.square()).sum([0, 2, 3])
-        denom2 = (self.lat_weights * target_prime.square()).sum([0, 2, 3])
-        per_channel_losses = numer / (denom1 * denom2).sqrt()
-        loss = per_channel_losses.mean()
-        if not self.aggregate_only:
-            loss = loss.unsqueeze(0)
-            loss = torch.cat((per_channel_losses, loss))
+        LatitudeWeightedMetric.cast_to_device(self, pred)
+        ClimatologyBasedMetric.cast_to_device(self, pred)
+        loss = acc(
+            pred,
+            target,
+            self.climatology,
+            self.aggregate_only,
+            self.lat_weights
+        )
         return loss
 
 
@@ -338,7 +299,6 @@ class Pearson(Metric):
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
-        self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
     def __call__(
         self,
@@ -361,27 +321,7 @@ class Pearson(Metric):
             channel-wise Pearson correlation coefficients.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-
-        def flatten_channel_wise(x: torch.Tensor) -> torch.Tensor:
-            """
-            :param x: A tensor of shape [B,C,H,W].
-            :type x: torch.Tensor
-
-            :return: A tensor of shape [C,B*H*W].
-            :rtype: torch.Tensor
-            """
-            return torch.stack([xi.flatten() for xi in torch.tensor_split(x, 2, 1)])
-
-        pred = flatten_channel_wise(pred)
-        target = flatten_channel_wise(target)
-        pred = pred - pred.mean(1, keepdims=True)
-        target = target - target.mean(1, keepdims=True)
-        per_channel_coeffs = self.cos(pred, target)
-        coeff = torch.mean(per_channel_coeffs)
-        if not self.aggregate_only:
-            coeff = coeff.unsqueeze(0)
-            coeff = torch.cat((per_channel_coeffs, coeff))
-        return coeff
+        return pearson(pred, target, self.aggregate_only)
 
 
 @register("mean_bias")
@@ -408,9 +348,4 @@ class MeanBias(Metric):
             bias, and the preceding elements are the channel-wise mean bias.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
-        mean_bias = target.mean() - pred.mean()
-        if not self.aggregate_only:
-            per_channel_mean_bias = target.mean([0, 2, 3]) - pred.mean([0, 2, 3])
-            mean_bias = mean_bias.unsqueeze(0)
-            mean_bias = torch.cat((per_channel_mean_bias, mean_bias))
-        return mean_bias
+        return mean_bias(pred, target, self.aggregate_only)
