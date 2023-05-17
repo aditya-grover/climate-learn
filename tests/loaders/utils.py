@@ -1,7 +1,7 @@
 # Standard library
 from dataclasses import dataclass
 from itertools import repeat
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 # Third party
 import torch
@@ -10,6 +10,17 @@ import torch
 @dataclass
 class MockTensor:
     shape: Tuple[int, ...]
+
+
+@dataclass
+class MockTask:
+    in_vars: Iterable[str]
+    out_vars: Iterable[str]
+
+
+@dataclass
+class MockDataset:
+    task: MockTask
 
 
 class MockDataModule:
@@ -25,13 +36,10 @@ class MockDataModule:
         out_vars: Optional[List[str]] = None,
     ):
         if in_vars is None:
-            self.in_vars = [f"var{i}" for i in range(num_in_vars)]
-        else:
-            self.in_vars = in_vars
+            in_vars = [f"var{i}" for i in range(num_in_vars)]
         if out_vars is None:
-            self.out_vars = [f"var{i}" for i in range(num_out_vars)]
-        else:
-            self.out_vars = out_vars
+            out_vars = [f"var{i}" for i in range(num_out_vars)]
+        self.train_dataset = MockDataset(MockTask(in_vars, out_vars))
         if history == 0:
             x = MockTensor((num_batches, num_in_vars, height, width))
         else:

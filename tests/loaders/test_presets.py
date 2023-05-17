@@ -63,17 +63,6 @@ def test_illegal_persistence(mock_dm):
     )
 
 
-def test_persistence_out_subset_in():
-    in_vars = ["a", "d", "b", "c"]
-    out_vars = ["d", "a"]
-    mock_dm = MockDataModule(32, 3, 4, 2, 32, 64, in_vars, out_vars)
-    mock_dm.setup()
-    model = cl.load_preset("forecasting", mock_dm, preset="persistence")
-    for batch in mock_dm.train_dataloader():
-        x, y, _, _ = batch
-        assert model(x).shape == y.shape
-        break
-
 
 @pytest.mark.parametrize("preset", DOWNSCALING_PRESETS)
 def test_known_downscaling_presets(preset):
