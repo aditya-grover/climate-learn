@@ -220,11 +220,18 @@ class ERA5(ClimateDataset):
         return -1, self.variables_to_update_for_task()
 
     def load_chunk(self, chunk_id: int) -> int:
-        n_years_in_chunk: int = (
-            len(self.years_to_iterate) + self.n_chunks - 1
-        ) // self.n_chunks
+        n_years_in_chunk: int = len(self.years_to_iterate) // self.n_chunks
+        n_chunks_with_extra_year: int = len(self.years_to_iterate) % self.n_chunks
+        offset: int = 0
+        if chunk_id >= n_chunks_with_extra_year:
+            offset = n_chunks_with_extra_year * (n_years_in_chunk + 1)
+            chunk_id = chunk_id - n_chunks_with_extra_year
+        else:
+            n_years_in_chunk = n_years_in_chunk + 1
         years_to_iterate_this_chunk = self.years_to_iterate[
-            chunk_id * n_years_in_chunk : (chunk_id + 1) * n_years_in_chunk
+            offset
+            + chunk_id * n_years_in_chunk : offset
+            + (chunk_id + 1) * n_years_in_chunk
         ]
         self.data_dict = self.load_from_nc_by_years(
             self.root_dir, years_to_iterate_this_chunk

@@ -44,6 +44,8 @@ class ShardDataset(IterableDataset):
         self.out_lon: Union[np.ndarray, None] = None
         self.climatology: Union[Data, None] = None
         self.epoch: int = 0
+        self.shuffle: bool = True
+        self.drop_last: bool = False
 
     def get_setup_args(self, seed: int) -> Dict[str, int]:
         setup_args: Dict[str, int] = {}
@@ -78,8 +80,10 @@ class ShardDataset(IterableDataset):
         setup_args["rank"] = rank
         setup_args["seed"] = seed
         setup_args["n_chunks"] = self.n_chunks
-        setup_args["shuffle"] = True
-        setup_args["drop_last"] = True
+        if self.drop_last:
+            setup_args["drop_last"] = True
+        if self.shuffle:
+            setup_args["shuffle"] = True
         return setup_args
 
     def setup_transforms(self) -> None:
@@ -239,6 +243,7 @@ class ShardDataset(IterableDataset):
 
     def setup(self) -> None:
         setup_args: Dict[str, int] = self.get_setup_args(seed=0)
+        del setup_args["shuffle"]
         data_len, variables_to_update = self.data.setup(
             style="shard", setup_args=setup_args
         )
