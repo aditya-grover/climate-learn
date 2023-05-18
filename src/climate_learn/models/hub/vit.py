@@ -1,4 +1,5 @@
 # Local application
+from .components.cnn_blocks import PeriodicConv2D
 from .components.pos_embed import get_2d_sincos_pos_embed
 from .utils import register
 
@@ -27,25 +28,17 @@ class VisionTransformer(nn.Module):
         mlp_ratio=4.0,
     ):
         super().__init__()
-
         self.img_size = img_size
         self.in_channels = in_channels * history
         self.out_channels = out_channels
         self.patch_size = patch_size
-
-        # --------------------------------------------------------------------------
-        # ViT encoder
         self.patch_embed = PatchEmbed(img_size, patch_size, self.in_channels, embed_dim)
-        self.num_patches = self.patch_embed.num_patches  # 128
-
+        self.num_patches = self.patch_embed.num_patches
         self.pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches, embed_dim), requires_grad=learn_pos_emb
-        )  # fixed sin-cos embedding
+        )
         self.pos_drop = nn.Dropout(p=drop_rate)
-
-        dpr = [
-            x.item() for x in torch.linspace(0, drop_path, depth)
-        ]  # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path, depth)]
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -55,41 +48,34 @@ class VisionTransformer(nn.Module):
                     qkv_bias=True,
                     drop_path=dpr[i],
                     norm_layer=nn.LayerNorm,
-                    drop=drop_rate,
+                    proj_drop=drop_rate,
+                    attn_drop=drop_rate,
                 )
                 for i in range(depth)
             ]
         )
         self.norm = nn.LayerNorm(embed_dim)
-        # --------------------------------------------------------------------------
-
-        # --------------------------------------------------------------------------
-        # ViT prediction head
         self.head = nn.ModuleList()
-        for i in range(decoder_depth):
+        for _ in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
             self.head.append(nn.GELU())
         self.head = nn.Sequential(*self.head)
-        # --------------------------------------------------------------------------
-
+        self.final = PeriodicConv2D(
+            (self.num_patches * embed_dim) // (img_size[0] * img_size[1]),
+            self.out_channels,
+            kernel_size=7,
+            padding=3,
+        )
         self.initialize_weights()
 
     def initialize_weights(self):
-        # initialization
-        # initialize (and freeze) pos_embed by sin-cos embedding
         pos_embed = get_2d_sincos_pos_embed(
             self.pos_embed.shape[-1],
-            int(self.img_size[0] / self.patch_size),
-            int(self.img_size[1] / self.patch_size),
+            self.img_size[0] // self.patch_size,
+            self.img_size[1] // self.patch_size,
             cls_token=False,
         )
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
-
-        # # initialize patch_embed like nn.Linear (instead of nn.Conv2d)
-        # w = self.patch_embed.proj.weight.data
-        # trunc_normal_(w.view([w.shape[0], -1]), std=0.02)
-
-        # initialize nn.Linear and nn.LayerNorm
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -101,60 +87,41 @@ class VisionTransformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def patchify(self, imgs):
-        """
-        imgs: (N, C, H, W)
-        x: (N, L, patch_size**2 *3)
-        """
+    def unpatchify(self, patches):
+        b, num_patches, embed_dim = patches.shape
         p = self.patch_size
-        assert imgs.shape[2] % p == 0 and imgs.shape[3] % p == 0
-
-        h = self.img_size[0] // p
-        w = self.img_size[1] // p
-        c = self.in_channels
-        x = imgs.reshape(shape=(imgs.shape[0], c, h, p, w, p))
-        x = torch.einsum("nchpwq->nhwpqc", x)
-        x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * c))
+        h, w = self.img_size
+        hh, ww = h // p, w // p
+        c = (num_patches * embed_dim) // (h * w)
+        if hh * ww != patches.shape[1]:
+            raise RuntimeError("Cannot unpatchify")
+        x = patches.reshape((b, hh, ww, p, p, c))
+        x = torch.einsum("nhwpqc->nchpwq", x)
+        x = x.reshape((b, -1, h, w))
         return x
 
-    def unpatchify(self, x):
-        """
-        x: (N, L, patch_size**2 *3)
-        imgs: (N, 3, H, W)
-        """
-        p = self.patch_size
-        c = self.out_channels
-        h = self.img_size[0] // p
-        w = self.img_size[1] // p
-        assert h * w == x.shape[1]
-
-        x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
-        x = torch.einsum("nhwpqc->nchpwq", x)
-        imgs = x.reshape(shape=(x.shape[0], c, h * p, w * p))
-        return imgs
-
     def forward_encoder(self, x: torch.Tensor):
-        """
-        x: B, C, H, W
-        """
-        # embed patches
-        x = self.patch_embed(x)  # B, L, D
-
-        # add pos embed
+        # x.shape = [B,C,H,W]
+        x = self.patch_embed(x)
+        # x.shape = [B,num_patches,embed_dim]
         x = x + self.pos_embed
-
-        # dropout
         x = self.pos_drop(x)
-
-        # apply Transformer blocks
         for blk in self.blocks:
             x = blk(x)
+        # x.shape = [B,num_patches,embed_dim]
         x = self.norm(x)
-
         return x
 
     def forward(self, x):
-        x = x.flatten(1, 2)  # flatten history
-        embeddings = self.forward_encoder(x)  # B, L, D
-        preds = self.head(embeddings)
-        return self.unpatchify(preds)
+        # x.shape = [B,T,in_channels,H,W]
+        x = x.flatten(1, 2)
+        # x.shape = [B,T*in_channels,H,W]
+        x = self.forward_encoder(x)
+        # x.shape = [B,num_patches,embed_dim]
+        x = self.head(x)
+        # x.shape = [B,num_patches,embed_dim]
+        x = self.unpatchify(x)
+        # x.shape = [B,(num_patches*embed_dim)//(H*W),H,W]
+        preds = self.final(x)
+        # preds.shape = [B,out_channels,H,W]
+        return preds
