@@ -36,9 +36,7 @@ class Downscaling(Task):
     def create_constants_data(
         self, constants_data: Data, apply_transform: bool = 1
     ) -> Data:
-        const_data: Data = {
-            k: constants_data[k] for k in self.constants
-        }
+        const_data: Data = {k: constants_data[k] for k in self.constants}
 
         # transforms.Normalize works only on image like data (C * H * W)
         # hence adding channel via unsqueeze and

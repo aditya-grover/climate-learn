@@ -33,7 +33,7 @@ class ForecastingArgs(TaskArgs):
         new_instance: ForecastingArgs = super().create_copy(args)
         ForecastingArgs.check_validity(new_instance)
         return new_instance
-    
+
     def check_validity(self) -> None:
         super().check_validity()
         if self.history < 0:

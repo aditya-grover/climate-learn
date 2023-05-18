@@ -50,7 +50,9 @@ class ClimateDataset(ABC):
             )
         variables_to_update: Dict[str, Sequence[str]] = {}
         for var in var_to_update.keys():
-            variables_to_update[self.name + ":" + var] = [self.name + ":" + v for v in var_to_update[var]]
+            variables_to_update[self.name + ":" + var] = [
+                self.name + ":" + v for v in var_to_update[var]
+            ]
         return length, variables_to_update
 
     def load_chunk(self, chunk_id: int) -> int:

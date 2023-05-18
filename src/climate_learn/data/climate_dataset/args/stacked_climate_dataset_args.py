@@ -15,7 +15,9 @@ class StackedClimateDatasetArgs(ClimateDatasetArgs):
         Callable[..., StackedClimateDataset], str
     ] = "StackedClimateDataset"
 
-    def __init__(self, data_args: Sequence[ClimateDatasetArgs], name: str = "climate_dataset") -> None:
+    def __init__(
+        self, data_args: Sequence[ClimateDatasetArgs], name: str = "climate_dataset"
+    ) -> None:
         self.child_data_args: Sequence[ClimateDatasetArgs] = data_args
         self.name: str = name
         StackedClimateDatasetArgs.check_validity(self)
@@ -39,9 +41,11 @@ class StackedClimateDatasetArgs(ClimateDatasetArgs):
                 f"StackedClimateDataset requires a sequence of ClimateDatasetArgs. "
                 f"You have provided none."
             )
-        names: Sequence[str] = [child_data_arg.name for child_data_arg in self.child_data_args]
+        names: Sequence[str] = [
+            child_data_arg.name for child_data_arg in self.child_data_args
+        ]
         if len(set(names)) != len(names):
             raise RuntimeError(
-                    f"StackedClimateDatasetArgs requires all the data_args to have "
-                    f"unique names."
-                )
+                f"StackedClimateDatasetArgs requires all the data_args to have "
+                f"unique names."
+            )

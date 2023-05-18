@@ -149,7 +149,9 @@ class DataModule(LightningDataModule):
         train_metadata: Dict[str, Any] = self.get_metadata("train")
         #### TODO: Come up with better way to extract lat and lon
         key_list: Sequence[str] = list(train_metadata.keys())
-        data_sources: Sequence[str] = list(dict.fromkeys([":".join(k.split(":")[:-1]) for k in key_list]))
+        data_sources: Sequence[str] = list(
+            dict.fromkeys([":".join(k.split(":")[:-1]) for k in key_list])
+        )
         metadata_grouped_by_sources: Dict[str, Dict[str, Any]] = {}
         for data_source in data_sources:
             metadata_grouped_by_sources[data_source] = {}
@@ -166,7 +168,7 @@ class DataModule(LightningDataModule):
     def get_out_transforms(self) -> Union[transforms.Normalize, None]:
         _, out_transforms, _ = self.train_dataset.get_transforms()
         return out_transforms
-    
+
     def get_metadata(self, split: str = "train") -> Dict[str, Any]:
         if split == "train":
             return self.train_dataset.get_metadata()

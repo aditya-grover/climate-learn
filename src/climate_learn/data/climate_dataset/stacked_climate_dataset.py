@@ -36,7 +36,9 @@ class StackedClimateDataset(ClimateDataset):
             length, var_to_update = climate_dataset.setup(style, setup_args)
             dataset_length.append(length)
             for key in var_to_update.keys():
-                variables_to_update[self.name + ":" + key] = [self.name + ":" + k for k in var_to_update[key]]
+                variables_to_update[self.name + ":" + key] = [
+                    self.name + ":" + k for k in var_to_update[key]
+                ]
         if not len(set(dataset_length)) == 1:
             raise RuntimeError(
                 f"Recieved datasets of different lengths: {dataset_length}"
@@ -65,9 +67,13 @@ class StackedClimateDataset(ClimateDataset):
     def get_constants_data(self) -> Dict[str, torch.tensor]:
         constants_data_dict: Dict[str, torch.tensor] = {}
         for dataset in self.climate_datasets:
-            child_constants_data_dict: Dict[str, torch.tensor] = dataset.get_constants_data()
+            child_constants_data_dict: Dict[
+                str, torch.tensor
+            ] = dataset.get_constants_data()
             for key in child_constants_data_dict.keys():
-                constants_data_dict[self.name + ":" + key] = child_constants_data_dict[key]
+                constants_data_dict[self.name + ":" + key] = child_constants_data_dict[
+                    key
+                ]
         return constants_data_dict
 
     def get_time(self) -> Dict[str, Union[np.ndarray, None]]:

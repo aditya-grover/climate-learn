@@ -254,18 +254,25 @@ class ERA5(ClimateDataset):
             )
         variables_to_update: Dict[str, Sequence[str]] = {}
         for var in var_to_update.keys():
-            variables_to_update[self.name + ":" + var] = [self.name + ":" + v for v in var_to_update[var]]
+            variables_to_update[self.name + ":" + var] = [
+                self.name + ":" + v for v in var_to_update[var]
+            ]
         return length, variables_to_update
 
     def get_item(
         self, index: int
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
-        return {self.name + ":" + k: self.data_dict[k][index] for k in self.data_dict.keys()}
+        return {
+            self.name + ":" + k: self.data_dict[k][index] for k in self.data_dict.keys()
+        }
 
     def get_constants_data(
         self,
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
-        return {self.name + ":" + k: self.constants_data[k] for k in self.constants_data.keys()}
+        return {
+            self.name + ":" + k: self.constants_data[k]
+            for k in self.constants_data.keys()
+        }
 
     def get_time(self) -> Dict[str, Union[np.ndarray, None]]:
         return {self.name + ":time": self.time}

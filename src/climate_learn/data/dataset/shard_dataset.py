@@ -250,7 +250,7 @@ class ShardDataset(IterableDataset):
 
     def get_metadata(self) -> Dict[str, Union[np.ndarray, None]]:
         return self.data.get_metadata()
-    
+
     def get_climatology(self) -> Union[Data, None]:
         return self.climatology
 
