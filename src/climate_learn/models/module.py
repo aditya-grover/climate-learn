@@ -17,8 +17,8 @@ class LitModule(pl.LightningModule):
         val_loss: List[Callable],
         test_loss: List[Callable],
         train_target_transform: Optional[Callable] = None,
-        val_target_transforms: Optional[List[Union[Callable,None]]] = None,
-        test_target_transforms: Optional[List[Union[Callable,None]]] = None,
+        val_target_transforms: Optional[List[Union[Callable, None]]] = None,
+        test_target_transforms: Optional[List[Union[Callable, None]]] = None,
     ):
         super().__init__()
         self.net = net
@@ -51,7 +51,7 @@ class LitModule(pl.LightningModule):
     def training_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
-        batch_idx: int
+        batch_idx: int,
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
@@ -81,21 +81,19 @@ class LitModule(pl.LightningModule):
     def validation_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
-        batch_idx: int
+        batch_idx: int,
     ) -> torch.Tensor:
         self.evaluate(batch, "val")
 
     def test_step(
         self,
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
-        batch_idx: int
+        batch_idx: int,
     ) -> torch.Tensor:
         self.evaluate(batch, "test")
 
     def evaluate(
-        self,
-        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
-        stage: str
+        self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
