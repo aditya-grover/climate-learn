@@ -1,5 +1,5 @@
 # Standard library
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, List, Optional, Tuple, Union
 
 # Third party
 import torch
@@ -17,8 +17,8 @@ class LitModule(pl.LightningModule):
         val_loss: List[Callable],
         test_loss: List[Callable],
         train_target_transform: Optional[Callable] = None,
-        val_target_transforms: Optional[List[Callable]] = None,
-        test_target_transforms: Optional[List[Callable]] = None,
+        val_target_transforms: Optional[List[Union[Callable,None]]] = None,
+        test_target_transforms: Optional[List[Union[Callable,None]]] = None,
     ):
         super().__init__()
         self.net = net
@@ -28,13 +28,31 @@ class LitModule(pl.LightningModule):
         self.val_loss = val_loss
         self.test_loss = test_loss
         self.train_target_transform = train_target_transform
+        if val_target_transforms is not None:
+            if len(val_loss) != len(val_target_transforms):
+                raise RuntimeError(
+                    "If 'val_target_transforms' is not None, its length must"
+                    " match that of 'val_loss'. 'None' can be passed for"
+                    " losses which do not require transformation."
+                )
         self.val_target_transforms = val_target_transforms
+        if test_target_transforms is not None:
+            if len(test_loss) != len(test_target_transforms):
+                raise RuntimeError(
+                    "If 'test_target_transforms' is not None, its length must"
+                    " match that of 'test_loss'. 'None' can be passed for "
+                    " losses which do not rqeuire transformation."
+                )
         self.test_target_transforms = test_target_transforms
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
-    def training_step(self, batch: Any, batch_idx: int):
+    def training_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        batch_idx: int
+    ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
         if self.train_target_transform:
@@ -60,32 +78,40 @@ class LitModule(pl.LightningModule):
         )
         return loss
 
-    def validation_step(self, batch: Any, batch_idx: int):
+    def validation_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        batch_idx: int
+    ) -> torch.Tensor:
         self.evaluate(batch, "val")
 
-    def test_step(self, batch: Any, batch_idx: int):
+    def test_step(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        batch_idx: int
+    ) -> torch.Tensor:
         self.evaluate(batch, "test")
 
-    def evaluate(self, batch, stage):
+    def evaluate(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        stage: str
+    ):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
         if stage == "val":
             loss_fns = self.val_loss
+            transforms = self.val_target_transforms
         elif stage == "test":
             loss_fns = self.test_loss
+            transforms = self.test_target_transforms
         else:
             raise RuntimeError("Invalid evaluation stage")
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
-            if stage == "val" and self.val_target_transforms is not None:
-                yhat_T = self.val_target_transforms[i](yhat)
-                y_T = self.val_target_transforms[i](y)
-            elif stage == "test" and self.test_target_transforms is not None:
-                yhat_T = self.test_target_transforms[i](yhat)
-                y_T = self.val_target_transforms[i](y)
-            else:
-                yhat_T = yhat
-                y_T = y
+            if transforms is not None and transforms[i] is not None:
+                yhat_T = transforms[i](yhat)
+                y_T = transforms[i](y)
             losses = lf(yhat_T, y_T)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
