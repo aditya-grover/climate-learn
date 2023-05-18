@@ -59,7 +59,7 @@ class MockDataModule:
     def train_dataloader(self):
         if self.setup_complete:
             return self.batches
-        return None
+        raise RuntimeError()
 
     def get_climatology(self, *args, **kwargs):
         if self.setup_complete:
