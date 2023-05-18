@@ -36,22 +36,24 @@ class VisionTransformer(nn.Module):
         self.num_patches = self.patch_embed.num_patches
         self.pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches, embed_dim), requires_grad=learn_pos_emb
-        ) 
+        )
         self.pos_drop = nn.Dropout(p=drop_rate)
         dpr = [x.item() for x in torch.linspace(0, drop_path, depth)]
-        self.blocks = nn.ModuleList([
-            Block(
-                embed_dim,
-                num_heads,
-                mlp_ratio,
-                qkv_bias=True,
-                drop_path=dpr[i],
-                norm_layer=nn.LayerNorm,
-                proj_drop=drop_rate,
-                attn_drop=drop_rate,
-            )
-            for i in range(depth)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                Block(
+                    embed_dim,
+                    num_heads,
+                    mlp_ratio,
+                    qkv_bias=True,
+                    drop_path=dpr[i],
+                    norm_layer=nn.LayerNorm,
+                    proj_drop=drop_rate,
+                    attn_drop=drop_rate,
+                )
+                for i in range(depth)
+            ]
+        )
         self.norm = nn.LayerNorm(embed_dim)
         self.head = nn.ModuleList()
         for _ in range(decoder_depth):
@@ -59,10 +61,10 @@ class VisionTransformer(nn.Module):
             self.head.append(nn.GELU())
         self.head = nn.Sequential(*self.head)
         self.final = PeriodicConv2D(
-            (self.num_patches*embed_dim)//(img_size[0] * img_size[1]),
+            (self.num_patches * embed_dim) // (img_size[0] * img_size[1]),
             self.out_channels,
             kernel_size=7,
-            padding=3
+            padding=3,
         )
         self.initialize_weights()
 
