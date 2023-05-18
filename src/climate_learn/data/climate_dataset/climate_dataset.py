@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 # Local application
-from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
+from .args import ClimateDatasetArgs
 
 
 class ClimateDataset(ABC):
@@ -16,7 +16,7 @@ class ClimateDataset(ABC):
     def __init__(self, data_args: ClimateDatasetArgs) -> None:
         self.variables: Sequence[str] = data_args.variables
         self.constants: Sequence[str] = data_args.constants
-        self.split: str = data_args.split
+        self.name: str = data_args.name
 
     def setup_constants(self) -> None:
         raise NotImplementedError
@@ -39,15 +39,21 @@ class ClimateDataset(ABC):
     ) -> Tuple[int, Any]:
         supported_styles: Sequence[str] = ["map", "shard"]
         if style == "map":
-            return self.setup_map(), {}
+            length, var_to_update = self.setup_map()
         elif style == "shard":
-            return self.setup_shard(setup_args), {}
+            length, var_to_update = self.setup_shard(setup_args)
         else:
             raise RuntimeError(
                 f"Please choose a valid style of loading data. "
                 f"Current available options include: {supported_styles}. "
                 f"You have choosen: {style}"
             )
+        variables_to_update: Dict[str, Sequence[str]] = {}
+        for var in var_to_update.keys():
+            variables_to_update[self.name + ":" + var] = [
+                self.name + ":" + v for v in var_to_update[var]
+            ]
+        return length, variables_to_update
 
     def load_chunk(self, chunk_id: int) -> int:
         raise NotImplementedError
@@ -58,7 +64,7 @@ class ClimateDataset(ABC):
     def get_constants_data(self) -> Dict[str, torch.tensor]:
         raise NotImplementedError
 
-    def get_time(self) -> Union[np.ndarray, None]:
+    def get_time(self) -> Dict[str, Union[np.ndarray, None]]:
         raise NotImplementedError
 
     def get_metadata(self) -> Dict[str, Any]:

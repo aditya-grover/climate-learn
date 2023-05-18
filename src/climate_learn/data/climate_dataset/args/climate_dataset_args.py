@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Sequence, TYPE_CHECKING, Union
 
 # Local application
 if TYPE_CHECKING:
-    from climate_learn.data.climate_dataset import ClimateDataset
+    from ..climate_dataset import ClimateDataset
 
 
 class ClimateDatasetArgs(ABC):
@@ -17,7 +17,7 @@ class ClimateDatasetArgs(ABC):
         self,
         variables: Sequence[str],
         constants: Sequence[str] = [],
-        split: str = "train",
+        name: str = "climate_dataset",
     ) -> None:
         r"""
         .. highlight:: python
@@ -32,7 +32,7 @@ class ClimateDatasetArgs(ABC):
         """
         self.variables: Sequence[str] = variables
         self.constants: Sequence[str] = constants
-        self.split: str = split
+        self.name: str = name
         ClimateDatasetArgs.check_validity(self)
 
     def create_copy(self, args: Dict[str, Any] = {}) -> ClimateDatasetArgs:
@@ -61,8 +61,4 @@ class ClimateDatasetArgs(ABC):
         r"""
         Checks whether the attributes of the current instance of class hold legal values.
         """
-        if self.split not in ["train", "val", "test"]:
-            raise RuntimeError(
-                f"Split {self.split} is not recognized! "
-                f"please choose from ['train', 'val', 'test']."
-            )
+        pass

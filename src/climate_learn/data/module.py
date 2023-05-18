@@ -1,5 +1,5 @@
 # Standard library
-from typing import Callable, Dict, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Sequence, Tuple, Union
 
 # Third party
 import numpy as np
@@ -9,13 +9,13 @@ from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
 
 # Local application
-from climate_learn.data.dataset import (
+from ..utils.datetime import Year, Hours
+from .dataset import (
     MapDatasetArgs,
     MapDataset,
     ShardDatasetArgs,
     ShardDataset,
 )
-from climate_learn.utils.datetime import Year, Hours
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
@@ -145,11 +145,39 @@ class DataModule(LightningDataModule):
         )
 
     def get_lat_lon(self) -> Tuple[Union[np.ndarray, None], Union[np.ndarray, None]]:
-        return self.train_dataset.lat, self.train_dataset.lon
+        ## Get rid of this in future; Use get_metadata() only
+        train_metadata: Dict[str, Any] = self.get_metadata("train")
+        #### TODO: Come up with better way to extract lat and lon
+        key_list: Sequence[str] = list(train_metadata.keys())
+        data_sources: Sequence[str] = list(
+            dict.fromkeys([":".join(k.split(":")[:-1]) for k in key_list])
+        )
+        metadata_grouped_by_sources: Dict[str, Dict[str, Any]] = {}
+        for data_source in data_sources:
+            metadata_grouped_by_sources[data_source] = {}
+        for key in train_metadata.keys():
+            data_source: str = ":".join(key.split(":")[:-1])
+            field_name: str = key.split(":")[-1]
+            metadata_grouped_by_sources[data_source][field_name] = train_metadata[key]
+        random_data_source: str = next(iter(metadata_grouped_by_sources.keys()))
+        ### Bug prone, can have data sources which don't have lat and lon
+        lat = metadata_grouped_by_sources[random_data_source]["lat"]
+        lon = metadata_grouped_by_sources[random_data_source]["lon"]
+        return lat, lon
 
     def get_out_transforms(self) -> Union[transforms.Normalize, None]:
         _, out_transforms, _ = self.train_dataset.get_transforms()
         return out_transforms
+
+    def get_metadata(self, split: str = "train") -> Dict[str, Any]:
+        if split == "train":
+            return self.train_dataset.get_metadata()
+        elif split == "val":
+            return self.val_dataset.get_metadata()
+        elif split == "test":
+            return self.test_dataset.get_metadata()
+        else:
+            raise RuntimeError(f"Unrecognized split: {split}.")
 
     def get_climatology(
         self, split: str = "val"
@@ -161,7 +189,7 @@ class DataModule(LightningDataModule):
         elif split == "test":
             return self.test_dataset.get_climatology()
         else:
-            raise NotImplementedError
+            raise RuntimeError(f"Unrecognized split: {split}.")
 
     def build_dataloader(
         self, dataset: Union[MapDataset, ShardDataset], shuffle: bool

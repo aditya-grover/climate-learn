@@ -8,9 +8,9 @@ from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 
 # Local application
-from climate_learn.data.climate_dataset import ClimateDataset
-from climate_learn.data.task import Task
-from climate_learn.data.dataset.args import MapDatasetArgs
+from ..climate_dataset import ClimateDataset
+from ..task import Task
+from .args import MapDatasetArgs
 
 Data = Dict[str, torch.tensor]
 Transform = Dict[str, transforms.Normalize]
@@ -38,10 +38,6 @@ class MapDataset(Dataset):
             task_class: Callable[..., Task] = dataset_args.task_args._task_class
         self.task: Task = task_class(dataset_args.task_args)
 
-        self.lat: Union[np.ndarray, None] = None
-        self.lon: Union[np.ndarray, None] = None
-        self.out_lat: Union[np.ndarray, None] = None
-        self.out_lon: Union[np.ndarray, None] = None
         self.length: int = 0
         self.climatology: Union[Data, None] = None
 
@@ -104,23 +100,11 @@ class MapDataset(Dataset):
 
     def setup(self) -> None:
         data_len, variables_to_update = self.data.setup(style="map")
-        #### TODO: Come up with better way to extract lat and lon
-        ## HotFix (StackedClimateDataset returns a list instead of dict)
-        metadata = self.data.get_metadata()
-        ## Get rid of these attributes in future;
-        ## Once ModelModule becomes independent of DataModule
-        if isinstance(metadata, list):  # For downscaling
-            self.lat = metadata[0]["lat"]
-            self.lon = metadata[0]["lon"]
-            self.out_lat = metadata[1]["lat"]
-            self.out_lon = metadata[1]["lon"]
-        else:
-            self.lat = metadata["lat"]
-            self.lon = metadata["lon"]
-            self.out_lat = metadata["lat"]
-            self.out_lon = metadata["lon"]
         self.length = self.task.setup(data_len, variables_to_update)
         self.setup_transforms()
+
+    def get_metadata(self) -> Dict[str, Union[np.ndarray, None]]:
+        return self.data.get_metadata()
 
     def get_climatology(self) -> Union[Data, None]:
         return self.climatology
@@ -155,14 +139,15 @@ class MapDataset(Dataset):
             const = None
         return inp, out, const
 
-    def get_time(self) -> np.ndarray:
+    def get_time(self) -> Dict[str, np.ndarray]:
         time_indices: Sequence[int] = [
             self.task.get_time_index(index) for index in range(self.length)
         ]
-        time: Union[None, np.ndarray] = self.data.get_time()
-        if time == None:
-            raise RuntimeError(f"No data has been loaded into the memory yet.")
-        return time[time_indices]
+        time_dict: Dict[str, Union[np.ndarray, None]] = self.data.get_time()
+        for key in time_dict.keys():
+            if not isinstance(time_dict[key], np.ndarray):
+                raise RuntimeError(f"Data hasn't been loaded into the memory yet.")
+        return {key: time_dict[key][time_indices] for key in time_dict.keys()}
 
     def get_transforms(self) -> Tuple[Transform, Transform, Transform]:
         return self.task.get_transforms()

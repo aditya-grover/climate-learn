@@ -8,5 +8,5 @@ class TestERA5ArgsInstantiation:
             variables=["geopotential", "2m_temperature"],
             years=range(2010, 2015),
             constants=["random_constant"],
-            split="train",
+            name="era5",
         )

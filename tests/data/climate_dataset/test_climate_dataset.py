@@ -7,6 +7,6 @@ class TestClimateDatasetInstantiation:
             ClimateDatasetArgs(
                 variables=["random_variable_1", "random_variable_2"],
                 constants=["random_constant"],
-                split="train",
+                name="my_climate_dataset",
             )
         )

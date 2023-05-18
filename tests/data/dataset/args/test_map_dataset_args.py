@@ -8,12 +8,12 @@ class TestMapDatasetArgsInstantiation:
         climate_dataset_args = ClimateDatasetArgs(
             variables=["random_variable_1", "random_variable_2"],
             constants=["random_constant"],
-            split="train",
+            name="my_climate_dataset",
         )
         task_args = TaskArgs(
-            in_vars=["random_variable_1"],
-            out_vars=["random_variable_2"],
-            constants=["random_constant"],
+            in_vars=["my_climate_dataset:random_variable_1"],
+            out_vars=["my_climate_dataset:random_variable_2"],
+            constants=["my_climate_dataset:random_constant"],
             subsample=3,
         )
         MapDatasetArgs(climate_dataset_args, task_args)

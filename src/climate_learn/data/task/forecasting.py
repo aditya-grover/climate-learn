@@ -5,8 +5,8 @@ from typing import Callable, Dict, Sequence, Tuple
 import torch
 
 # Local application
-from climate_learn.data.task.task import Task
-from climate_learn.data.task.args import ForecastingArgs
+from .args import ForecastingArgs
+from .task import Task
 
 Data = Dict[str, torch.tensor]
 
@@ -23,42 +23,7 @@ class Forecasting(Task):
     def setup(
         self, data_len: int, variables_to_update: Dict[str, Sequence[str]] = {}
     ) -> int:
-        # Assuming that variables_to_update is a dict
-        in_vars: Sequence[str] = []
-        out_vars: Sequence[str] = []
-        for variable in self.in_vars:
-            if variable in variables_to_update.keys():
-                for variable_to_add in variables_to_update[variable]:
-                    in_vars.append(variable_to_add)
-            else:
-                in_vars.append(variable)
-        for variable in self.out_vars:
-            if variable in variables_to_update.keys():
-                for variable_to_add in variables_to_update[variable]:
-                    out_vars.append(variable_to_add)
-            else:
-                out_vars.append(variable)
-        ## using dict instead of set to preserve insertion order
-        self.in_vars = list(dict.fromkeys(in_vars))
-        self.out_vars = list(dict.fromkeys(out_vars))
-
-        variables_available: Sequence[str] = []
-        for variables in variables_to_update.values():
-            variables_available.extend(variables)
-        variables_available = set(variables_available)
-
-        if not set(self.in_vars).issubset(variables_available):
-            RuntimeError(
-                f"The input variables required by the task: {self.in_vars} "
-                f"are not available in the dataset: {variables_available}"
-            )
-
-        if not set(self.out_vars).issubset(variables_available):
-            RuntimeError(
-                f"The output variables required by the task: {self.in_vars} "
-                f"are not available in the dataset: {variables_available}"
-            )
-
+        super().setup(data_len, variables_to_update)
         return (
             data_len - ((self.history - 1) * self.window + self.pred_range)
         ) // self.subsample
