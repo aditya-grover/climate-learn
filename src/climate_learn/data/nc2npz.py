@@ -2,6 +2,12 @@
 import glob
 import os
 
+# Third party
+import numpy as np
+import xarray as xr
+import netCDF4 as nc
+from tqdm import tqdm
+
 # Local application
 from .climate_dataset.era5.constants import (
     DEFAULT_PRESSURE_LEVELS,
@@ -9,12 +15,6 @@ from .climate_dataset.era5.constants import (
     VAR_TO_NAME,
     CONSTANTS,
 )
-
-# Third party
-import numpy as np
-import xarray as xr
-import netCDF4 as nc
-from tqdm import tqdm
 
 HOURS_PER_YEAR = 8736  # 8760 --> 8736 which is dividable by 16
 

@@ -5,7 +5,6 @@ from typing import Callable, Dict, Sequence, Tuple
 import torch
 
 # Local application
-from climate_learn.data.climate_dataset import *
 from .args import DownscalingArgs
 from .task import Task
 

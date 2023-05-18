@@ -1,6 +1,5 @@
 # Standard library
 from __future__ import annotations
-import copy
 from typing import Any, Callable, Dict, Sequence, TYPE_CHECKING, Union
 
 # Local application
