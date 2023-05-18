@@ -16,7 +16,9 @@ class StackedClimateDatasetArgs(ClimateDatasetArgs):
     ] = "StackedClimateDataset"
 
     def __init__(
-        self, data_args: Sequence[ClimateDatasetArgs], name: str = "climate_dataset"
+        self,
+        data_args: Sequence[ClimateDatasetArgs],
+        name: str = "stacked_climate_dataset",
     ) -> None:
         self.child_data_args: Sequence[ClimateDatasetArgs] = data_args
         self.name: str = name

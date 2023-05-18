@@ -18,7 +18,7 @@ class ERA5Args(ClimateDatasetArgs):
         variables: Sequence[str],
         years: Iterable[int],
         constants: Sequence[str] = [],
-        name: str = "climate_dataset",
+        name: str = "era5",
     ) -> None:
         super().__init__(variables, constants, name)
         self.root_dir: str = root_dir
