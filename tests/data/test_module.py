@@ -24,21 +24,21 @@ class TestModuleInstantiation:
                 "orography",
                 "land_sea_mask",
             ],
-            split="train",
+            name="era5",
         )
         forecasting_args = ForecastingArgs(
             in_vars=[
-                "2m_temperature",
-                "geopotential",
-                "temperature_250",
+                "era5:2m_temperature",
+                "era5:geopotential",
+                "era5:temperature_250",
             ],
             out_vars=[
-                "geopotential",
-                "temperature_250",
+                "era5:geopotential",
+                "era5:temperature_250",
             ],
             constants=[
-                "orography",
-                "land_sea_mask",
+                "era5:orography",
+                "era5:land_sea_mask",
             ],
             pred_range=3 * 24,
             subsample=6,
@@ -46,12 +46,12 @@ class TestModuleInstantiation:
         train_dataset_args = MapDatasetArgs(climate_dataset_args, forecasting_args)
 
         modified_args_for_val_dataset = {
-            "climate_dataset_args": {"years": range(2015, 2017), "split": "val"}
+            "climate_dataset_args": {"years": range(2015, 2017)}
         }
         val_dataset_args = train_dataset_args.create_copy(modified_args_for_val_dataset)
 
         modified_args_for_test_dataset = {
-            "climate_dataset_args": {"years": range(2017, 2019), "split": "test"}
+            "climate_dataset_args": {"years": range(2017, 2019)}
         }
         test_dataset_args = train_dataset_args.create_copy(
             modified_args_for_test_dataset
@@ -72,7 +72,7 @@ class TestModuleInstantiation:
                 "orography",
                 "land_sea_mask",
             ],
-            split="train",
+            name="era5_lowres",
         )
         high_res_climate_dataset_args = ERA5Args(
             root_dir=os.path.join(DATA_PATH, "era5/2.8125deg/"),
@@ -81,24 +81,24 @@ class TestModuleInstantiation:
                 "temperature_250",
             ],
             years=range(2009, 2015),
-            split="train",
+            name="era5_highres",
         )
         stacked_climate_dataset_args = StackedClimateDatasetArgs(
-            [climate_dataset_args, high_res_climate_dataset_args]
+            [climate_dataset_args, high_res_climate_dataset_args], "stack"
         )
         downscaling_args = DownscalingArgs(
             in_vars=[
-                "2m_temperature",
-                "geopotential",
-                "temperature_250",
+                "stack:era5_lowres:2m_temperature",
+                "stack:era5_lowres:geopotential",
+                "stack:era5_lowres:temperature_250",
             ],
             out_vars=[
-                "geopotential",
-                "temperature_250",
+                "stack:era5_highres:geopotential",
+                "stack:era5_highres:temperature_250",
             ],
             constants=[
-                "orography",
-                "land_sea_mask",
+                "stack:era5_lowres:orography",
+                "stack:era5_lowres:land_sea_mask",
             ],
             subsample=6,
         )
@@ -109,10 +109,9 @@ class TestModuleInstantiation:
         modified_args_for_val_dataset = {
             "climate_dataset_args": {
                 "child_data_args": [
-                    {"years": range(2015, 2017), "split": "val"},
-                    {"years": range(2015, 2017), "split": "val"},
-                ],
-                "split": "val",
+                    {"years": range(2015, 2017)},
+                    {"years": range(2015, 2017)},
+                ]
             }
         }
         val_dataset_args = train_dataset_args.create_copy(modified_args_for_val_dataset)
@@ -120,10 +119,9 @@ class TestModuleInstantiation:
         modified_args_for_test_dataset = {
             "climate_dataset_args": {
                 "child_data_args": [
-                    {"years": range(2017, 2019), "split": "test"},
-                    {"years": range(2017, 2019), "split": "test"},
-                ],
-                "split": "test",
+                    {"years": range(2017, 2019)},
+                    {"years": range(2017, 2019)},
+                ]
             }
         }
         test_dataset_args = train_dataset_args.create_copy(

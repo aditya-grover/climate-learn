@@ -9,6 +9,6 @@ class TestERA5Instantiation:
                 variables=["geopotential", "2m_temperature"],
                 years=range(2010, 2015),
                 constants=["land_sea_mask", "orography"],
-                split="train",
+                name="era5",
             )
         )
