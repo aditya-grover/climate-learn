@@ -19,7 +19,7 @@ class TestForecastingModels:
     history = 3
     num_channels = 2
     out_channels = 1
-    width, height = 32, 64
+    height, width = 32, 64
     x = torch.randn((num_batches, history, num_channels, height, width))
     y_same_channels = torch.randn((num_batches, num_channels, height, width))
     y_diff_channels = torch.randn((num_batches, out_channels, height, width))
@@ -73,7 +73,6 @@ class TestForecastingModels:
         model = Unet(self.num_channels, out_channels, self.history)
         assert model(self.x).shape == target.shape
 
-    @pytest.mark.skip(reason="ViT is broken, will fix in future PR")
     @pytest.mark.parametrize("same_out_channels", [True, False])
     def test_vit(self, same_out_channels):
         if same_out_channels:
@@ -83,7 +82,7 @@ class TestForecastingModels:
             out_channels = self.out_channels
             target = self.y_diff_channels
         model = VisionTransformer(
-            (self.width, self.height),
+            (self.height, self.width),
             self.num_channels,
             out_channels,
             self.history,
