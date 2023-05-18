@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Callable, Sequence, TYPE_CHECKING, Union
 
 # Local application
-from climate_learn.data.task.args import TaskArgs
+from .task_args import TaskArgs
 
 if TYPE_CHECKING:
-    from climate_learn.data.task import Downscaling
+    from ..downscaling import Downscaling
 
 
 class DownscalingArgs(TaskArgs):

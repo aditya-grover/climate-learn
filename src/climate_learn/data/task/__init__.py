@@ -1,4 +1,4 @@
-from .args import TaskArgs, ForecastingArgs, DownscalingArgs
+from .args import TaskArgs, DownscalingArgs, ForecastingArgs
 from .task import Task
-from .forecasting import Forecasting
 from .downscaling import Downscaling
+from .forecasting import Forecasting

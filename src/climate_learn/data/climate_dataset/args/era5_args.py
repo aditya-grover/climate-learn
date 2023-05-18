@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Callable, Iterable, Sequence, TYPE_CHECKING, Union
 
 # Local application
-from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
+from .climate_dataset_args import ClimateDatasetArgs
 
 if TYPE_CHECKING:
-    from climate_learn.data.climate_dataset import ERA5
+    from ..era5.era5 import ERA5
 
 
 class ERA5Args(ClimateDatasetArgs):
@@ -18,8 +18,8 @@ class ERA5Args(ClimateDatasetArgs):
         variables: Sequence[str],
         years: Iterable[int],
         constants: Sequence[str] = [],
-        split: str = "train",
+        name: str = "climate_dataset",
     ) -> None:
-        super().__init__(variables, constants, split)
+        super().__init__(variables, constants, name)
         self.root_dir: str = root_dir
         self.years: Iterable[int] = years

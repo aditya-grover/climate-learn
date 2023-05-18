@@ -9,9 +9,9 @@ from torch.utils.data import IterableDataset
 from torchvision.transforms import transforms
 
 # Local application
-from climate_learn.data.climate_dataset import ClimateDataset
-from climate_learn.data.task import Task
-from climate_learn.data.dataset.args import ShardDatasetArgs
+from ..climate_dataset import ClimateDataset
+from ..task import Task
+from .args import ShardDatasetArgs
 
 Data = Dict[str, torch.tensor]
 Transform = Dict[str, transforms.Normalize]
@@ -36,12 +36,8 @@ class ShardDataset(IterableDataset):
         else:
             task_class: Callable[..., Task] = dataset_args.task_args._task_class
         self.task: Task = task_class(dataset_args.task_args)
-        self.n_chunks = dataset_args.n_chunks
+        self.n_chunks: int = dataset_args.n_chunks
 
-        self.lat: Union[np.ndarray, None] = None
-        self.lon: Union[np.ndarray, None] = None
-        self.out_lat: Union[np.ndarray, None] = None
-        self.out_lon: Union[np.ndarray, None] = None
         self.climatology: Union[Data, None] = None
         self.epoch: int = 0
         self.shuffle: bool = True
@@ -247,27 +243,14 @@ class ShardDataset(IterableDataset):
         data_len, variables_to_update = self.data.setup(
             style="shard", setup_args=setup_args
         )
-        #### TODO: Come up with better way to extract lat and lon
-        ## HotFix (StackedClimateDataset returns a list instead of dict)
-        ## TODO: Need some sort of communication from all the process and then form assert
-        metadata = self.data.get_metadata()
-        ## Get rid of these attributes in future;
-        ## Once ModelModule becomes independent of DataModule
-        if isinstance(metadata, list):  # For downscaling
-            self.lat = metadata[0]["lat"]
-            self.lon = metadata[0]["lon"]
-            self.out_lat = metadata[1]["lat"]
-            self.out_lon = metadata[1]["lon"]
-        else:
-            self.lat = metadata["lat"]
-            self.lon = metadata["lon"]
-            self.out_lat = metadata["lat"]
-            self.out_lon = metadata["lon"]
         ## TODO: Need some sort of communication from all the process and then form assert
         _ = self.task.setup(data_len, variables_to_update)
         self.setup_transforms()
         self.epoch = 0
 
+    def get_metadata(self) -> Dict[str, Union[np.ndarray, None]]:
+        return self.data.get_metadata()
+    
     def get_climatology(self) -> Union[Data, None]:
         return self.climatology
 
@@ -316,7 +299,17 @@ class ShardDataset(IterableDataset):
         return inp, out, const
 
     def get_time(self) -> np.ndarray:
-        raise NotImplementedError
+        time_dict: Dict[str, Union[np.ndarray, None]] = self.data.get_time()
+        for key in time_dict.keys():
+            if not isinstance(time_dict[key], np.ndarray):
+                raise RuntimeError(f"Data hasn't been loaded into the memory yet.")
+        random_key: str = next(iter(time_dict.keys()))
+        data_len: int = len(time_dict[random_key])
+        length: int = self.task.setup(data_len)
+        time_indices: Sequence[int] = [
+            self.task.get_time_index(index) for index in range(length)
+        ]
+        return {key: time_dict[key][time_indices] for key in time_dict.keys()}
 
     def get_transforms(self) -> Tuple[Transform, Transform, Transform]:
         return self.task.get_transforms()

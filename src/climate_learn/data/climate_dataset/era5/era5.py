@@ -12,9 +12,9 @@ from tqdm import tqdm
 import xarray as xr
 
 # Local application
-from climate_learn.data.climate_dataset.args import ERA5Args
-from climate_learn.data.climate_dataset import ClimateDataset
-from climate_learn.data.climate_dataset.era5.constants import (
+from ..args import ERA5Args
+from ..climate_dataset import ClimateDataset
+from .constants import (
     CONSTANTS,
     DEFAULT_PRESSURE_LEVELS,
     NAME_LEVEL_TO_VAR_LEVEL,
@@ -243,33 +243,37 @@ class ERA5(ClimateDataset):
     ) -> Tuple[int, Dict[str, Sequence[str]]]:
         supported_styles: Sequence[str] = ["map", "shard"]
         if style == "map":
-            return self.setup_map()
+            length, var_to_update = self.setup_map()
         elif style == "shard":
-            return self.setup_shard(setup_args)
+            length, var_to_update = self.setup_shard(setup_args)
         else:
             RuntimeError(
                 f"Please choose a valid style of loading data. "
                 f"Current available options include: {supported_styles}. "
                 f"You have choosen: {style}"
             )
+        variables_to_update: Dict[str, Sequence[str]] = {}
+        for var in var_to_update.keys():
+            variables_to_update[self.name + ":" + var] = [self.name + ":" + v for v in var_to_update[var]]
+        return length, variables_to_update
 
     def get_item(
         self, index: int
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
-        return {k: self.data_dict[k][index] for k in self.data_dict.keys()}
+        return {self.name + ":" + k: self.data_dict[k][index] for k in self.data_dict.keys()}
 
     def get_constants_data(
         self,
     ) -> Dict[str, torch.tensor]:  # Dict where each value is a torch tensor shape 32*64
-        return self.constants_data
+        return {self.name + ":" + k: self.constants_data[k] for k in self.constants_data.keys()}
 
-    def get_time(self) -> Union[np.ndarray, None]:
-        return self.time
+    def get_time(self) -> Dict[str, Union[np.ndarray, None]]:
+        return {self.name + ":time": self.time}
 
     def get_metadata(
         self,
     ) -> Dict[str, Union[np.ndarray, None]]:  # Dict where each value is a ndarray
-        return {"lat": self.lat, "lon": self.lon}
+        return {self.name + ":lat": self.lat, self.name + ":lon": self.lon}
 
 
 ERA5Args._data_class = ERA5

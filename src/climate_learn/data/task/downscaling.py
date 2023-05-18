@@ -6,8 +6,8 @@ import torch
 
 # Local application
 from climate_learn.data.climate_dataset import *
-from climate_learn.data.task.task import Task
-from climate_learn.data.task.args import DownscalingArgs
+from .args import DownscalingArgs
+from .task import Task
 
 Data = Dict[str, torch.tensor]
 
@@ -19,57 +19,13 @@ class Downscaling(Task):
         super().__init__(task_args)
 
     def setup(
-        self,
-        data_len: int,
-        variables_to_update: Sequence[Dict[str, Sequence[str]]] = [{}, {}],
+        self, data_len: int, variables_to_update: Dict[str, Sequence[str]] = {}
     ) -> int:
         # # why is this a single number instead of a tuple
         # self.downscale_ratio: Any = (
         #     self.out_data.shape[-1] // self.inp_data.shape[-1]
         # )  # TODO add stronger typecheck
-        # Assuming that variables_to_update is a list of dict
-        # As it is coming from StackedClimateDataset
-        in_vars: Sequence[str] = []
-        out_vars: Sequence[str] = []
-        for variable in self.in_vars:
-            if variable in variables_to_update[0].keys():
-                for variable_to_add in variables_to_update[0][variable]:
-                    in_vars.append(variable_to_add)
-            else:
-                in_vars.append(variable)
-        for variable in self.out_vars:
-            if variable in variables_to_update[1].keys():
-                for variable_to_add in variables_to_update[1][variable]:
-                    out_vars.append(variable_to_add)
-            else:
-                out_vars.append(variable)
-        ## using dict instead of set to preserve insertion order
-        self.in_vars = list(dict.fromkeys(in_vars))
-        self.out_vars = list(dict.fromkeys(out_vars))
-
-        variables_available_input: Sequence[str] = []
-        for variables in variables_to_update[0].values():
-            variables_available_input.extend(variables)
-        variables_available_input = set(variables_available_input)
-
-        variables_available_output: Sequence[str] = []
-        for variables in variables_to_update[1].values():
-            variables_available_output.extend(variables)
-        variables_available_output = set(variables_available_output)
-
-        if not set(self.in_vars).issubset(variables_available_input):
-            RuntimeError(
-                f"The input variables required by the task: {self.in_vars} "
-                f"are not available in the dataset: {variables_available_input}"
-            )
-
-        if not set(self.out_vars).issubset(variables_available_output):
-            RuntimeError(
-                f"The output variables required by the task: {self.in_vars} "
-                f"are not available in the dataset: {variables_available_output}"
-            )
-
-        return data_len // self.subsample
+        return super().setup(data_len, variables_to_update)
 
     def get_raw_index(self, index: int) -> int:
         return index * self.subsample
@@ -80,10 +36,9 @@ class Downscaling(Task):
     def create_constants_data(
         self, constants_data: Data, apply_transform: bool = 1
     ) -> Data:
-        ## Need constants data from the first dataset only
         const_data: Data = {
-            k: constants_data[0][k] for k in self.constants
-        }  # [lowres_lat, lowres_lon]
+            k: constants_data[k] for k in self.constants
+        }
 
         # transforms.Normalize works only on image like data (C * H * W)
         # hence adding channel via unsqueeze and
@@ -101,13 +56,11 @@ class Downscaling(Task):
         constants_data: Data,
         apply_transform: bool = 1,
     ) -> Tuple[Data, Data]:
-        ## First dataset contains the input
         inp_data: Data = {
-            k: raw_data[0][k] for k in self.in_vars
+            k: raw_data[k] for k in self.in_vars
         }  # [lowres_lat, lowres_lon]
-        ## Second dataset contains the output
         out_data: Data = {
-            k: raw_data[1][k] for k in self.out_vars
+            k: raw_data[k] for k in self.out_vars
         }  # [highres_lat, highres_lon]
 
         # transforms.Normalize works only on image like data (C * H * W)

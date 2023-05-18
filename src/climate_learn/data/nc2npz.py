@@ -3,7 +3,7 @@ import glob
 import os
 
 # Local application
-from climate_learn.data.climate_dataset.era5.constants import (
+from .climate_dataset.era5.constants import (
     DEFAULT_PRESSURE_LEVELS,
     NAME_TO_VAR,
     VAR_TO_NAME,

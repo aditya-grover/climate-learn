@@ -5,11 +5,11 @@ import copy
 from typing import Any, Callable, Dict, TYPE_CHECKING, Union
 
 # Local application
-from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
-from climate_learn.data.task.args import TaskArgs
+from ...climate_dataset.args import ClimateDatasetArgs
+from ...task.args import TaskArgs
 
 if TYPE_CHECKING:
-    from climate_learn.data.dataset import MapDataset
+    from ..map_dataset import MapDataset
 
 
 class MapDatasetArgs(ABC):
@@ -30,7 +30,7 @@ class MapDatasetArgs(ABC):
                 )
             elif arg == "task_args":
                 new_instance.task_args = new_instance.task_args.create_copy(args[arg])
-        new_instance.check_validity()
+        MapDatasetArgs.check_validity(new_instance)
         return new_instance
 
     def check_validity(self) -> None:

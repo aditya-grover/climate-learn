@@ -4,10 +4,10 @@ import copy
 from typing import Any, Callable, Dict, Sequence, TYPE_CHECKING, Union
 
 # Local application
-from climate_learn.data.task.args import TaskArgs
+from .task_args import TaskArgs
 
 if TYPE_CHECKING:
-    from climate_learn.data.task import Forecasting
+    from ..forecasting import Forecasting
 
 
 class ForecastingArgs(TaskArgs):
@@ -29,6 +29,11 @@ class ForecastingArgs(TaskArgs):
         self.pred_range: int = pred_range
         ForecastingArgs.check_validity(self)
 
+    def create_copy(self, args: Dict[str, Any] = {}) -> ForecastingArgs:
+        new_instance: ForecastingArgs = super().create_copy(args)
+        ForecastingArgs.check_validity(new_instance)
+        return new_instance
+    
     def check_validity(self) -> None:
         super().check_validity()
         if self.history < 0:
