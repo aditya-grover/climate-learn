@@ -1,35 +1,25 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
+# Local application
+from .components.pos_embed import get_2d_sincos_pos_embed
+from .utils import register
 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
-# DeiT: https://github.com/facebookresearch/deit
-# --------------------------------------------------------
-
-
+# Third party
 import torch
 import torch.nn as nn
 from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_
-from .utils.pos_embed import get_2d_sincos_pos_embed
 
 
+@register("vit")
 class VisionTransformer(nn.Module):
     def __init__(
         self,
-        img_size=[128, 256],
+        img_size,
+        in_channels,
+        out_channels,
+        history,
         patch_size=16,
         drop_path=0.1,
         drop_rate=0.1,
         learn_pos_emb=False,
-        in_vars=[
-            "2m_temperature",
-            "10m_u_component_of_wind",
-            "10m_v_component_of_wind",
-        ],
-        out_vars=["2m_temperature"],
         embed_dim=1024,
         depth=24,
         decoder_depth=8,
@@ -39,17 +29,13 @@ class VisionTransformer(nn.Module):
         super().__init__()
 
         self.img_size = img_size
-        self.n_channels = len(in_vars)
+        self.in_channels = in_channels * history
+        self.out_channels = out_channels
         self.patch_size = patch_size
-
-        self.in_vars = in_vars
-        self.out_vars = out_vars
 
         # --------------------------------------------------------------------------
         # ViT encoder
-        self.patch_embed = PatchEmbed(
-            img_size, patch_size, len(self.in_vars), embed_dim
-        )
+        self.patch_embed = PatchEmbed(img_size, patch_size, self.in_channels, embed_dim)
         self.num_patches = self.patch_embed.num_patches  # 128
 
         self.pos_embed = nn.Parameter(
@@ -125,7 +111,7 @@ class VisionTransformer(nn.Module):
 
         h = self.img_size[0] // p
         w = self.img_size[1] // p
-        c = len(self.in_vars)
+        c = self.in_channels
         x = imgs.reshape(shape=(imgs.shape[0], c, h, p, w, p))
         x = torch.einsum("nchpwq->nhwpqc", x)
         x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * c))
@@ -137,7 +123,7 @@ class VisionTransformer(nn.Module):
         imgs: (N, 3, H, W)
         """
         p = self.patch_size
-        c = len(self.out_vars)
+        c = self.out_channels
         h = self.img_size[0] // p
         w = self.img_size[1] // p
         assert h * w == x.shape[1]
@@ -167,51 +153,8 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward_loss(
-        self, y, pred, out_variables, metric, lat, log_postfix
-    ):  # metric is a list
-        """
-        y: [N, 3, H, W]
-        pred: [N, L, p*p*3]
-        """
-        pred = self.unpatchify(pred)
-        return (
-            [
-                m(pred, y, out_variables, lat=lat, log_postfix=log_postfix)
-                for m in metric
-            ],
-            pred,
-        )
-
-    def forward(self, x, y, out_variables, metric, lat, log_postfix):
-        if len(x.shape) == 5:  # history
-            x = x.flatten(1, 2)
+    def forward(self, x):
+        x = x.flatten(1, 2)  # flatten history
         embeddings = self.forward_encoder(x)  # B, L, D
         preds = self.head(embeddings)
-        loss, preds = self.forward_loss(
-            y, preds, out_variables, metric, lat, log_postfix
-        )
-        return loss, preds
-
-    def predict(self, x):
-        if len(x.shape) == 5:  # history
-            x = x.flatten(1, 2)
-        with torch.no_grad():
-            embeddings = self.forward_encoder(x)
-            pred = self.head(embeddings)
-        return self.unpatchify(pred)
-
-    def evaluate(
-        self, x, y, variables, out_variables, transform, metrics, lat, clim, log_postfix
-    ):
-        pred = self.predict(x)
-        return [
-            m(pred, y, transform, out_variables, lat, clim, log_postfix)
-            for m in metrics
-        ], pred
-
-
-# model = VisionTransformer(img_size=[32, 64], embed_dim=128, patch_size=2, depth=8, upsampling=2).cuda()
-# x, y = torch.randn(2, 3, 32, 64).cuda(), torch.randn(2, 3, 64, 128).cuda()
-# pred = model.predict(x)
-# print (pred.shape)
+        return self.unpatchify(preds)
