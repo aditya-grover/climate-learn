@@ -15,15 +15,15 @@ def main():
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
     
-    root = "/home/data/datasets/weatherbench/era5/5.625deg"
+    root = "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg"
     dataset = "era5"
     variables = [
         "2m_temperature",
-        "geopotential",
-        "temperature",
-        "specific_humidity",
-        "u_component_of_wind",
-        "v_component_of_wind"
+        # "geopotential",
+        # "temperature",
+        # "specific_humidity",
+        # "u_component_of_wind",
+        # "v_component_of_wind"
     ]
     in_vars = [f"{dataset}:{var}" for var in variables]
     out_vars = [f"{dataset}:{var}" for var in variables]
@@ -79,12 +79,16 @@ def main():
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
-        acceleator="gpu",
-        devices=args.gpu
+        accelerator="gpu",
+        devices=[args.gpu],
+        max_epochs=5
     )
-    trainer.fit(linreg, data_module)
+    trainer.fit(linreg, dm)
     
     # Evaluate baselines
     trainer.test(climatology, dm)
     trainer.test(persistence, dm)
     trainer.test(linreg, dm)
+
+if __name__ == '__main__':
+    main()
