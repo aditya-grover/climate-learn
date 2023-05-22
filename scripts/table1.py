@@ -5,9 +5,11 @@ from argparse import ArgumentParser
 import climate_learn as cl
 from climate_learn.data import DataModule
 from climate_learn.data.climate_dataset.args import ERA5Args
-from climate_learn.data.dataset.args import ShardDatasetArgs
+from climate_learn.data.dataset.args import ShardDatasetArgs, MapDatasetArgs
 from climate_learn.data.task.args import ForecastingArgs
 
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 def main():
     parser = ArgumentParser()
@@ -19,11 +21,11 @@ def main():
     dataset = "era5"
     variables = [
         "2m_temperature",
-        # "geopotential",
-        # "temperature",
-        # "specific_humidity",
-        # "u_component_of_wind",
-        # "v_component_of_wind"
+        "geopotential",
+        "temperature",
+        "specific_humidity",
+        "u_component_of_wind",
+        "v_component_of_wind"
     ]
     in_vars = [f"{dataset}:{var}" for var in variables]
     out_vars = [f"{dataset}:{var}" for var in variables]
@@ -44,17 +46,18 @@ def main():
         pred_range=pred_range,
         subsample=subsample
     )
-    shard_dataset_args = ShardDatasetArgs(data_args, forecasting_args, 5)
+    shard_dataset_args = ShardDatasetArgs(data_args, forecasting_args, 4)
+    map_dataset_args = MapDatasetArgs(data_args, forecasting_args)
 
     # Split-specific arguments
     train_dataset_args = shard_dataset_args.create_copy(
         {"climate_dataset_args": {"years": train_years}}
     )
-    val_dataset_args = shard_dataset_args.create_copy(
-        {"climate_dataset_args": {"years": val_years}, "n_chunks": 1}
+    val_dataset_args = map_dataset_args.create_copy(
+        {"climate_dataset_args": {"years": val_years}}
     )
-    test_dataset_args = shard_dataset_args.create_copy(
-        {"climate_dataset_args": {"years": test_years}, "n_chunks": 1}
+    test_dataset_args = map_dataset_args.create_copy(
+        {"climate_dataset_args": {"years": test_years}}
     )
 
     # Data module
@@ -63,7 +66,7 @@ def main():
         val_dataset_args,
         test_dataset_args,
         batch_size=32,
-        num_workers=8
+        num_workers=0,
     )
     
     # Fit baselines
@@ -81,7 +84,7 @@ def main():
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=5
+        strategy="ddp_spawn"
     )
     trainer.fit(linreg, dm)
     
