@@ -5,19 +5,19 @@ from argparse import ArgumentParser
 import climate_learn as cl
 from climate_learn.data import DataModule
 from climate_learn.data.climate_dataset.args import ERA5Args
-from climate_learn.data.dataset.args import ShardDatasetArgs, MapDatasetArgs
+from climate_learn.data.dataset.args import MapDatasetArgs, ShardDatasetArgs
 from climate_learn.data.task.args import ForecastingArgs
-
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 def main():
     parser = ArgumentParser()
     parser.add_argument("pred_range", type=int)
+    parser.add_argument("chunks", type=int)
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
     
-    root = "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg"
+    root = "/home/data/datasets/weatherbench/era5/5.625deg"
     dataset = "era5"
     variables = [
         "2m_temperature",
@@ -29,7 +29,6 @@ def main():
     ]
     in_vars = [f"{dataset}:{var}" for var in variables]
     out_vars = [f"{dataset}:{var}" for var in variables]
-    total_years = range(1979, 2018)
     train_years = range(1979, 2015)
     val_years = range(2015, 2017)
     test_years = range(2017, 2019)
@@ -37,8 +36,6 @@ def main():
     subsample = 6
     pred_range = args.pred_range
     
-    # General arguments
-    data_args = ERA5Args(root, variables, total_years, name=dataset)
     forecasting_args = ForecastingArgs(
         in_vars,
         out_vars,
@@ -46,21 +43,19 @@ def main():
         pred_range=pred_range,
         subsample=subsample
     )
-    shard_dataset_args = ShardDatasetArgs(data_args, forecasting_args, 4)
-    map_dataset_args = MapDatasetArgs(data_args, forecasting_args)
-
-    # Split-specific arguments
-    train_dataset_args = shard_dataset_args.create_copy(
-        {"climate_dataset_args": {"years": train_years}}
+    train_dataset_args = ShardDatasetArgs(
+        ERA5Args(root, variables, train_years, name=dataset),
+        forecasting_args,
+        n_chunks=args.chunks
     )
-    val_dataset_args = map_dataset_args.create_copy(
-        {"climate_dataset_args": {"years": val_years}}
+    val_dataset_args = MapDatasetArgs(
+        ERA5Args(root, variables, val_years, name=dataset),
+        forecasting_args
     )
-    test_dataset_args = map_dataset_args.create_copy(
-        {"climate_dataset_args": {"years": test_years}}
+    test_dataset_args = MapDatasetArgs(
+        ERA5Args(root, variables, test_years, name=dataset),
+        forecasting_args
     )
-
-    # Data module
     dm = DataModule(
         train_dataset_args,
         val_dataset_args,
@@ -69,7 +64,6 @@ def main():
         num_workers=0,
     )
     
-    # Fit baselines
     climatology = cl.load_forecasting_module(
         data_module=dm, preset="climatology"
     )
@@ -86,12 +80,12 @@ def main():
         devices=[args.gpu],
         strategy="ddp_spawn"
     )
-    trainer.fit(linreg, dm)
     
-    # Evaluate baselines
+    trainer.fit(linreg, dm)
     trainer.test(climatology, dm)
     trainer.test(persistence, dm)
     trainer.test(linreg, dm)
 
+    
 if __name__ == '__main__':
     main()
