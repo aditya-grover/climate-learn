@@ -72,9 +72,10 @@ def main():
         "in_channel": 36,
         "out_channels": 3,
         "history": 3,
-        "embed_dim": 128,
-        "depth": 16,
-        "decoder_depth": 4,
+        "patch_size": 2,
+        "embed_dim": 256,
+        "depth": 8,
+        "decoder_depth": 2,
         "num_heads": 16,
         "mlp_ratio": 4
     }
