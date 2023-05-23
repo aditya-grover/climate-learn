@@ -3,22 +3,21 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import DataModule
-from climate_learn.data.climate_dataset.args import ERA5Args
-from climate_learn.data.dataset.args import MapDatasetArgs, ShardDatasetArgs
-from climate_learn.data.task.args import ForecastingArgs
+from climate_learn.data import IterDataModule
+from climate_learn.utils.datetime import Hours
+from climate_learn.data.climate_dataset.era5.constants import *
 import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def main():
+    torch.multiprocessing.set_sharing_strategy("file_system")
+
     parser = ArgumentParser()
     parser.add_argument("pred_range", type=int)
-    parser.add_argument("chunks", type=int)
+    parser.add_argument("root_dir")
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
     
-    root = "/home/data/datasets/weatherbench/era5/5.625deg"
-    dataset = "era5"
     variables = [
         "2m_temperature",
         "geopotential",
@@ -27,42 +26,46 @@ def main():
         "u_component_of_wind",
         "v_component_of_wind"
     ]
-    in_vars = [f"{dataset}:{var}" for var in variables]
-    out_vars = [f"{dataset}:{var}" for var in variables]
-    train_years = range(1979, 2015)
-    val_years = range(2015, 2017)
-    test_years = range(2017, 2019)
-    history = 3
-    subsample = 6
-    pred_range = args.pred_range
+    in_vars = []
+    for var in variables:
+        if var in PRESSURE_LEVEL_VARS:
+            for level in DEFAULT_PRESSURE_LEVELS:
+                in_vars.append(var + "_" + str(level))
+        else:
+            in_vars.append(var)
+
+    out_variables = [
+        "2m_temperature",
+        "geopotential_500",
+        "temperature_850"
+    ]
+    out_vars = []
+    for var in out_variables:
+        if var in PRESSURE_LEVEL_VARS:
+            for level in DEFAULT_PRESSURE_LEVELS:
+                out_vars.append(var + "_" + str(level))
+        else:
+            out_vars.append(var)
     
-    forecasting_args = ForecastingArgs(
+    history = 3
+    subsample = Hours(6)
+    window = 6
+    pred_range = Hours(args.pred_range)
+    batch_size = 32
+    
+    dm = IterDataModule(
+        "forecasting",
+        args.root_dir,
+        args.root_dir,
         in_vars,
         out_vars,
-        history=history,
-        pred_range=pred_range,
-        subsample=subsample
+        history,
+        window,
+        pred_range,
+        subsample,
+        batch_size=batch_size
     )
-    train_dataset_args = ShardDatasetArgs(
-        ERA5Args(root, variables, train_years, name=dataset),
-        forecasting_args,
-        n_chunks=args.chunks
-    )
-    val_dataset_args = MapDatasetArgs(
-        ERA5Args(root, variables, val_years, name=dataset),
-        forecasting_args
-    )
-    test_dataset_args = MapDatasetArgs(
-        ERA5Args(root, variables, test_years, name=dataset),
-        forecasting_args
-    )
-    dm = DataModule(
-        train_dataset_args,
-        val_dataset_args,
-        test_dataset_args,
-        batch_size=32,
-        num_workers=0,
-    )
+    dm.setup()
     
     climatology = cl.load_forecasting_module(
         data_module=dm, preset="climatology"
@@ -87,5 +90,5 @@ def main():
     trainer.test(linreg, dm)
 
     
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
