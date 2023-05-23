@@ -354,17 +354,10 @@ def load_transform(transform_name, data_module):
 
 
 def get_data_dims(data_module):
-    for batch in data_module.train_dataloader():
-        x, y, _, _ = batch
-        break
-    return x.shape, y.shape
-
+    return data_module.get_data_dims()
 
 def get_data_variables(data_module):
-    in_vars = data_module.train_dataset.task.in_vars
-    out_vars = data_module.train_dataset.task.out_vars
-    return in_vars, out_vars
-
+    return data_module.get_data_variables()
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
