@@ -63,7 +63,8 @@ def main():
         window,
         pred_range,
         subsample,
-        batch_size=batch_size
+        batch_size=batch_size,
+        num_workers=8
     )
     dm.setup()
     
@@ -73,21 +74,13 @@ def main():
     persistence = cl.load_forecasting_module(
         data_module=dm, preset="persistence"
     )
-    linreg = cl.load_forecasting_module(
-        data_module=dm, preset="linear-regression"
-    )
     trainer = cl.Trainer(
-        early_stopping="lat_rmse:aggregate",
-        patience=5,
         accelerator="gpu",
-        devices=[args.gpu],
-        strategy="ddp_spawn"
+        devices=[args.gpu]        
     )
     
-    trainer.fit(linreg, dm)
     trainer.test(climatology, dm)
     trainer.test(persistence, dm)
-    trainer.test(linreg, dm)
 
     
 if __name__ == "__main__":

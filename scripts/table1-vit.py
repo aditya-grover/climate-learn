@@ -63,13 +63,14 @@ def main():
         window,
         pred_range,
         subsample,
-        batch_size=batch_size
+        batch_size=batch_size,
+        num_workers=8
     )
     dm.setup()
     
     vit_kwargs = {
         "img_size": (32,64),
-        "in_channel": 36,
+        "in_channels": 36,
         "out_channels": 3,
         "history": 3,
         "patch_size": 2,
@@ -82,14 +83,15 @@ def main():
     vit = cl.load_forecasting_module(
         data_module=dm,
         model="vit",
-        model_kwargs=vit_kwargs
+        model_kwargs=vit_kwargs,
+        optim="adamw",
+        optim_kwargs={"lr": 1e-5}
     )
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
         accelerator="gpu",
-        devices=[args.gpu],
-        strategy="ddp_spawn"
+        devices=[args.gpu]
     )
     
     trainer.fit(vit, dm)

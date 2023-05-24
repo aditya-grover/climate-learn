@@ -63,19 +63,23 @@ def main():
         window,
         pred_range,
         subsample,
-        batch_size=batch_size
+        batch_size=batch_size,
+        num_workers=8
     )
     dm.setup()
     
     resnet = cl.load_forecasting_module(
-        data_module=dm, preset="rasp-theurey-2020"
+        data_module=dm,
+        preset="rasp-theurey-2020",
+        optim_kwargs={"lr": 1e-4},
+        sched="linear-warmup-cosine-annealing",
+        sched_kwargs={"warmup_epochs": 1000}
     )
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
         accelerator="gpu",
-        devices=[args.gpu],
-        strategy="ddp_spawn"
+        devices=[args.gpu]
     )
     
     trainer.fit(resnet, dm)

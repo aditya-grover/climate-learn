@@ -77,18 +77,18 @@ def load_model_module(
         print("Using custom optimizer")
     else:
         raise TypeError("'optim' must be str or torch.optim.Optimizer")
-    # Load the LR scheduler
-    if preset is None and sched is None:
-        raise RuntimeError("Please specify 'preset' or 'sched'")
-    elif preset:
+    # Load the LR scheduler, if specified
+    if preset:
         print("Using preset learning rate scheduler")
+    elif sched is None:
+        lr_scheduler = None
     elif isinstance(sched, str):
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
     elif isinstance(sched, LRScheduler):
         print("Using custom learning rate scheduler")
     else:
-        raise TypeError("'sched' must be str or torch.optim.lr_scheduler._LRScheduler")
+        raise TypeError("'sched' must be str, None, or torch.optim.lr_scheduler._LRScheduler")
     # Load training loss
     in_vars, out_vars = get_data_variables(data_module)
     lat, lon = data_module.get_lat_lon()
@@ -124,10 +124,10 @@ def load_model_module(
         if isinstance(tl, str):
             clim = get_climatology(data_module, "test")
             metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-            print(f"Loading validation loss: {tl}")
+            print(f"Loading test loss: {tl}")
             test_losses.append(load_loss(tl, False, metainfo))
         elif isinstance(tl, Callable):
-            print("Using custom validation loss")
+            print("Using custom testing loss")
             test_losses.append(tl)
         else:
             raise TypeError("each 'test_loss' must be str or Callable")
@@ -166,10 +166,10 @@ def load_model_module(
     if isinstance(test_target_transform, Iterable):
         for tt in test_target_transform:
             if isinstance(tt, str):
-                print(f"Loading validation transform: {tt}")
+                print(f"Loading test transform: {tt}")
                 test_transforms.append(load_transform(tt, data_module))
             elif isinstance(tt, Callable):
-                print("Using custom validation transform")
+                print("Using custom test transform")
                 test_transforms.append(tt)
             else:
                 raise TypeError("each 'test_transform' must be str or Callable")
@@ -233,7 +233,11 @@ def load_preset(task, data_module, preset):
         history, in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
         if preset.lower() == "climatology":
-            model = Climatology(get_climatology(data_module, "train"))
+            norm = data_module.get_out_transforms()
+            mean_norm = torch.tensor([norm[k].mean for k in norm.keys()])
+            std_norm = torch.tensor([norm[k].std for k in norm.keys()])
+            clim = get_climatology(data_module, "train")
+            model = Climatology(clim, mean_norm, std_norm)
             optimizer = lr_scheduler = None
         elif preset == "persistence":
             if not set(out_vars).issubset(in_vars):
@@ -352,17 +356,27 @@ def load_transform(transform_name, data_module):
     transform = transform_cls(data_module)
     return transform
 
+# def get_data_dims(data_module):
+#     return data_module.get_data_dims()
+
+# def get_data_variables(data_module):
+#     return data_module.get_data_variables()
 
 def get_data_dims(data_module):
-    return data_module.get_data_dims()
+    for batch in data_module.train_dataloader():
+        x, y, _, _ = batch
+        break
+    return x.shape, y.shape
 
 def get_data_variables(data_module):
-    return data_module.get_data_variables()
+    in_vars = data_module.train_dataset.task.in_vars
+    out_vars = data_module.train_dataset.task.out_vars
+    return in_vars, out_vars
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
     if clim is None:
         raise RuntimeError("Climatology has not yet been set.")
     # Hotfix to work with dict style data
-    clim = torch.stack(tuple(clim.values()))
+    clim = torch.stack(tuple(clim.values()))    
     return clim

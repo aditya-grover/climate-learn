@@ -39,7 +39,7 @@ class Trainer(pl.Trainer):
             ]
             if early_stopping:
                 early_stop_callback = EarlyStopping(
-                    monitor=early_stopping, patience=patience, verbose=False
+                    early_stopping, 1e-8, patience
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks

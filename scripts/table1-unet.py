@@ -63,7 +63,8 @@ def main():
         window,
         pred_range,
         subsample,
-        batch_size=batch_size
+        batch_size=batch_size,
+        num_workers=8
     )
     dm.setup()
     
@@ -77,14 +78,15 @@ def main():
     unet = cl.load_forecasting_module(
         data_module=dm,
         model="unet",
-        model_kwargs=unet_kwargs
+        model_kwargs=unet_kwargs,
+        optim="adamw",
+        optim_kwargs={"lr": 1e-5}
     )
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
         accelerator="gpu",
-        devices=[args.gpu],
-        strategy="ddp_spawn"
+        devices=[args.gpu]
     )
     
     trainer.fit(unet, dm)
