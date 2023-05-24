@@ -85,13 +85,16 @@ def main():
         model="vit",
         model_kwargs=vit_kwargs,
         optim="adamw",
-        optim_kwargs={"lr": 1e-5}
+        optim_kwargs={"lr": 1e-5},
+        sched="linear-warmup-cosine-annealing",
+        sched_kwargs={"warmup_epochs": 1000, "max_epochs": 64}
     )
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
         accelerator="gpu",
-        devices=[args.gpu]
+        devices=[args.gpu],
+        max_epochs=64
     )
     
     trainer.fit(vit, dm)

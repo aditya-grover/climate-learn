@@ -68,18 +68,36 @@ def main():
     )
     dm.setup()
     
+    model = cl.models.hub.ResNet(
+        in_channels=36,
+        out_channels=3,
+        history=history,
+        hidden_channels=128,
+        activation="leaky",
+        norm=True,
+        dropout=0.1,
+        n_blocks=19,
+    )
+    optimizer = cl.load_optimizer(
+        model, "Adam", {"lr": 1e-4, "weight_decay": 1e-5}
+    )
+    lr_scheduler = cl.load_lr_scheduler(
+        "linear-warmup-cosine-annealing",
+        optimizer,
+        {"warmup_epochs": 1000, "max_epochs": 64}
+    )
     resnet = cl.load_forecasting_module(
         data_module=dm,
-        preset="rasp-theurey-2020",
-        optim_kwargs={"lr": 1e-4},
-        sched="linear-warmup-cosine-annealing",
-        sched_kwargs={"warmup_epochs": 1000}
+        model=model,
+        optim=optimizer,
+        sched=lr_scheduler
     )
     trainer = cl.Trainer(
         early_stopping="lat_rmse:aggregate",
         patience=5,
         accelerator="gpu",
-        devices=[args.gpu]
+        devices=[args.gpu],
+        max_epochs=64
     )
     
     trainer.fit(resnet, dm)

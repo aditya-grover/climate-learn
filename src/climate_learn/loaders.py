@@ -74,6 +74,7 @@ def load_model_module(
         print(f"Loading optimizer {optim}")
         optimizer = load_optimizer(model, optim, optim_kwargs)
     elif isinstance(optim, torch.optim.Optimizer):
+        optimizer = optim
         print("Using custom optimizer")
     else:
         raise TypeError("'optim' must be str or torch.optim.Optimizer")
@@ -86,6 +87,7 @@ def load_model_module(
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
     elif isinstance(sched, LRScheduler):
+        lr_scheduler = sched
         print("Using custom learning rate scheduler")
     else:
         raise TypeError("'sched' must be str, None, or torch.optim.lr_scheduler._LRScheduler")
@@ -356,22 +358,22 @@ def load_transform(transform_name, data_module):
     transform = transform_cls(data_module)
     return transform
 
-# def get_data_dims(data_module):
-#     return data_module.get_data_dims()
-
-# def get_data_variables(data_module):
-#     return data_module.get_data_variables()
-
 def get_data_dims(data_module):
-    for batch in data_module.train_dataloader():
-        x, y, _, _ = batch
-        break
-    return x.shape, y.shape
+    return data_module.get_data_dims()
 
 def get_data_variables(data_module):
-    in_vars = data_module.train_dataset.task.in_vars
-    out_vars = data_module.train_dataset.task.out_vars
-    return in_vars, out_vars
+    return data_module.get_data_variables()
+
+# def get_data_dims(data_module):
+#     for batch in data_module.train_dataloader():
+#         x, y, _, _ = batch
+#         break
+#     return x.shape, y.shape
+
+# def get_data_variables(data_module):
+#     in_vars = data_module.train_dataset.task.in_vars
+#     out_vars = data_module.train_dataset.task.out_vars
+#     return in_vars, out_vars
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
