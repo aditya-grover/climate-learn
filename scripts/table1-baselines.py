@@ -76,7 +76,8 @@ def main():
     )
     trainer = cl.Trainer(
         accelerator="gpu",
-        devices=[args.gpu]        
+        devices=[args.gpu],
+        default_root_dir=f"baselines_forecasting_{args.pred_range}"        
     )
     
     trainer.test(climatology, dm)

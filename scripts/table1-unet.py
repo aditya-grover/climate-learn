@@ -89,7 +89,8 @@ def main():
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=64
+        max_epochs=64,
+        default_root_dir=f"unet_forecasting_{args.pred_range}"
     )
     
     trainer.fit(unet, dm)
