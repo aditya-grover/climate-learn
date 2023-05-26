@@ -93,12 +93,13 @@ def main():
         sched=lr_scheduler
     )
     trainer = cl.Trainer(
-        early_stopping="lat_rmse:aggregate",
+        early_stopping="lat_mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
         max_epochs=64,
-        default_root_dir=f"resnet_forecasting_{args.pred_range}"
+        default_root_dir=f"resnet_forecasting_{args.pred_range}",
+        precision=16
     )
     
     trainer.fit(resnet, dm)

@@ -201,10 +201,10 @@ load_forecasting_module = partial(
     load_model_module,
     task="forecasting",
     train_loss="lat_mse",
-    val_loss=["lat_rmse", "lat_acc"],
+    val_loss=["lat_rmse", "lat_acc", "lat_mse"],
     test_loss=["lat_rmse", "lat_acc"],
     train_target_transform=None,
-    val_target_transform=["denormalize", "denormalize"],
+    val_target_transform=["denormalize", "denormalize", None],
     test_target_transform=["denormalize", "denormalize"],
 )
 
