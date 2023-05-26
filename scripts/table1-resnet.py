@@ -7,6 +7,7 @@ from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
 import torch.multiprocessing
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 def main():
@@ -19,6 +20,10 @@ def main():
     args = parser.parse_args()
     
     variables = [
+        "land_sea_mask",
+        "orography",
+        "lattitude",
+        "toa_incident_solar_radiation",
         "2m_temperature",
         "geopotential",
         "temperature",
@@ -48,10 +53,11 @@ def main():
             out_vars.append(var)
     
     history = 3
-    subsample = Hours(6)
     window = 6
     pred_range = Hours(args.pred_range)
-    batch_size = 32
+    subsample = Hours(1)
+    batch_size = 128
+    default_root_dir=f"results/resnet_forecasting_{args.pred_range}"
     
     dm = IterDataModule(
         "forecasting",
@@ -64,12 +70,12 @@ def main():
         pred_range,
         subsample,
         batch_size=batch_size,
-        num_workers=8
+        num_workers=1
     )
-    dm.setup()
+    # dm.setup()
     
     model = cl.models.hub.ResNet(
-        in_channels=36,
+        in_channels=40,
         out_channels=3,
         history=history,
         hidden_channels=128,
@@ -79,12 +85,12 @@ def main():
         n_blocks=19,
     )
     optimizer = cl.load_optimizer(
-        model, "Adam", {"lr": 1e-4, "weight_decay": 1e-5}
+        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
     )
     lr_scheduler = cl.load_lr_scheduler(
         "linear-warmup-cosine-annealing",
         optimizer,
-        {"warmup_epochs": 1000, "max_epochs": 64}
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
     resnet = cl.load_forecasting_module(
         data_module=dm,
@@ -92,17 +98,22 @@ def main():
         optim=optimizer,
         sched=lr_scheduler
     )
+    logger = TensorBoardLogger(
+        save_dir=f"{default_root_dir}/logs"
+    )
     trainer = cl.Trainer(
-        early_stopping="lat_rmse:aggregate",
+        early_stopping="val/lat_mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=64,
-        default_root_dir=f"resnet_forecasting_{args.pred_range}"
+        precision="bf16",
+        max_epochs=50,
+        default_root_dir=default_root_dir,
+        logger=logger
     )
     
-    trainer.fit(resnet, dm)
-    trainer.test(resnet, dm)
+    trainer.fit(resnet, datamodule=dm)
+    trainer.test(resnet, datamodule=dm, ckpt_path="best")
 
     
 if __name__ == "__main__":
