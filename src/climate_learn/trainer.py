@@ -43,12 +43,6 @@ class Trainer(pl.Trainer):
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
-        if "strategy" not in kwargs:
-            if in_notebook():
-                warn("In interactive environment: cannot use DDP spawn strategy")
-                kwargs["strategy"] = None
-            else:
-                kwargs["strategy"] = "ddp_spawn"
         self.trainer = pl.Trainer(**kwargs)
 
     def fit(self, model_module, *args, **kwargs):

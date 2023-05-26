@@ -6,12 +6,9 @@ import climate_learn as cl
 from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
-import torch.multiprocessing
 
 
 def main():
-    torch.multiprocessing.set_sharing_strategy("file_system")
-
     parser = ArgumentParser()
     parser.add_argument("pred_range", type=int)
     parser.add_argument("root_dir")
@@ -93,13 +90,14 @@ def main():
         sched=lr_scheduler
     )
     trainer = cl.Trainer(
-        early_stopping="lat_mse:aggregate",
+        early_stopping="val/lat_mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
         max_epochs=64,
         default_root_dir=f"resnet_forecasting_{args.pred_range}",
-        precision=16
+        precision="bf16",
+        summary_depth=1
     )
     
     trainer.fit(resnet, dm)

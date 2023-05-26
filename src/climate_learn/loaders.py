@@ -103,6 +103,18 @@ def load_model_module(
         print("Using custom training loss")
     else:
         raise TypeError("'train_loss' must be str or Callable")
+    # Load training transform
+    if isinstance(train_target_transform, str):
+        print(f"Loading training transform: {train_target_transform}")
+        train_transform = load_transform(train_target_transform, data_module)
+    elif isinstance(train_target_transform, Callable):
+        print("Using custom training transform")
+        train_transform = train_target_transform
+    elif train_target_transform is None:
+        print("No train transform")
+        train_transform = train_target_transform
+    else:
+        raise TypeError("'train_target_transform' must be str, callable, or None")
     # Load validation loss
     if not isinstance(val_loss, Iterable):
         raise TypeError("'val_loss' must be an iterable")
@@ -118,32 +130,6 @@ def load_model_module(
             val_losses.append(vl)
         else:
             raise TypeError("each 'val_loss' must be str or Callable")
-    # Load test loss
-    if not isinstance(test_loss, Iterable):
-        raise TypeError("'test_loss' must be an iterable")
-    test_losses = []
-    for tl in test_loss:
-        if isinstance(tl, str):
-            clim = get_climatology(data_module, "test")
-            metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-            print(f"Loading test loss: {tl}")
-            test_losses.append(load_loss(tl, False, metainfo))
-        elif isinstance(tl, Callable):
-            print("Using custom testing loss")
-            test_losses.append(tl)
-        else:
-            raise TypeError("each 'test_loss' must be str or Callable")
-    # Load training transform
-    if isinstance(train_target_transform, str):
-        print(f"Loading training transform: {train_target_transform}")
-        train_transform = load_transform(train_target_transform, data_module)
-    elif isinstance(train_target_transform, Callable):
-        print("Using custom training transform")
-        train_transform = train_target_transform
-    elif train_target_transform is None:
-        train_transform = train_target_transform
-    else:
-        raise TypeError("'train_target_transform' must be str, callable, or None")
     # Load validation transform
     val_transforms = []
     if isinstance(val_target_transform, Iterable):
@@ -166,6 +152,21 @@ def load_model_module(
             "'val_target_transform' must be an iterable of strings/callables,"
             " or None"
         )
+    # Load test loss
+    if not isinstance(test_loss, Iterable):
+        raise TypeError("'test_loss' must be an iterable")
+    test_losses = []
+    for tl in test_loss:
+        if isinstance(tl, str):
+            clim = get_climatology(data_module, "test")
+            metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
+            print(f"Loading test loss: {tl}")
+            test_losses.append(load_loss(tl, False, metainfo))
+        elif isinstance(tl, Callable):
+            print("Using custom testing loss")
+            test_losses.append(tl)
+        else:
+            raise TypeError("each 'test_loss' must be str or Callable")
     # Load test transform
     test_transforms = []
     if isinstance(test_target_transform, Iterable):
