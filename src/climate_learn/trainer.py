@@ -9,6 +9,7 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,
+    LearningRateMonitor
 )
 
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
@@ -21,10 +22,15 @@ class Trainer(pl.Trainer):
         self, early_stopping=None, patience=0, summary_depth=-1, seed=0, **kwargs
     ):
         pl.seed_everything(seed)
+        default_root_dir = kwargs["default_root_dir"]
         if "logger" not in kwargs:
             kwargs["logger"] = False
         if "callbacks" not in kwargs:
             checkpoint_callback = ModelCheckpoint(
+                dirpath=f"{default_root_dir}/checkpoints",
+                monitor=early_stopping,
+                mode="min",
+                save_top_k=1,
                 save_last=True,
                 verbose=False,
                 filename="epoch_{epoch:03d}",
@@ -32,14 +38,16 @@ class Trainer(pl.Trainer):
             )
             summary_callback = RichModelSummary(max_depth=summary_depth)
             progress_callback = RichProgressBar()
+            lr_monitor = LearningRateMonitor(logging_interval="step")
             callbacks = [
                 checkpoint_callback,
                 summary_callback,
                 progress_callback,
+                lr_monitor
             ]
             if early_stopping:
                 early_stop_callback = EarlyStopping(
-                    early_stopping, 1e-8, patience
+                    early_stopping, 0.0, patience
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
@@ -48,7 +56,7 @@ class Trainer(pl.Trainer):
                 warn("In interactive environment: cannot use DDP spawn strategy")
                 kwargs["strategy"] = None
             else:
-                kwargs["strategy"] = "ddp_spawn"
+                kwargs["strategy"] = "ddp"
         self.trainer = pl.Trainer(**kwargs)
 
     def fit(self, model_module, *args, **kwargs):
