@@ -154,8 +154,11 @@ def load_model_module(
             elif isinstance(vt, Callable):
                 print("Using custom validation transform")
                 val_transforms.append(vt)
+            elif vt is None:
+                print("No validation transform")
+                val_transforms.append(None)
             else:
-                raise TypeError("each 'val_transform' must be str or Callable")
+                raise TypeError("each 'val_transform' must be str, Callable, or None")
     elif val_target_transform is None:
         val_transforms = val_target_transform
     else:
@@ -173,8 +176,11 @@ def load_model_module(
             elif isinstance(tt, Callable):
                 print("Using custom test transform")
                 test_transforms.append(tt)
+            elif tt is None:
+                print("No test transform")
+                test_transforms.append(None)
             else:
-                raise TypeError("each 'test_transform' must be str or Callable")
+                raise TypeError("each 'test_transform' must be str, Callable, or None")
     elif test_target_transform is None:
         test_transforms = test_target_transform
     else:
