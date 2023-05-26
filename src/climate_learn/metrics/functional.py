@@ -15,12 +15,11 @@ def mse(
     error = (pred - target).square()
     if lat_weights is not None:
         error = error * lat_weights
+    per_channel_losses = error.mean([0, 2, 3])
     loss = error.mean()
-    if not aggregate_only:
-        per_channel_losses = error.mean([0, 2, 3])
-        loss = loss.unsqueeze(0)
-        loss = torch.cat((per_channel_losses, loss))
-    return loss
+    if aggregate_only:
+        return loss
+    return torch.cat((per_channel_losses, loss.unsqueeze(0)))
 
 
 def rmse(
@@ -32,12 +31,11 @@ def rmse(
     error = (pred - target).square()
     if lat_weights is not None:
         error = error * lat_weights
-    loss = error.mean().sqrt()
-    if not aggregate_only:
-        per_channel_losses = error.mean([0, 2, 3]).sqrt()
-        loss = loss.unsqueeze(0)
-        loss = torch.cat((per_channel_losses, loss))
-    return loss
+    per_channel_losses = error.mean([2, 3]).sqrt().mean(0)
+    loss = per_channel_losses.mean()
+    if aggregate_only:
+        return loss
+    return torch.cat((per_channel_losses, loss.unsqueeze(0)))
 
 
 def acc(
@@ -49,22 +47,18 @@ def acc(
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     pred = pred - climatology
     target = target - climatology
-    pred_prime = pred - pred.mean([0, 2, 3], keepdims=True)
-    target_prime = target - target.mean([0, 2, 3], keepdims=True)
-    if lat_weights is not None:
-        numer = (lat_weights * pred_prime * target_prime).sum([0, 2, 3])
-        denom1 = (lat_weights * pred_prime.square()).sum([0, 2, 3])
-        denom2 = (lat_weights * target_prime.square()).sum([0, 2, 3])
-    else:
-        numer = (pred_prime * target_prime).sum([0, 2, 3])
-        denom1 = pred_prime.square().sum([0, 2, 3])
-        denom2 = target_prime.square().sum([0, 2, 3])
-    per_channel_losses = numer / (denom1 * denom2).sqrt()
-    loss = per_channel_losses.mean()
-    if not aggregate_only:
-        loss = loss.unsqueeze(0)
-        loss = torch.cat((per_channel_losses, loss))
-    return loss
+    per_channel_acc = []
+    for i in range(pred.shape[1]):
+        pred_prime = pred[:,i] - pred[:,i].mean()
+        target_prime = target[:,i] - target[:,i].mean()
+        numer = (lat_weights * pred_prime * target_prime).sum()
+        denom1 = (lat_weights * pred_prime.square()).sum()
+        denom2 = (lat_weights * target_prime.square()).sum()
+        per_channel_acc.append(numer / (denom1 * denom2).sqrt())
+    result = per_channel_acc.mean()
+    if aggregate_only:
+        return result
+    return torch.cat((per_channel_acc, result))
 
 
 def pearson(
