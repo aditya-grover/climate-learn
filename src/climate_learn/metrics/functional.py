@@ -55,10 +55,11 @@ def acc(
         denom1 = (lat_weights * pred_prime.square()).sum()
         denom2 = (lat_weights * target_prime.square()).sum()
         per_channel_acc.append(numer / (denom1 * denom2).sqrt())
+    per_channel_acc = torch.stack(per_channel_acc)
     result = per_channel_acc.mean()
     if aggregate_only:
         return result
-    return torch.cat((per_channel_acc, result))
+    return torch.cat((per_channel_acc, result.unsqueeze(0)))
 
 
 def pearson(
