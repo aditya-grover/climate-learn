@@ -14,4 +14,5 @@ class Interpolation(nn.Module):
         self.mode = mode
 
     def forward(self, x):
-        return F.interpolate(x, self.size, mode=self.mode)
+        yhat = F.interpolate(x, self.size, mode=self.mode)
+        return yhat

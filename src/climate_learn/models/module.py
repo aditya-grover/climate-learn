@@ -3,6 +3,7 @@ from typing import Callable, List, Optional, Tuple, Union
 
 # Third party
 import torch
+import torch.nn.functional as F
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 
@@ -10,6 +11,7 @@ import pytorch_lightning as pl
 class LitModule(pl.LightningModule):
     def __init__(
         self,
+        task: str,
         net: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: LRScheduler,
@@ -21,6 +23,7 @@ class LitModule(pl.LightningModule):
         test_target_transforms: Optional[List[Union[Callable, None]]] = None,
     ):
         super().__init__()
+        self.task = task
         self.net = net
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -45,7 +48,9 @@ class LitModule(pl.LightningModule):
                 )
         self.test_target_transforms = test_target_transforms
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:            
+        # if self.task == "downscaling":
+        #     x = F.interpolate(x, 2, mode="bilinear")
         return self.net(x)
 
     def training_step(

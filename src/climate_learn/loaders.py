@@ -191,6 +191,7 @@ def load_model_module(
         )
     # Instantiate Lightning Module
     model_module = LitModule(
+        task,
         model,
         optimizer,
         lr_scheduler,
@@ -219,11 +220,11 @@ load_downscaling_module = partial(
     load_model_module,
     task="downscaling",
     train_loss="mse",
-    val_loss=["rmse", "pearson", "mean_bias"],
+    val_loss=["rmse", "pearson", "mean_bias", "mse"],
     test_loss=["rmse", "pearson", "mean_bias"],
     train_target_transform=None,
-    val_target_transform=["denormalize", "denormalize"],
-    test_target_transform=["denormalize", "denormalize"],
+    val_target_transform=["denormalize", "denormalize", "denormalize", None],
+    test_target_transform=["denormalize", "denormalize", "denormalize"],
 )
 
 
@@ -293,7 +294,7 @@ def load_preset(task, data_module, preset):
                     " input variables."
                 )
             interpolation_mode = preset.split("-")[0]
-            model = Interpolation(out_height * out_width, interpolation_mode)
+            model = Interpolation((out_height, out_width), interpolation_mode)
             optimizer = lr_scheduler = None
         else:
             raise_not_impl()
