@@ -1,10 +1,13 @@
 # Standard library
 import argparse
+from ftplib import FTP
 import os
 import subprocess
+from zipfile import ZipFile
 
 # Third party
 import cdsapi
+from tqdm import tqdm, trange
 
 # Local application
 from .climate_dataset.era5.constants import NAME_TO_CMIP
@@ -211,6 +214,21 @@ def _download_weatherbench(root, dataset, variable, resolution="1.40625"):
         )
 
 
+def _download_prism(root, variable):
+    ftp = FTP("prism.oregonstate.edu")
+    ftp.login()
+    for year in trange(1981, 2022):
+        ftp.cwd(f"/daily/{variable}/{year}")
+        for remote_fn in tqdm(ftp.nlst(), leave=False):
+            local_fn = os.path.join(root, remote_fn)
+            with open(local_fn, "wb") as file:
+                ftp.retrbinary(f"RETR {remote_fn}", file.write)
+            with ZipFile(local_fn) as myzip:
+                myzip.extract(f"{remote_fn[:-3]}bil")
+            os.unlink(local_fn)
+    ftp.quit()
+
+
 def download(source, **kwargs):
     r"""Download interface.
 
@@ -221,20 +239,14 @@ def download(source, **kwargs):
         function: :py:func:`_download_copernicus`,
         :py:func:`_download_weatherbench`, :py:func:`_download_esgf`
     """
-
-    # TODO: this was appropriate for the Colab tutorial, but should we
-    # keep it for future releases?
-    if "root" not in kwargs or kwargs["root"] is None:
-        kwargs["root"] = ".climate_tutorial"
-
-    kwargs["root"] = os.path.join(kwargs["root"], f"data/{source}")
-
     if source == "copernicus":
         _download_copernicus(**kwargs)
     elif source == "weatherbench":
         _download_weatherbench(**kwargs)
     elif source == "esgf":
         _download_esgf(**kwargs)
+    elif source == "prism":
+        _download_prism(**kwargs)
 
 
 def main():
@@ -243,29 +255,31 @@ def main():
     subparsers = parser.add_subparsers(dest="source")
 
     subparser = subparsers.add_parser("copernicus")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument("--dataset", type=str, choices=["era5"], required=True)
-    subparser.add_argument("--year", type=int, required=True)
+    subparser.add_argument("root")
+    subparser.add_argument("variable")
+    subparser.add_argument("dataset", choices=["era5"])
+    subparser.add_argument("year", type=int)
     subparser.add_argument("--pressure", action="store_true", default=False)
-    subparser.add_argument("--api_key", type=str, default=None)
+    subparser.add_argument("--api_key", default=None)
 
     subparser = subparsers.add_parser("weatherbench")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument(
-        "--dataset", type=str, choices=["era5", "cmip6"], required=True
-    )
-    subparser.add_argument("--resolution", type=str, default="5.625")
+    subparser.add_argument("root")
+    subparser.add_argument("variable")
+    subparser.add_argument("dataset", choices=["era5", "cmip6"])
+    subparser.add_argument("--resolution", default="5.625")
 
     subparser = subparsers.add_parser("esgf")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument("--dataset", type=str, choices=["era5"], required=True)
-    subparser.add_argument("--resolution", type=str, default="5.625")
-    subparser.add_argument("--institutionID", type=str, default="MPI-M")
-    subparser.add_argument("--sourceID", type=str, default="MPI-ESM1-2-HR")
-    subparser.add_argument("--exprID", type=str, default="historical")
+    subparser.add_argument("root")
+    subparser.add_argument("variable")
+    subparser.add_argument("dataset", choices=["era5"])
+    subparser.add_argument("--resolution", default="5.625")
+    subparser.add_argument("--institutionID", default="MPI-M")
+    subparser.add_argument("--sourceID", default="MPI-ESM1-2-HR")
+    subparser.add_argument("--exprID", default="historical")
+
+    subparser = subparsers.add_parser("prism")
+    subparser.add_argument("root")
+    subparser.add_argument("variable")
 
     args = parser.parse_args()
     download(**vars(args))

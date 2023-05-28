@@ -297,64 +297,45 @@ def load_preset(task, data_module, preset):
             interpolation_mode = preset.split("-")[0]
             model = Interpolation((out_height, out_width), interpolation_mode)
             optimizer = lr_scheduler = None
-        elif preset == "resnet":
-            model = nn.Sequential(
-                Interpolation((out_height, out_width), "bilinear"),
-                ResNet(in_channels, out_channels, n_blocks=19)
-            )
-            optimizer = load_optimizer(
-                model,
-                "adamw",
-                {"lr": 1e-4, "weight_decay": 1e-5}
-            )
-            lr_scheduler = load_lr_scheduler(
-                "linear-warmup-cosine-annealing",
-                optimizer,
-                {"warmup_epochs": 1000, "max_epochs": 64}
-            )
-        elif preset == "unet":
-            model = nn.Sequential(
-                Interpolation((out_height, out_width), "bilinear"),
-                Unet(in_channels, out_channels, ch_mults=[1,1,2], n_blocks=4)
-            )
-            optimizer = load_optimizer(
-                model,
-                "adamw",
-                {"lr": 1e-4, "weight_decay": 1e-5}
-            )
-            lr_scheduler = load_lr_scheduler(
-                "linear-warmup-cosine-annealing",
-                optimizer,
-                {"warmup_epochs": 1000, "max_epochs": 64}
-            )
-        elif preset == "vit":
-            model = nn.Sequential(
-                Interpolation((out_height, out_width), "bilinear"),
-                VisionTransformer(
+        else:
+            if preset == "resnet":
+                backbone = ResNet(in_channels, out_channels, n_blocks=19)
+            elif preset == "unet":
+                backbone = Unet(in_channels, out_channels, ch_mults=[1,1,2], n_blocks=4)
+            elif preset == "vit":
+                backbone = VisionTransformer(
                     (64,128),
                     in_channels,
                     out_channels,
                     history=1,
-                    patch_size=2,
+                    patch_size=4,
                     embed_dim=256,
                     depth=8,
                     decoder_depth=2,
                     num_heads=16,
                     mlp_ratio=4
                 )
+            else:
+                raise_not_impl()
+            model = nn.Sequential(
+                Interpolation((out_height, out_width), "bilinear"),
+                backbone
             )
             optimizer = load_optimizer(
                 model,
                 "adamw",
-                {"lr": 1e-4, "weight_decay": 1e-5}
+                {"lr": 5e-4, "weight_decay": 1e-5}
             )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",
                 optimizer,
-                {"warmup_epochs": 1000, "max_epochs": 64}
+                {
+                    "warmup_epochs": 5,
+                    "max_epochs": 50,
+                    "warmup_start_lr": 1e-8,
+                    "eta_min": 1e-8
+                }
             )
-        else:
-            raise_not_impl()
     return model, optimizer, lr_scheduler
 
 

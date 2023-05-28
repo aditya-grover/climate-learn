@@ -62,7 +62,7 @@ def main():
         devices=[args.gpu],
         max_epochs=64,
         default_root_dir=f"{args.preset}_downscaling",
-        precision="16",
+        precision="bf16",
         summary_depth=1
     )
     trainer.fit(model, dm)
