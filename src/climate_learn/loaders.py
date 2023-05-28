@@ -1,5 +1,5 @@
 # Standard library
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 from functools import partial
 import warnings
 
@@ -12,6 +12,8 @@ from .models.hub import (
     LinearRegression,
     Persistence,
     ResNet,
+    Unet,
+    VisionTransformer
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -191,7 +193,6 @@ def load_model_module(
         )
     # Instantiate Lightning Module
     model_module = LitModule(
-        task,
         model,
         optimizer,
         lr_scheduler,
@@ -296,6 +297,62 @@ def load_preset(task, data_module, preset):
             interpolation_mode = preset.split("-")[0]
             model = Interpolation((out_height, out_width), interpolation_mode)
             optimizer = lr_scheduler = None
+        elif preset == "resnet":
+            model = nn.Sequential(
+                Interpolation((out_height, out_width), "bilinear"),
+                ResNet(in_channels, out_channels, n_blocks=19)
+            )
+            optimizer = load_optimizer(
+                model,
+                "adamw",
+                {"lr": 1e-4, "weight_decay": 1e-5}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": 1000, "max_epochs": 64}
+            )
+        elif preset == "unet":
+            model = nn.Sequential(
+                Interpolation((out_height, out_width), "bilinear"),
+                Unet(in_channels, out_channels, ch_mults=[1,1,2], n_blocks=4)
+            )
+            optimizer = load_optimizer(
+                model,
+                "adamw",
+                {"lr": 1e-4, "weight_decay": 1e-5}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": 1000, "max_epochs": 64}
+            )
+        elif preset == "vit":
+            model = nn.Sequential(
+                Interpolation((out_height, out_width), "bilinear"),
+                VisionTransformer(
+                    (64,128),
+                    in_channels,
+                    out_channels,
+                    history=1,
+                    patch_size=2,
+                    embed_dim=256,
+                    depth=8,
+                    decoder_depth=2,
+                    num_heads=16,
+                    mlp_ratio=4
+                )
+            )
+            optimizer = load_optimizer(
+                model,
+                "adamw",
+                {"lr": 1e-4, "weight_decay": 1e-5}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": 1000, "max_epochs": 64}
+            )
         else:
             raise_not_impl()
     return model, optimizer, lr_scheduler
