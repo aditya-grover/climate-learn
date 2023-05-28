@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 # Third party
 import torch
-from scipy import stats
+import torch.nn.functional as F
 
 
 def mse(
@@ -67,19 +67,16 @@ def pearson(
     target: Union[torch.FloatTensor, torch.DoubleTensor],
     aggregate_only: bool = False,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
-    per_channel_coeff = []
-    for i in range(pred.shape[1]):
-        per_channel_coeff.append(
-            stats.pearsonr(
-                pred[:,i].flatten().cpu().numpy(),
-                target[:,i].flatten().cpu().numpy()
-            )[0]
-        )
-    per_channel_coeff = torch.tensor(per_channel_coeff)
-    result = per_channel_coeff.mean()
-    if aggregate_only:
-        return result
-    return torch.cat((per_channel_coeff, result.unsqueeze(0)))
+    pred = _flatten_channel_wise(pred)
+    target = _flatten_channel_wise(target)
+    pred = pred - pred.mean(1, keepdims=True)
+    target = target - target.mean(1, keepdims=True)
+    per_channel_coeffs = F.cosine_similarity(pred, target)
+    coeff = torch.mean(per_channel_coeffs)
+    if not aggregate_only:
+        coeff = coeff.unsqueeze(0)
+        coeff = torch.cat((per_channel_coeffs, coeff))
+    return coeff
 
 
 def mean_bias(
@@ -97,3 +94,16 @@ def mean_bias(
     if aggregate_only:
         return result
     return torch.cat((per_channel_mb, result.unsqueeze(0)))
+
+
+def _flatten_channel_wise(x: torch.Tensor) -> torch.Tensor:
+    """
+    :param x: A tensor of shape [B,C,H,W].
+    :type x: torch.Tensor
+
+    :return: A tensor of shape [C,B*H*W].
+    :rtype: torch.Tensor
+    """
+    subtensors = torch.tensor_split(x, x.shape[1], 1)
+    result = torch.stack([t.flatten() for t in subtensors])
+    return result
