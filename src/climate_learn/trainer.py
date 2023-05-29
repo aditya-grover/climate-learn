@@ -58,6 +58,7 @@ class Trainer(pl.Trainer):
             else:
                 kwargs["strategy"] = "ddp"
         self.trainer = pl.Trainer(**kwargs)
+        self.trainer.favorite_metric = early_stopping
 
     def fit(self, model_module, *args, **kwargs):
         if model_module.optimizer is None:

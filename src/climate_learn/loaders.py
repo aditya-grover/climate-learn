@@ -86,7 +86,7 @@ def load_model_module(
     elif isinstance(sched, str):
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
-    elif isinstance(sched, LRScheduler):
+    elif isinstance(sched, LRScheduler) or isinstance(sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
         lr_scheduler = sched
         print("Using custom learning rate scheduler")
     else:
@@ -326,6 +326,8 @@ def load_lr_scheduler(
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, **sched_kwargs)
     elif sched == "linear-warmup-cosine-annealing":
         lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **sched_kwargs)
+    elif sched == 'reduce-lr-on-plateau':
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **sched_kwargs)
     else:
         raise NotImplementedError(
             f"{sched} is not an implemented learning rate scheduler. If you"
