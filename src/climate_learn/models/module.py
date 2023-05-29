@@ -109,9 +109,12 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
-                yhat = transforms[i](yhat)
-                y = transforms[i](y)
-            losses = lf(yhat, y)
+                yhat_t = transforms[i](yhat)
+                y_t = transforms[i](y)
+            else:
+                yhat_t = yhat
+                y_t = y
+            losses = lf(yhat_t, y_t)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[f"{stage}/{loss_name}:agggregate"] = losses
