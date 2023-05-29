@@ -161,3 +161,9 @@ cython_debug/
 
 # Ignore checkpoint files
 *.ckpt
+
+# vscode settings
+.vscode/
+
+# training results
+results/
