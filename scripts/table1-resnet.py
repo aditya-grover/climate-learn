@@ -23,10 +23,13 @@ def main():
         "land_sea_mask",
         "orography",
         "lattitude",
-        "toa_incident_solar_radiation",
+        # "toa_incident_solar_radiation",
         "2m_temperature",
+        "10m_u_component_of_wind",
+        "10m_v_component_of_wind",
         "geopotential",
         "temperature",
+        "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
         "v_component_of_wind"
@@ -69,28 +72,29 @@ def main():
         window,
         pred_range,
         subsample,
+        buffer_size=2000,
         batch_size=batch_size,
         num_workers=1
     )
     # dm.setup()
     
     model = cl.models.hub.ResNet(
-        in_channels=40,
+        in_channels=48,
         out_channels=3,
         history=history,
         hidden_channels=128,
         activation="leaky",
         norm=True,
         dropout=0.1,
-        n_blocks=19,
+        n_blocks=28,
     )
     optimizer = cl.load_optimizer(
         model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
     )
     lr_scheduler = cl.load_lr_scheduler(
-        "linear-warmup-cosine-annealing",
+        "reduce-lr-on-plateau",
         optimizer,
-        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
+        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0}
     )
     resnet = cl.load_forecasting_module(
         data_module=dm,
@@ -103,7 +107,7 @@ def main():
     )
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
-        patience=5,
+        patience=10,
         accelerator="gpu",
         devices=[args.gpu],
         precision="bf16",
