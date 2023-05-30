@@ -23,7 +23,7 @@ def main():
         "land_sea_mask",
         "orography",
         "lattitude",
-        # "toa_incident_solar_radiation",
+        "toa_incident_solar_radiation",
         "2m_temperature",
         "10m_u_component_of_wind",
         "10m_v_component_of_wind",
@@ -79,7 +79,7 @@ def main():
     # dm.setup()
     
     model = cl.models.hub.ResNet(
-        in_channels=48,
+        in_channels=49,
         out_channels=3,
         history=history,
         hidden_channels=128,
@@ -94,7 +94,7 @@ def main():
     lr_scheduler = cl.load_lr_scheduler(
         "reduce-lr-on-plateau",
         optimizer,
-        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0}
+        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0, "min_lr": 5e-7}
     )
     resnet = cl.load_forecasting_module(
         data_module=dm,
