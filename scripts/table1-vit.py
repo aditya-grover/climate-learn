@@ -88,7 +88,7 @@ def main():
         drop_rate=0.1,
         learn_pos_emb=True,
         embed_dim=128,
-        depth=16,
+        depth=8,
         decoder_depth=2,
         num_heads=4,
         mlp_ratio=4,
