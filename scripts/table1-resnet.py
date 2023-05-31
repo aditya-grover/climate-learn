@@ -89,7 +89,7 @@ def main():
         n_blocks=28,
     )
     optimizer = cl.load_optimizer(
-        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
+        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
     )
     lr_scheduler = cl.load_lr_scheduler(
         "reduce-lr-on-plateau",
