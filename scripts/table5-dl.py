@@ -7,6 +7,7 @@ import climate_learn as cl
 from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 def main():
@@ -23,9 +24,16 @@ def main():
     args = parser.parse_args()
     
     variables = [
+        "land_sea_mask",
+        "orography",
+        "lattitude",
+        "toa_incident_solar_radiation",
         "2m_temperature",
+        "10m_u_component_of_wind",
+        "10m_v_component_of_wind",
         "geopotential",
         "temperature",
+        "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
         "v_component_of_wind"
@@ -39,8 +47,9 @@ def main():
             in_vars.append(var)
     out_vars = [out_var_dict[args.variable]]
     
-    subsample = Hours(6)
-    batch_size = 32
+    subsample = Hours(1)
+    batch_size = 128
+    default_root_dir = f"{args.preset}_downscaling_{args.variable}"
     
     dm = IterDataModule(
         "downscaling",
@@ -50,7 +59,8 @@ def main():
         out_vars,
         subsample=subsample,
         batch_size=batch_size,
-        num_workers=8
+        buffer_size=2000,
+        num_workers=4
     )
     dm.setup()
     
@@ -58,18 +68,20 @@ def main():
         data_module=dm,
         preset=args.preset
     )
+    logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
     trainer = cl.Trainer(
         early_stopping="val/mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=64,
-        default_root_dir=f"{args.preset}_downscaling_{args.variable}",
+        max_epochs=50,
+        default_root_dir=default_root_dir,
+        logger=logger,
         precision="bf16",
         summary_depth=1
     )
-    trainer.fit(model, dm)
-    trainer.test(model, dm, ckpt_path="best")
+    trainer.fit(model, datamodule=dm)
+    trainer.test(model, datamodule=dm, ckpt_path="best")
 
     
 if __name__ == "__main__":

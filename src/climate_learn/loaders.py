@@ -308,11 +308,12 @@ def load_preset(task, data_module, preset):
                     in_channels,
                     out_channels,
                     history=1,
-                    patch_size=4,
-                    embed_dim=256,
+                    patch_size=2,
+                    learn_pos_emb=True,
+                    embed_dim=128,
                     depth=8,
                     decoder_depth=2,
-                    num_heads=16,
+                    num_heads=4,
                     mlp_ratio=4
                 )
             else:
@@ -324,7 +325,7 @@ def load_preset(task, data_module, preset):
             optimizer = load_optimizer(
                 model,
                 "adamw",
-                {"lr": 1e-4, "weight_decay": 1e-5}
+                {"lr": 1e-5, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
             )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",

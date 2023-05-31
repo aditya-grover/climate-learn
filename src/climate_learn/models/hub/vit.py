@@ -59,13 +59,8 @@ class VisionTransformer(nn.Module):
         for _ in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
             self.head.append(nn.GELU())
+        self.head.append(nn.Linear(embed_dim, out_channels * patch_size**2))
         self.head = nn.Sequential(*self.head)
-        self.final = PeriodicConv2D(
-            (self.num_patches * embed_dim) // (img_size[0] * img_size[1]),
-            self.out_channels,
-            kernel_size=7,
-            padding=3,
-        )
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -87,18 +82,16 @@ class VisionTransformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def unpatchify(self, patches):
-        b, num_patches, embed_dim = patches.shape
+    def unpatchify(self, x):
         p = self.patch_size
-        h, w = self.img_size
-        hh, ww = h // p, w // p
-        c = (num_patches * embed_dim) // (h * w)
-        if hh * ww != patches.shape[1]:
-            raise RuntimeError("Cannot unpatchify")
-        x = patches.reshape((b, hh, ww, p, p, c))
+        c = self.out_channels
+        h = self.img_size[0] // p
+        w = self.img_size[1] // p
+        assert h * w == x.shape[1]
+        x = x.reshape(shape=(x.shape[0], c, h, w, p, p, c))
         x = torch.einsum("nhwpqc->nchpwq", x)
-        x = x.reshape((b, -1, h, w))
-        return x
+        imgs = x.reshape(shape=(x.shape[0], c, h*p, w*p))
+        return imgs
 
     def forward_encoder(self, x: torch.Tensor):
         # x.shape = [B,C,H,W]
@@ -120,8 +113,6 @@ class VisionTransformer(nn.Module):
         # x.shape = [B,num_patches,embed_dim]
         x = self.head(x)
         # x.shape = [B,num_patches,embed_dim]
-        x = self.unpatchify(x)
-        # x.shape = [B,(num_patches*embed_dim)//(H*W),H,W]
-        preds = self.final(x)
+        preds = self.unpatchify(x)
         # preds.shape = [B,out_channels,H,W]
         return preds
