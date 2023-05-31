@@ -324,7 +324,7 @@ def load_preset(task, data_module, preset):
             optimizer = load_optimizer(
                 model,
                 "adamw",
-                {"lr": 5e-4, "weight_decay": 1e-5}
+                {"lr": 1e-4, "weight_decay": 1e-5}
             )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",

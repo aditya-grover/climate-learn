@@ -10,9 +10,16 @@ from climate_learn.data.climate_dataset.era5.constants import *
 
 
 def main():
+    out_var_dict = {
+        "t2m": "2m_temperature",
+        "z500": "geopotential_500",
+        "t850": "temperature_850"
+    }
+
     parser = ArgumentParser()
     parser.add_argument("preset")
-    parser.add_argument("gpu", type=int)
+    parser.add_argument("variable", choices=list(out_var_dict.keys()))
+    parser.add_argument("gpu", type=int)    
     args = parser.parse_args()
     
     variables = [
@@ -30,11 +37,7 @@ def main():
                 in_vars.append(var + "_" + str(level))
         else:
             in_vars.append(var)
-    out_vars = [
-        "2m_temperature",
-        "geopotential_500",
-        "temperature_850"
-    ]
+    out_vars = [out_var_dict[args.variable]]
     
     subsample = Hours(6)
     batch_size = 32
@@ -61,7 +64,7 @@ def main():
         accelerator="gpu",
         devices=[args.gpu],
         max_epochs=64,
-        default_root_dir=f"{args.preset}_downscaling",
+        default_root_dir=f"{args.preset}_downscaling_{args.variable}",
         precision="bf16",
         summary_depth=1
     )
