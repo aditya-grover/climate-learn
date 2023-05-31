@@ -40,28 +40,18 @@ class Unet(nn.Module):
         self.hidden_channels = hidden_channels
 
         if activation == "gelu":
-            act = nn.GELU()
+            self.activation = nn.GELU()
         elif activation == "relu":
-            act = nn.ReLU()
+            self.activation = nn.ReLU()
         elif activation == "silu":
-            act = nn.SiLU()
+            self.activation = nn.SiLU()
         elif activation == "leaky":
-            act = nn.LeakyReLU(0.3)
+            self.activation = nn.LeakyReLU(0.3)
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
 
-        if norm:
-            norm = nn.BatchNorm2d(hidden_channels)
-        else:
-            norm = nn.Identity()
-
-        self.image_proj = nn.Sequential(
-            PeriodicConv2D(
-                self.in_channels, hidden_channels, kernel_size=7, padding=3
-            ),
-            act,
-            norm,
-            nn.Dropout(dropout)
+        self.image_proj = PeriodicConv2D(
+            self.in_channels, self.hidden_channels, kernel_size=7, padding=3
         )
 
         # #### First half of U-Net - decreasing resolution
@@ -141,8 +131,12 @@ class Unet(nn.Module):
         # Combine the set of modules
         self.up = nn.ModuleList(up)
 
+        if norm:
+            self.norm = nn.BatchNorm2d(self.hidden_channels)
+        else:
+            self.norm = nn.Identity()
         self.final = PeriodicConv2D(
-            in_channels, self.out_channels, kernel_size=3, padding=1
+            in_channels, self.out_channels, kernel_size=7, padding=3
         )
 
     def forward(self, x):
@@ -163,5 +157,5 @@ class Unet(nn.Module):
                 s = h.pop()
                 x = torch.cat((x, s), dim=1)
                 x = m(x)
-        yhat = self.final(x)
+        yhat = self.final(self.activation(self.norm(x)))
         return yhat

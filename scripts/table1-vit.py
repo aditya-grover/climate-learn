@@ -60,7 +60,7 @@ def main():
     subsample = Hours(1)
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/vit_forecasting_{args.pred_range}"
+    default_root_dir=f"results/vit_new_forecasting_{args.pred_range}"
     
     dm = IterDataModule(
         "forecasting",
@@ -97,9 +97,9 @@ def main():
         model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
     )
     lr_scheduler = cl.load_lr_scheduler(
-        "reduce-lr-on-plateau",
+        "linear-warmup-cosine-annealing",
         optimizer,
-        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0, "min_lr": 5e-7}
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
     vit = cl.load_forecasting_module(
         data_module=dm,
@@ -113,7 +113,7 @@ def main():
     )
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
-        patience=10,
+        patience=5,
         accelerator="gpu",
         devices=[args.gpu],
         precision="bf16",

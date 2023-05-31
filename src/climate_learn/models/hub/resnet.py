@@ -25,28 +25,18 @@ class ResNet(nn.Module):
         self.hidden_channels = hidden_channels
 
         if activation == "gelu":
-            act = nn.GELU()
+            self.activation = nn.GELU()
         elif activation == "relu":
-            act = nn.ReLU()
+            self.activation = nn.ReLU()
         elif activation == "silu":
-            act = nn.SiLU()
+            self.activation = nn.SiLU()
         elif activation == "leaky":
-            act = nn.LeakyReLU(0.3)
+            self.activation = nn.LeakyReLU(0.3)
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
 
-        if norm:
-            norm = nn.BatchNorm2d(hidden_channels)
-        else:
-            norm = nn.Identity()
-
-        self.image_proj = nn.Sequential(
-            PeriodicConv2D(
-                self.in_channels, hidden_channels, kernel_size=7, padding=3
-            ),
-            act,
-            norm,
-            nn.Dropout(dropout)
+        self.image_proj = PeriodicConv2D(
+            self.in_channels, hidden_channels, kernel_size=7, padding=3
         )
         self.blocks = nn.ModuleList(
             [
@@ -61,8 +51,12 @@ class ResNet(nn.Module):
             ]
         )
 
+        if norm:
+            self.norm = nn.BatchNorm2d(hidden_channels)
+        else:
+            self.norm = nn.Identity()
         self.final = PeriodicConv2D(
-            hidden_channels, out_channels, kernel_size=3, padding=1
+            hidden_channels, out_channels, kernel_size=7, padding=3
         )
 
     def forward(self, x):
@@ -72,6 +66,6 @@ class ResNet(nn.Module):
         x = self.image_proj(x)
         for block in self.blocks:
             x = block(x)
-        yhat = self.final(x)
+        yhat = self.final(self.activation(self.norm(x)))
         # yhat.shape = [B,C,H,W]
         return yhat
