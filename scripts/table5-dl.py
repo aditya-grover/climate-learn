@@ -69,7 +69,7 @@ def main():
         summary_depth=1
     )
     trainer.fit(model, dm)
-    trainer.test(model, dm)
+    trainer.test(model, dm, ckpt_path="best")
 
     
 if __name__ == "__main__":
