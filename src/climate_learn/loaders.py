@@ -299,7 +299,7 @@ def load_preset(task, data_module, preset):
             optimizer = lr_scheduler = None
         else:
             if preset == "resnet":
-                backbone = ResNet(in_channels, out_channels, n_blocks=19)
+                backbone = ResNet(in_channels, out_channels, n_blocks=28)
             elif preset == "unet":
                 backbone = Unet(in_channels, out_channels, ch_mults=[1,1,2], n_blocks=4)
             elif preset == "vit":

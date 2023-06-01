@@ -47,6 +47,11 @@ class Trainer(pl.Trainer):
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
+        if "strategy" not in kwargs:
+            if in_notebook():
+                kwargs["strategy"] = None
+            else:
+                kwargs["strategy"] = "ddp"
         self.trainer = pl.Trainer(**kwargs)
 
     def fit(self, model_module, *args, **kwargs):

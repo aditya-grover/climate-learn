@@ -48,7 +48,7 @@ def main():
     out_vars = [out_var_dict[args.variable]]
     
     subsample = Hours(1)
-    batch_size = 128
+    batch_size = 32
     default_root_dir = f"{args.preset}_downscaling_{args.variable}"
     
     dm = IterDataModule(
@@ -77,7 +77,7 @@ def main():
         max_epochs=50,
         default_root_dir=default_root_dir,
         logger=logger,
-        precision="bf16",
+        precision="16",
         summary_depth=1
     )
     trainer.fit(model, datamodule=dm)
