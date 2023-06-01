@@ -110,7 +110,7 @@ def main():
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        precision="bf16",
+        precision=16,
         max_epochs=50,
         default_root_dir=default_root_dir,
         logger=logger
