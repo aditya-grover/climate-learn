@@ -12,6 +12,7 @@ from .models.hub import (
     LinearRegression,
     Persistence,
     ResNet,
+    ViTPretrained,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -39,6 +40,10 @@ def load_model_module(
     train_target_transform: Optional[Union[str, Callable]] = None,
     val_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
     test_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
+    use_pretrained_backbone: Optional[bool] = False,
+    use_pretrained_embeddings: Optional[bool] = False,
+    freeze_backbone: Optional[bool] = False,
+    freeze_embeddings: Optional[bool] = False,
 ):
     # Temporary fix, per this discussion:
     # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
@@ -50,7 +55,7 @@ def load_model_module(
         raise RuntimeError("Please specify 'preset' or 'model'")
     elif preset:
         print(f"Loading preset: {preset}")
-        model, optimizer, lr_scheduler = load_preset(task, data_module, preset)
+        model, optimizer, lr_scheduler = load_preset(task, data_module, preset, use_pretrained_backbone, use_pretrained_embeddings, freeze_backbone, freeze_embeddings)
     elif isinstance(model, str):
         print(f"Loading model: {model}")
         model_cls = MODEL_REGISTRY.get(model, None)
@@ -226,7 +231,7 @@ load_downscaling_module = partial(
 )
 
 
-def load_preset(task, data_module, preset):
+def load_preset(task, data_module, preset, use_pretrained_backbone=False, use_pretrained_embeddings=False, freeze_backbone=False, freeze_embeddings=False):
     in_vars, out_vars = get_data_variables(data_module)
     in_shape, out_shape = get_data_dims(data_module)
 
@@ -272,6 +277,20 @@ def load_preset(task, data_module, preset):
                 norm=True,
                 dropout=0.1,
                 n_blocks=19,
+            )
+            optimizer = load_optimizer(
+                model, "Adam", {"lr": 1e-5, "weight_decay": 1e-5}
+            )
+            lr_scheduler = None
+        elif preset.lower() == 'vit':
+            model = ViTPretrained(
+                img_size = (in_height, in_width),
+                in_channels = in_channels,
+                out_channels = out_channels,
+                use_pretrained_backbone=use_pretrained_backbone,
+                use_pretrained_embeddings=use_pretrained_embeddings,
+                freeze_backbone=freeze_backbone,
+                freeze_embeddings=freeze_embeddings,
             )
             optimizer = load_optimizer(
                 model, "Adam", {"lr": 1e-5, "weight_decay": 1e-5}
@@ -364,22 +383,22 @@ def load_transform(transform_name, data_module):
     transform = transform_cls(data_module)
     return transform
 
-def get_data_dims(data_module):
-    return data_module.get_data_dims()
-
-def get_data_variables(data_module):
-    return data_module.get_data_variables()
-
 # def get_data_dims(data_module):
-#     for batch in data_module.train_dataloader():
-#         x, y, _, _ = batch
-#         break
-#     return x.shape, y.shape
+    # return data_module.get_data_dims()
 
 # def get_data_variables(data_module):
-#     in_vars = data_module.train_dataset.task.in_vars
-#     out_vars = data_module.train_dataset.task.out_vars
-#     return in_vars, out_vars
+    # return data_module.get_data_variables()
+
+def get_data_dims(data_module):
+    for batch in data_module.train_dataloader():
+        x, y, _, _ = batch
+        break
+    return x.shape, y.shape
+
+def get_data_variables(data_module):
+    in_vars = data_module.train_dataset.task.in_vars
+    out_vars = data_module.train_dataset.task.out_vars
+    return in_vars, out_vars
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)

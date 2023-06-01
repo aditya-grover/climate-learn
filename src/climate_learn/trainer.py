@@ -46,9 +46,10 @@ class Trainer(pl.Trainer):
         if "strategy" not in kwargs:
             if in_notebook():
                 warn("In interactive environment: cannot use DDP spawn strategy")
-                kwargs["strategy"] = None
+                kwargs["strategy"] = 'auto'
             else:
-                kwargs["strategy"] = "ddp_spawn"
+                # kwargs["strategy"] = "ddp_spawn"
+                kwargs['strategy'] = 'auto'
         self.trainer = pl.Trainer(**kwargs)
 
     def fit(self, model_module, *args, **kwargs):

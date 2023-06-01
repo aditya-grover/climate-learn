@@ -63,17 +63,34 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"{loss_name}:aggregate [train]"] = loss
         else:  # per channel + aggregate
             for var_name, loss in zip(out_variables, losses):
                 loss_dict[f"{loss_name}:{var_name}"] = loss
             loss = losses[-1]
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"{loss_name}:aggregate [train]"] = loss
+        
+        loss_fns = self.val_loss
+        transforms = self.val_target_transforms
+        for i, lf in enumerate(loss_fns):
+            if transforms is not None and transforms[i] is not None:
+                yhat = transforms[i](yhat)
+                y = transforms[i](y)
+            losses = lf(yhat, y)
+            loss_name = getattr(lf, "name", f"loss_{i}")
+            if losses.dim() == 0:
+                loss_dict[f"{loss_name}:agggregate [train]"] = losses
+            else:
+                for var_name, loss in zip(out_variables, losses):
+                    name = f"{loss_name}:{var_name} [train]"
+                    loss_dict[name] = loss
+                loss_dict[f"{loss_name}:aggregate [train]"] = losses[-1]
+
         self.log_dict(
             loss_dict,
             prog_bar=True,
             on_step=True,
-            on_epoch=False,
+            on_epoch=True,
             batch_size=x.shape[0],
         )
         return loss
@@ -113,12 +130,12 @@ class LitModule(pl.LightningModule):
             losses = lf(yhat, y)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
-                loss_dict[f"{loss_name}:agggregate"] = losses
+                loss_dict[f"{loss_name}:agggregate [{stage}]"] = losses
             else:  # per channel + aggregate
                 for var_name, loss in zip(out_variables, losses):
-                    name = f"{loss_name}:{var_name}"
+                    name = f"{loss_name}:{var_name} [{stage}]"
                     loss_dict[name] = loss
-                loss_dict[f"{loss_name}:aggregate"] = losses[-1]
+                loss_dict[f"{loss_name}:aggregate [{stage}]"] = losses[-1]
         self.log_dict(
             loss_dict,
             on_step=False,
