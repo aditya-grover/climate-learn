@@ -163,4 +163,5 @@ cython_debug/
 *.ckpt
 
 # Ignore log files
-climate-learn/notebooks/wandb/
+notebooks/wandb/
+notebooks/lightning_logs/
