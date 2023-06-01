@@ -161,3 +161,6 @@ cython_debug/
 
 # Ignore checkpoint files
 *.ckpt
+
+# Ignore log files
+climate-learn/notebooks/wandb/
