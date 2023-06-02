@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.era5.constants import *
+from climate_learn.data.climate_dataset.cmip6.constants import *
 import torch.multiprocessing
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -20,16 +20,9 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "land_sea_mask",
-        "orography",
-        "lattitude",
-        "toa_incident_solar_radiation",
-        "2m_temperature",
-        "10m_u_component_of_wind",
-        "10m_v_component_of_wind",
+        "air_temperature",
         "geopotential",
         "temperature",
-        "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
         "v_component_of_wind"
@@ -43,7 +36,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -62,7 +55,7 @@ def main():
     batch_size = 128
     default_root_dir=f"results/unet_new_forecasting_{args.pred_range}"
     
-    dm = IterDataModule(
+    dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -79,7 +72,7 @@ def main():
     # dm.setup()
 
     model = cl.models.hub.Unet(
-        in_channels=49,
+        in_channels=36,
         out_channels=3,
         history=history,
         hidden_channels=64,
