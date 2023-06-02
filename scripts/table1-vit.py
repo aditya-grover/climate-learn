@@ -60,7 +60,7 @@ def main():
     subsample = Hours(1)
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/vit_new_forecasting_{args.pred_range}"
+    default_root_dir=f"results/vit_new_forecasting_1_worker_{args.pred_range}"
     
     dm = IterDataModule(
         "forecasting",
@@ -74,7 +74,7 @@ def main():
         subsample,
         buffer_size=2000,
         batch_size=batch_size,
-        num_workers=4
+        num_workers=1
     )
     # dm.setup()
     
