@@ -63,7 +63,15 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
             if len(ds[code].shape) == 3:  # surface level variables
                 ds[code] = ds[code].expand_dims("val", axis=1)
                 # remove the last 24 hours if this year has 366 days
-                np_vars[var] = ds[code].to_numpy()[-HOURS_PER_YEAR:]
+                if code == 'tp': # accumulate 6 hours and log transform
+                    tp = ds[code].to_numpy()
+                    tp_cum_6hrs = np.cumsum(tp, axis=0)
+                    tp_cum_6hrs[6:] = tp_cum_6hrs[6:] - tp_cum_6hrs[:-6]
+                    eps = 0.001
+                    tp_cum_6hrs = np.log(eps + tp_cum_6hrs) - np.log(eps)
+                    np_vars[var] = tp_cum_6hrs[-HOURS_PER_YEAR:]
+                else:
+                    np_vars[var] = ds[code].to_numpy()[-HOURS_PER_YEAR:]
 
                 if partition == "train":
                     # compute mean and std of each var in each year
@@ -141,6 +149,8 @@ def nc2np(path, variables, years, save_dir, partition, num_shards_per_year):
                 # E[X] = E[E[X|Y]]
                 mean = mean.mean(axis=0)
                 normalize_mean[var] = mean
+                if var == 'total_precipitation':
+                    normalize_mean[var] = np.zeros_like(normalize_mean[var])
                 normalize_std[var] = std
 
         np.savez(os.path.join(save_dir, "normalize_mean.npz"), **normalize_mean)

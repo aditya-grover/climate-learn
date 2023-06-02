@@ -53,7 +53,7 @@ def main():
     window = 6
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/unet_forecasting_{args.pred_range}"
+    default_root_dir=f"results/unet_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",
@@ -85,9 +85,9 @@ def main():
         model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
     )
     lr_scheduler = cl.load_lr_scheduler(
-        "reduce-lr-on-plateau",
+        "linear-warmup-cosine-annealing",
         optimizer,
-        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0, "min_lr": 5e-7}
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
     unet = cl.load_forecasting_module(
         data_module=dm,
@@ -104,8 +104,8 @@ def main():
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        precision="bf16",
-        max_epochs=40,
+        precision=16,
+        max_epochs=50,
         default_root_dir=default_root_dir,
         logger=logger
     )

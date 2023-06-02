@@ -53,7 +53,7 @@ def main():
     pred_range = Hours(args.pred_range)
     subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"results/resnet_forecasting_{args.pred_range}"
+    default_root_dir=f"results/resnet_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",
@@ -67,7 +67,7 @@ def main():
         subsample,
         buffer_size=2000,
         batch_size=batch_size,
-        num_workers=1
+        num_workers=4
     )
     # dm.setup()
     
@@ -82,12 +82,12 @@ def main():
         n_blocks=28,
     )
     optimizer = cl.load_optimizer(
-        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
+        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
     )
     lr_scheduler = cl.load_lr_scheduler(
-        "reduce-lr-on-plateau",
+        "linear-warmup-cosine-annealing",
         optimizer,
-        {"mode": "min", "factor": 0.5, "patience": 0, "threshold": 0.0, "min_lr": 5e-7}
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
     resnet = cl.load_forecasting_module(
         data_module=dm,
@@ -103,8 +103,8 @@ def main():
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        precision="bf16",
-        max_epochs=40,
+        precision=16,
+        max_epochs=50,
         default_root_dir=default_root_dir,
         logger=logger
     )
