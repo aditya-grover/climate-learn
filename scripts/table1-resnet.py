@@ -53,7 +53,7 @@ def main():
     pred_range = Hours(args.pred_range)
     subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"results/resnet_new_forecasting_{args.pred_range}"
+    default_root_dir=f"results/cmip6_resnet_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",

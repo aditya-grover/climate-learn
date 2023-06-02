@@ -23,7 +23,6 @@ def main():
         "air_temperature",
         "geopotential",
         "temperature",
-        "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
         "v_component_of_wind"
@@ -54,7 +53,7 @@ def main():
     subsample = Hours(1)
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/vit_new_forecasting_{args.pred_range}"
+    default_root_dir=f"results/cmip6_vit_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",
@@ -74,7 +73,7 @@ def main():
     
     model = cl.models.hub.VisionTransformer(
         img_size=(32, 64),
-        in_channels=49,
+        in_channels=36,
         out_channels=3,
         history=3,
         patch_size=2,
