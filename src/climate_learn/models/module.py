@@ -1,10 +1,13 @@
 # Standard library
+from asyncio.proactor_events import constants
 from typing import Callable, List, Optional, Tuple, Union
 
 # Third party
 import torch
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
+
+from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
 
 
 class LitModule(pl.LightningModule):
@@ -44,6 +47,13 @@ class LitModule(pl.LightningModule):
                     " losses which do not rqeuire transformation."
                 )
         self.test_target_transforms = test_target_transforms
+    
+    def replace_constant(self, y, yhat, out_variables):
+        for i in range(yhat.shape[1]):
+            # if constant replace with ground-truth value
+            if out_variables[i] in CONSTANTS:
+                yhat[:, i] = y[:, i]
+        return yhat
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
@@ -55,6 +65,7 @@ class LitModule(pl.LightningModule):
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
+        yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -97,6 +108,7 @@ class LitModule(pl.LightningModule):
     ):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
+        yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms
