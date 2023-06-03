@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data import ContinuousIterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
 import torch.multiprocessing
@@ -14,7 +14,6 @@ def main():
     torch.multiprocessing.set_sharing_strategy("file_system")
 
     parser = ArgumentParser()
-    parser.add_argument("pred_range", type=int)
     parser.add_argument("root_dir")
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
@@ -56,13 +55,15 @@ def main():
             out_vars.append(var)
     
     history = 3
-    subsample = Hours(1)
     window = 6
-    pred_range = Hours(args.pred_range)
+    min_pred_range = Hours(6)
+    max_pred_range = Hours(120)
+    hrs_each_step = Hours(1)
+    subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"results/unet_new_forecasting_1_worker_{args.pred_range}"
+    default_root_dir=f"results/unet_new_forecasting_1_worker_continuous"
     
-    dm = IterDataModule(
+    dm = ContinuousIterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -70,16 +71,19 @@ def main():
         out_vars,
         history,
         window,
-        pred_range,
-        subsample,
+        random_lead_time=True,
+        min_pred_range=min_pred_range,
+        max_pred_range=max_pred_range,
+        hrs_each_step=hrs_each_step,
+        subsample=subsample,
         buffer_size=2000,
         batch_size=batch_size,
         num_workers=1
     )
     # dm.setup()
-
+    
     model = cl.models.hub.Unet(
-        in_channels=49,
+        in_channels=50,
         out_channels=3,
         history=history,
         hidden_channels=64,
@@ -102,7 +106,6 @@ def main():
         optim=optimizer,
         sched=lr_scheduler
     )
-
     logger = TensorBoardLogger(
         save_dir=f"{default_root_dir}/logs"
     )
@@ -118,7 +121,42 @@ def main():
     )
     
     trainer.fit(unet, datamodule=dm)
-    trainer.test(unet, datamodule=dm, ckpt_path="best")
+
+    for lead_time in [6, 24, 72, 120, 240]:
+        test_logger = TensorBoardLogger(
+            save_dir=f"{default_root_dir}/logs"
+        )
+
+        test_trainer = cl.Trainer(
+            early_stopping="val/lat_mse:aggregate",
+            patience=5,
+            accelerator="gpu",
+            devices=[args.gpu],
+            precision=16,
+            max_epochs=50,
+            default_root_dir=default_root_dir,
+            logger=test_logger
+        )
+
+        test_dm = ContinuousIterDataModule(
+            "forecasting",
+            args.root_dir,
+            args.root_dir,
+            in_vars,
+            out_vars,
+            history,
+            window,
+            random_lead_time=False,
+            min_pred_range=Hours(lead_time),
+            max_pred_range=Hours(lead_time),
+            hrs_each_step=hrs_each_step,
+            subsample=subsample,
+            buffer_size=2000,
+            batch_size=batch_size,
+            num_workers=1
+        )
+
+        test_trainer.test(unet, datamodule=test_dm, ckpt_path="best")
 
     
 if __name__ == "__main__":
