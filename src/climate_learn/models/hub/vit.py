@@ -88,7 +88,7 @@ class VisionTransformer(nn.Module):
         h = self.img_size[0] // p
         w = self.img_size[1] // p
         assert h * w == x.shape[1]
-        x = x.reshape(shape=(x.shape[0], c, h, w, p, p, c))
+        x = x.reshape(shape=(x.shape[0], h, w, p, p, c))
         x = torch.einsum("nhwpqc->nchpwq", x)
         imgs = x.reshape(shape=(x.shape[0], c, h*p, w*p))
         return imgs

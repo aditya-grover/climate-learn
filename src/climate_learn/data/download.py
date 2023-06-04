@@ -2,6 +2,7 @@
 import argparse
 from ftplib import FTP
 import os
+import re
 import subprocess
 from zipfile import ZipFile
 
@@ -223,8 +224,11 @@ def _download_prism(root, variable):
             local_fn = os.path.join(root, remote_fn)
             with open(local_fn, "wb") as file:
                 ftp.retrbinary(f"RETR {remote_fn}", file.write)
+            subdir_name = re.search("\d{8}", remote_fn)[0]
+            subdir_path = os.path.join(root, subdir_name)
+            os.mkdir(subdir_path)
             with ZipFile(local_fn) as myzip:
-                myzip.extract(f"{remote_fn[:-3]}bil")
+                myzip.extractall(path=subdir_path)
             os.unlink(local_fn)
     ftp.quit()
 

@@ -74,6 +74,7 @@ def main():
         trainer = cl.Trainer(
             accelerator="gpu",
             devices=[args.gpu],
+            logger=logger,
             precision="16",
             summary_depth=1
         )

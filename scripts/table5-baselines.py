@@ -25,7 +25,7 @@ def main():
         "temperature_850"
     ]
     
-    subsample = Hours(6)
+    subsample = Hours(1)
     batch_size = 32
     
     dm = IterDataModule(
@@ -36,7 +36,7 @@ def main():
         out_vars,
         subsample=subsample,
         batch_size=batch_size,
-        num_workers=8
+        num_workers=4
     )
     dm.setup()
     

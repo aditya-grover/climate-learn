@@ -311,8 +311,8 @@ def load_preset(task, data_module, preset):
                     patch_size=2,
                     learn_pos_emb=True,
                     embed_dim=128,
-                    depth=8,
-                    decoder_depth=2,
+                    depth=4,
+                    decoder_depth=1,
                     num_heads=4,
                     mlp_ratio=4
                 )
@@ -427,5 +427,6 @@ def get_climatology(data_module, split):
     if clim is None:
         raise RuntimeError("Climatology has not yet been set.")
     # Hotfix to work with dict style data
-    clim = torch.stack(tuple(clim.values()))    
+    if isinstance(clim, dict):
+        clim = torch.stack(tuple(clim.values()))    
     return clim
