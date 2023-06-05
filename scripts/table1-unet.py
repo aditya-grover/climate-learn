@@ -53,7 +53,7 @@ def main():
     window = 6
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/cmip6_unet_new_forecasting_{args.pred_range}"
+    default_root_dir=f"new_results/cmip6_unet_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",

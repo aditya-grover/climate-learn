@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
+from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.cmip6.constants import *
+from climate_learn.data.climate_dataset.era5.constants import *
 import torch.multiprocessing
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "air_temperature",
+        "2m_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
@@ -36,7 +36,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "air_temperature",
+        "2m_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -50,12 +50,12 @@ def main():
     
     history = 3
     window = 6
-    subsample = Hours(1)
     pred_range = Hours(args.pred_range)
+    subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"new_results/cmip6_vit_new_forecasting_{args.pred_range}"
+    default_root_dir=f"../results/cmip6_resnet_new_forecasting_{args.pred_range}"
     
-    dm = CMIP6IterDataModule(
+    dm = IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -71,20 +71,15 @@ def main():
     )
     # dm.setup()
     
-    model = cl.models.hub.VisionTransformer(
-        img_size=(32, 64),
+    model = cl.models.hub.ResNet(
         in_channels=36,
         out_channels=3,
-        history=3,
-        patch_size=2,
-        drop_path=0.1,
-        drop_rate=0.1,
-        learn_pos_emb=True,
-        embed_dim=128,
-        depth=8,
-        decoder_depth=2,
-        num_heads=4,
-        mlp_ratio=4,
+        history=history,
+        hidden_channels=128,
+        activation="leaky",
+        norm=True,
+        dropout=0.1,
+        n_blocks=28,
     )
     optimizer = cl.load_optimizer(
         model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
@@ -94,13 +89,12 @@ def main():
         optimizer,
         {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
-    vit = cl.load_forecasting_module(
+    resnet = cl.load_forecasting_module(
         data_module=dm,
         model=model,
         optim=optimizer,
         sched=lr_scheduler
     )
-    
     logger = TensorBoardLogger(
         save_dir=f"{default_root_dir}/logs"
     )
@@ -115,8 +109,8 @@ def main():
         logger=logger
     )
     
-    trainer.fit(vit, datamodule=dm)
-    trainer.test(vit, datamodule=dm, ckpt_path="best")
+    # trainer.fit(resnet, datamodule=dm)
+    trainer.test(resnet, datamodule=dm, ckpt_path="last")
 
     
 if __name__ == "__main__":

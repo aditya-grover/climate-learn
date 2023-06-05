@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
+from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.cmip6.constants import *
+from climate_learn.data.climate_dataset.era5.constants import *
 import torch.multiprocessing
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "air_temperature",
+        "2m_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
@@ -36,7 +36,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "air_temperature",
+        "2m_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -53,9 +53,9 @@ def main():
     subsample = Hours(1)
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"new_results/cmip6_vit_new_forecasting_{args.pred_range}"
+    default_root_dir=f"../results/cmip6_vit_new_forecasting_{args.pred_range}"
     
-    dm = CMIP6IterDataModule(
+    dm = IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -115,8 +115,8 @@ def main():
         logger=logger
     )
     
-    trainer.fit(vit, datamodule=dm)
-    trainer.test(vit, datamodule=dm, ckpt_path="best")
+    # trainer.fit(vit, datamodule=dm)
+    trainer.test(vit, datamodule=dm, ckpt_path="last")
 
     
 if __name__ == "__main__":

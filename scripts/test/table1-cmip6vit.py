@@ -53,7 +53,7 @@ def main():
     subsample = Hours(1)
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"new_results/cmip6_vit_new_forecasting_{args.pred_range}"
+    default_root_dir=f"../results/era5_vit_new_forecasting_{args.pred_range}"
     
     dm = CMIP6IterDataModule(
         "forecasting",
@@ -115,8 +115,8 @@ def main():
         logger=logger
     )
     
-    trainer.fit(vit, datamodule=dm)
-    trainer.test(vit, datamodule=dm, ckpt_path="best")
+    # trainer.fit(vit, datamodule=dm)
+    trainer.test(vit, datamodule=dm, ckpt_path="last")
 
     
 if __name__ == "__main__":
