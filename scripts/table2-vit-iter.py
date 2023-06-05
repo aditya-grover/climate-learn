@@ -6,6 +6,7 @@ import climate_learn as cl
 from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
+import torch
 import torch.multiprocessing
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -133,7 +134,48 @@ def main():
     )
     
     trainer.fit(vit, datamodule=dm)
-    trainer.test(vit, datamodule=dm, ckpt_path="best")
+
+    # ckpt_path = '/home/tungnd/climate-learn/results/vit_forecasting_all_vars_6/checkpoints/epoch_049.ckpt'
+    # ckpt = torch.load(ckpt_path)
+    # msg = vit.load_state_dict(ckpt['state_dict'])
+    # print (msg)
+
+    # for lead_time in [6, 24, 72, 120, 240]:
+    #     n_iters = lead_time // pred_range.hours()
+    #     vit.set_mode('iter')
+    #     vit.set_n_iters(n_iters)
+
+    #     test_logger = TensorBoardLogger(
+    #         save_dir=f"{default_root_dir}/logs"
+    #     )
+
+    #     test_trainer = cl.Trainer(
+    #         early_stopping="val/lat_mse:aggregate",
+    #         patience=5,
+    #         accelerator="gpu",
+    #         devices=[args.gpu],
+    #         precision=16,
+    #         max_epochs=50,
+    #         default_root_dir=default_root_dir,
+    #         logger=test_logger
+    #     )
+
+    #     test_dm = IterDataModule(
+    #         "forecasting",
+    #         args.root_dir,
+    #         args.root_dir,
+    #         in_vars,
+    #         out_vars,
+    #         history,
+    #         window,
+    #         Hours(lead_time),
+    #         subsample=subsample,
+    #         buffer_size=2000,
+    #         batch_size=batch_size,
+    #         num_workers=1
+    #     )
+
+    #     test_trainer.test(vit, datamodule=test_dm)
 
     
 if __name__ == "__main__":
