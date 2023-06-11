@@ -7,6 +7,7 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from climate_learn.data.task import Downscaling, Forecasting
@@ -18,7 +19,7 @@ from climate_learn.data.dataset import MapDataset
 def interpolate_input(x: torch.Tensor, y: torch.Tensor):
     # interpolate input to match output size
     out_h, out_w = y.shape[-2], y.shape[-1]
-    x = torch.nn.functional.interpolate(x, (out_h, out_w), mode="bilinear")
+    x = F.interpolate(x, (out_h, out_w), mode="bilinear")
     return x
 
 
@@ -164,5 +165,81 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
 
     if save_dir is not None:
         plt.savefig(os.path.join(save_dir, "visualize_mean_bias.png"))
+    else:
+        plt.show()
+
+
+def visualize_rank_histogram(model_module, data_module, save_dir=None, ensemble_size=50):
+    """Visualizes rank histogram on the test set.
+
+    :param model_module: A ClimateLearn model.
+    :type model_module: LightningModule
+    :param data_module: A ClimateLearn dataset.
+    :type data_module: LightningDataModule
+    :param save_dir: The directory to save the visualization to. Defaults to `None`,
+        meaning the visualization is not saved.
+    :type save_dir: str, optional
+    :param ensemble_size: The number of ensemble members to draw from the
+        probabilistic forecast.
+    :type ensemble_size: int
+    """
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+
+    loader = data_module.test_dataloader()
+    channels, height, width = -1, -1, -1
+    all_mean_rank = []
+
+    for batch in tqdm(loader):
+        x, y, _, out_vars = batch 
+        x = x.to(model_module.device)
+        y = y.to(model_module.device)
+        if channels == height == width == -1:
+            channels, height, width = x.shape[1:]
+        pred = model_module.forward(x)
+
+        batch_mean_rank = torch.empty((batch, channels))
+
+        # Get mean rank across all samples in the batch
+        for i in range(batch):
+            
+            # Generate the ensemble forecast
+            ensemble_forecast = torch.empty((ensemble_size, channels, height, width))
+            for j in range(ensemble_size):
+                for k in range(channels):
+                    indiv_forecast = torch.normal(pred.loc[i,k], pred.scale[i,k])
+                    ensemble_forecast[j,k] = indiv_forecast
+
+            # Get the mean rank per channel
+            mean_rank = torch.empty((channels))
+            for j in range(channels):
+                concat_forecast = torch.concatenate((
+                    ensemble_forecast[:,j],
+                    y[i,j].unsqueeze(0))
+                )
+                sorted_forecast, _ = torch.sort(concat_forecast, dim=0)
+                rank = (sorted_forecast == y[i,j]).nonzero()[:,0]
+                mean_rank[j] = rank.to(float).mean()
+                
+            batch_mean_rank[i] = mean_rank
+
+    # Put together all the computed mean ranks
+    all_mean_rank = torch.concatenate(all_mean_rank)
+
+    # Plot
+    fig, axes = plt.subplots(1, channels, figsize=(12, 4), squeeze=False)
+    bins = torch.arange(-0.5, ensemble_size+1.5, 1)
+    for i in range(channels):
+        freq, _ = np.histogram(all_mean_rank[:,i], bins=bins)
+        rel_freq = freq / np.sum(freq)
+        axes[i].bar(bins[1:], rel_freq)
+        axes[i].set_xlabel(f"{out_vars[i]} average rank")
+        axes[i].set_ylabel("Relative frequency")
+
+    fig.suptitle("Rank Histograms")
+    fig.tight_layout()
+
+    if save_dir is not None:
+        plt.savefig(os.path.join(save_dir, "visualize_rank_histogram.png"))
     else:
         plt.show()
