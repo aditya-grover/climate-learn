@@ -2,7 +2,7 @@
 from typing import Callable, Optional, Union
 
 # Local application
-from .utils import MetricsMetaInfo, register
+from .utils import MetricsMetaInfo, register, Pred
 from .functional import *
 
 # Third party
@@ -154,6 +154,120 @@ class LatWeightedMSE(LatitudeWeightedMetric):
         """
         super().cast_to_device(pred)
         return mse(pred, target, self.aggregate_only, self.lat_weights)
+
+
+@register("msess")
+class MSESS(ClimatologyBasedMetric):
+    """Computes mean-squared error skill score."""
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W]. These should be
+            denormalized.
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W]. These
+            should be denormalized.
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            MSESS, and the preceding elements are the channel-wise MSESSs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().cast_to_device(pred)
+        return msess(pred, target, self.climatology, self.aggregate_only)
+    
+
+@register("lat_msess")
+class LatWeightedMSESS(LatitudeWeightedMetric, ClimatologyBasedMetric):
+    """
+    Computes latitude-weighted mean-squared error skill score.
+    """
+
+    def __init__(self, *args, **kwargs):
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W]. These should be
+            denormalized.
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W]. These
+            should be denormalized.
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            MSESS, and the preceding elements are the channel-wise MSESSs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        LatitudeWeightedMetric.cast_to_device(self, pred)
+        ClimatologyBasedMetric.cast_to_device(self, pred)
+        return msess(pred, target, self.climatology, self.aggregate_only, self.lat_weights)
+
+
+@register("mae")
+class MAE(Metric):
+    """Computes standard mean absolute error."""
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            MAE, and the preceding elements are the channel-wise MAEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return mae(pred, target, self.aggregate_only)
+
+
+@register("lat_mae")
+class LatWeightedMAE(LatitudeWeightedMetric):
+    """Computes latitude-weighted mean absolute error."""
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            MSE, and the preceding elements are the channel-wise MSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().cast_to_device(pred)
+        return mae(pred, target, self.aggregate_only, self.lat_weights)
 
 
 @register("rmse")
@@ -336,3 +450,164 @@ class MeanBias(Metric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return mean_bias(pred, target, self.aggregate_only)
+
+
+@register("gaussian_crps")
+class GaussianCRPS(Metric):
+    """Computes the Gaussian continuous ranked probability score."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian CRPS, and the preceding elements are the channel-wise
+            Gaussian CRPS.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_crps(pred, target, self.aggregate_only)
+    
+
+@register("lat_gaussian_crps")
+class LatGaussianCRPS(LatitudeWeightedMetric):
+    """Computes the latitude-weighted Gaussian CRPS."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian CRPS, and the preceding elements are the channel-wise
+            Gaussian CRPS.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_crps(pred, target, self.aggregate_only, self.lat_weights)
+    
+
+@register("gaussian_spread")
+class GaussianSpread(Metric):
+    """Computes the spread of a probabilistic prediction."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: Ignored. Kept to maintain call signature consistency.
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian spread, and the preceding elements are the channel-wise
+            Gaussian spread.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_spread(pred, self.aggregate_only)
+    
+
+@register("lat_gaussian_spread")
+class LatWeightedGaussianSpread(LatitudeWeightedMetric):
+    """Computes the latitude-weighted spread of a probabilistic prediction."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: Ignored. Kept to maintain call signature consistency.
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian spread, and the preceding elements are the channel-wise
+            Gaussian spread.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_spread(pred, self.aggregate_only, self.lat_weights)
+    
+
+@register("gaussian_ssr")
+class GaussianSSR(Metric):
+    """Computes the spread-skill ratio of a probabilistic prediction."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian SSR, and the preceding elements are the channel-wise
+            Gaussian SSR.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_spread_skill_ratio(pred, target, self.aggregate_only)
+    
+
+@register("lat_gaussian_ssr")
+class LatGaussianSSR(LatitudeWeightedMetric):
+    """Computes the latitude-weighted SSR of a probabilistic prediction."""
+
+    def __call__(
+        self,
+        pred: torch.distributions.Normal,
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The probabilistic predicted values.
+        :type pred: torch.distributions.Normal
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            Gaussian SSR, and the preceding elements are the channel-wise
+            Gaussian SSR.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        return gaussian_spread_skill_ratio(
+            pred,
+            target,
+            self.aggregate_only,
+            self.lat_weights
+        )
