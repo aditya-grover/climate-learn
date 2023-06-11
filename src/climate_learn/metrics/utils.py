@@ -1,10 +1,13 @@
 # Standard library
 from dataclasses import dataclass
-from typing import List
+from functools import wraps
+from typing import List, Union
 
 # Third party
 import numpy.typing as npt
 import torch
+
+Pred = Union[torch.FloatTensor, torch.DoubleTensor, torch.distributions.Normal]
 
 
 @dataclass
@@ -24,5 +27,13 @@ def register(name):
         METRICS_REGISTRY[name] = metric_class
         metric_class.name = name
         return metric_class
-
     return decorator
+
+
+def handles_probabilistic(metric):
+    @wraps(metric)
+    def wrapper(pred: Pred, *args, **kwargs):
+        if isinstance(pred, torch.distributions.Normal):
+            pred = pred.loc
+        return metric(pred, *args, **kwargs)
+    return wrapper
