@@ -166,4 +166,7 @@ cython_debug/
 .vscode/
 
 # training results
-results/
+*results*/
+table*.pdf
+table*.png
+test.py

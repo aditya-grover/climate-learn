@@ -126,7 +126,7 @@ def plot_rmse(axs, data, variable, resolution):
         color = "#00c0ff"
     else:
         raise NotImplementedError("Resolution not implemented")
-    axs.plot(*get_resnet_value(data, variable, resolution), marker="o", markersize=2.5, color=color, label=f"ResNet")
+    axs.plot(*get_resnet_value(data, variable, resolution), marker="o", markersize=2.5, color=color, label=f"ResNet-direct")
     # axs.plot(*get_unet_value(data, variable, resolution), marker="o", markersize=2.5, color="C2", label=f"UNet")
     # axs.plot(*get_vit_value(data, variable, resolution), marker="o", markersize=2.5, color="C3", label=f"ViT")
 
@@ -161,7 +161,7 @@ def plot_acc(axs, data, variable, resolution):
     else:
         raise NotImplementedError("Resolution not implemented")
 
-    axs.plot(*get_resnet_value(data, variable, resolution), marker="o", markersize=2.5, color=color, label=f"ResNet")
+    axs.plot(*get_resnet_value(data, variable, resolution), marker="o", markersize=2.5, color=color, label=f"ResNet-direct")
     # axs.plot(*get_unet_value(data, variable, resolution), marker="o", markersize=2.5, color="C2", label=f"UNet")
     # axs.plot(*get_vit_value(data, variable, resolution), marker="o", markersize=2.5, color="C3", label=f"ViT")
 
