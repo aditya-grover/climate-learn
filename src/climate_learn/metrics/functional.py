@@ -38,6 +38,45 @@ def rmse(
     return torch.cat((per_channel_losses, loss.unsqueeze(0)))
 
 
+def nrmses(
+    pred: Union[torch.FloatTensor, torch.DoubleTensor],
+    target: Union[torch.FloatTensor, torch.DoubleTensor],
+    clim: Union[torch.FloatTensor, torch.DoubleTensor],
+    aggregate_only: bool = False,
+    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
+) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+    y_normalization = clim.squeeze()
+    error = (pred.mean(dim=0) - target.mean(dim=0))**2 # (C, H, W)
+    if lat_weights is not None:
+        error = error * lat_weights.squeeze(0)
+    per_channel_losses = error.mean(dim=(-2,-1)).sqrt() / y_normalization # C
+    loss = per_channel_losses.mean()
+    if aggregate_only:
+        return loss
+    return torch.cat((per_channel_losses, loss.unsqueeze(0)))
+
+
+def nrmseg(
+    pred: Union[torch.FloatTensor, torch.DoubleTensor],
+    target: Union[torch.FloatTensor, torch.DoubleTensor],
+    clim: Union[torch.FloatTensor, torch.DoubleTensor],
+    aggregate_only: bool = False,
+    lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
+) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+    y_normalization = clim.squeeze()
+    if lat_weights is not None:
+        pred = pred * lat_weights
+        target = target * lat_weights
+    pred = pred.mean(dim=(-2, -1)) # N, C
+    target = target.mean(dim=(-2, -1)) # N, C
+    error = (pred - target)**2
+    per_channel_losses = error.mean(0).sqrt() / y_normalization # C
+    loss = per_channel_losses.mean()
+    if aggregate_only:
+        return loss
+    return torch.cat((per_channel_losses, loss.unsqueeze(0)))
+
+
 def acc(
     pred: Union[torch.FloatTensor, torch.DoubleTensor],
     target: Union[torch.FloatTensor, torch.DoubleTensor],

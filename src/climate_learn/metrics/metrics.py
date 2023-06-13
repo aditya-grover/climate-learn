@@ -336,3 +336,100 @@ class MeanBias(Metric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return mean_bias(pred, target, self.aggregate_only)
+
+
+@register("lat_nrmses")
+class LatWeightedNRMSES(LatitudeWeightedMetric, ClimatologyBasedMetric):
+    """Computes latitude-weighted normalized spatial root mean-squared error."""
+
+    def __init__(self, *args, **kwargs):
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        LatitudeWeightedMetric.cast_to_device(self, pred)
+        ClimatologyBasedMetric.cast_to_device(self, pred)
+
+        return nrmses(pred, target, self.climatology, self.aggregate_only, self.lat_weights)
+
+
+@register("lat_nrmseg")
+class LatWeightedNRMSEG(LatitudeWeightedMetric, ClimatologyBasedMetric):
+    """Computes latitude-weighted normalized spatial root mean-squared error."""
+
+    def __init__(self, *args, **kwargs):
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        LatitudeWeightedMetric.cast_to_device(self, pred)
+        ClimatologyBasedMetric.cast_to_device(self, pred)
+        
+        return nrmseg(pred, target, self.climatology, self.aggregate_only, self.lat_weights)
+
+
+@register("lat_nrmse")
+class LatWeightedNRMSE(LatitudeWeightedMetric, ClimatologyBasedMetric):
+    """Computes latitude-weighted normalized spatial root mean-squared error."""
+
+    def __init__(self, *args, **kwargs):
+        LatitudeWeightedMetric.__init__(self, *args, **kwargs)
+        ClimatologyBasedMetric.__init__(self, *args, **kwargs)
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        LatitudeWeightedMetric.cast_to_device(self, pred)
+        ClimatologyBasedMetric.cast_to_device(self, pred)
+
+        return nrmses(pred, target, self.climatology, self.aggregate_only, self.lat_weights) \
+            + 5*nrmseg(pred, target, self.climatology, self.aggregate_only, self.lat_weights)
