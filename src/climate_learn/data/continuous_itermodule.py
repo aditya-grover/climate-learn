@@ -38,9 +38,13 @@ def collate_fn_continuous(
 
     ## As a hotfix inp is just stacking input and constants data
     ## via {**inp_data, **const_data} i.e. merging both of them unto one dict
-    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))]) # B, T, C, H, W
-    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))]) # B, C', H, W
-    lead_times = torch.stack([batch[i][2] for i in range(len(batch))]) # B, 
+    inp = torch.stack(
+        [handle_dict_features(batch[i][0]) for i in range(len(batch))]
+    )  # B, T, C, H, W
+    out = torch.stack(
+        [handle_dict_features(batch[i][1]) for i in range(len(batch))]
+    )  # B, C', H, W
+    lead_times = torch.stack([batch[i][2] for i in range(len(batch))])  # B,
     b, t, _, h, w = inp.shape
     lead_times = lead_times.reshape(b, 1, 1, 1, 1).repeat(1, t, 1, h, w)
     inp = torch.cat((inp, lead_times), dim=2)
@@ -122,7 +126,7 @@ class ContinuousIterDataModule(LightningDataModule):
         lat = np.load(os.path.join(self.hparams.out_root_dir, "lat.npy"))
         lon = np.load(os.path.join(self.hparams.out_root_dir, "lon.npy"))
         return lat, lon
-    
+
     def get_data_variables(self):
         return self.hparams.in_vars, self.hparams.out_vars
 
@@ -130,10 +134,22 @@ class ContinuousIterDataModule(LightningDataModule):
         lat = len(np.load(os.path.join(self.hparams.out_root_dir, "lat.npy")))
         lon = len(np.load(os.path.join(self.hparams.out_root_dir, "lon.npy")))
         if self.hparams.task == "forecasting":
-            in_size = torch.Size([self.hparams.batch_size, self.hparams.history, len(self.hparams.in_vars), lat, lon])
+            in_size = torch.Size(
+                [
+                    self.hparams.batch_size,
+                    self.hparams.history,
+                    len(self.hparams.in_vars),
+                    lat,
+                    lon,
+                ]
+            )
         else:
-            in_size = torch.Size([self.hparams.batch_size, len(self.hparams.in_vars), lat, lon])
-        out_size = torch.Size([self.hparams.batch_size, len(self.hparams.out_vars), lat, lon])
+            in_size = torch.Size(
+                [self.hparams.batch_size, len(self.hparams.in_vars), lat, lon]
+            )
+        out_size = torch.Size(
+            [self.hparams.batch_size, len(self.hparams.out_vars), lat, lon]
+        )
         return in_size, out_size
 
     def get_normalize(self, root_dir, variables):

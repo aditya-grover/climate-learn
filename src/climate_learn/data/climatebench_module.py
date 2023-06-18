@@ -7,8 +7,11 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 
 from climate_learn.data.climate_dataset.climatebench_dataset import (
-    ClimateBenchDataset, input_for_training,
-    load_x_y, output_for_training, split_train_val
+    ClimateBenchDataset,
+    input_for_training,
+    load_x_y,
+    output_for_training,
+    split_train_val,
 )
 
 
@@ -31,23 +34,16 @@ class ClimateDataModule(LightningDataModule):
         root_dir,  # contains metadata and train + val + test
         history=10,
         list_train_simu=[
-            'ssp126',
-            'ssp370',
-            'ssp585',
-            'historical',
-            'hist-GHG',
-            'hist-aer'
+            "ssp126",
+            "ssp370",
+            "ssp585",
+            "historical",
+            "hist-GHG",
+            "hist-aer",
         ],
-        list_test_simu=[
-            'ssp245'
-        ],
-        variables=[
-            'CO2',
-            'SO2',
-            'CH4',
-            'BC'
-        ],
-        out_variables='tas',
+        list_test_simu=["ssp245"],
+        variables=["CO2", "SO2", "CH4", "BC"],
+        out_variables="tas",
         train_ratio=0.9,
         batch_size: int = 128,
         num_workers: int = 1,
@@ -63,39 +59,69 @@ class ClimateDataModule(LightningDataModule):
             self.hparams.out_variables = out_variables
 
         # split train and val datasets
-        dict_x_train_val, dict_y_train_val, lat, lon = load_x_y(os.path.join(root_dir, 'train_val'), list_train_simu, out_variables)
+        dict_x_train_val, dict_y_train_val, lat, lon = load_x_y(
+            os.path.join(root_dir, "train_val"), list_train_simu, out_variables
+        )
         self.lat, self.lon = lat, lon
-        x_train_val = np.concatenate([
-            input_for_training(
-                dict_x_train_val[simu], skip_historical=(i<2), history=history, len_historical=165
-            ) for i, simu in enumerate(dict_x_train_val.keys())
-        ], axis = 0) # N, T, C, H, W
-        y_train_val = np.concatenate([
-            output_for_training(
-                dict_y_train_val[simu], skip_historical=(i<2), history=history, len_historical=165
-            ) for i, simu in enumerate(dict_y_train_val.keys())
-        ], axis=0) # N, 1, H, W
-        x_train, y_train, x_val, y_val = split_train_val(x_train_val, y_train_val, train_ratio)
-        
+        x_train_val = np.concatenate(
+            [
+                input_for_training(
+                    dict_x_train_val[simu],
+                    skip_historical=(i < 2),
+                    history=history,
+                    len_historical=165,
+                )
+                for i, simu in enumerate(dict_x_train_val.keys())
+            ],
+            axis=0,
+        )  # N, T, C, H, W
+        y_train_val = np.concatenate(
+            [
+                output_for_training(
+                    dict_y_train_val[simu],
+                    skip_historical=(i < 2),
+                    history=history,
+                    len_historical=165,
+                )
+                for i, simu in enumerate(dict_y_train_val.keys())
+            ],
+            axis=0,
+        )  # N, 1, H, W
+        x_train, y_train, x_val, y_val = split_train_val(
+            x_train_val, y_train_val, train_ratio
+        )
+
         self.dataset_train = ClimateBenchDataset(
-            x_train, y_train, variables, out_variables, lat, 'train'
+            x_train, y_train, variables, out_variables, lat, "train"
         )
         self.dataset_val = ClimateBenchDataset(
-            x_val, y_val, variables, out_variables, lat, 'val'
+            x_val, y_val, variables, out_variables, lat, "val"
         )
-        self.dataset_val.set_normalize(self.dataset_train.inp_transform, self.dataset_train.out_transform)
+        self.dataset_val.set_normalize(
+            self.dataset_train.inp_transform, self.dataset_train.out_transform
+        )
 
-        dict_x_test, dict_y_test, _, _ = load_x_y(os.path.join(root_dir, 'test'), list_test_simu, out_variables)
+        dict_x_test, dict_y_test, _, _ = load_x_y(
+            os.path.join(root_dir, "test"), list_test_simu, out_variables
+        )
         x_test = input_for_training(
-            dict_x_test[list_test_simu[0]], skip_historical=True, history=history, len_historical=165
+            dict_x_test[list_test_simu[0]],
+            skip_historical=True,
+            history=history,
+            len_historical=165,
         )
         y_test = output_for_training(
-            dict_y_test[list_test_simu[0]], skip_historical=True, history=history, len_historical=165
+            dict_y_test[list_test_simu[0]],
+            skip_historical=True,
+            history=history,
+            len_historical=165,
         )
         self.dataset_test = ClimateBenchDataset(
-            x_test, y_test, variables, out_variables, lat, 'test'
+            x_test, y_test, variables, out_variables, lat, "test"
         )
-        self.dataset_test.set_normalize(self.dataset_train.inp_transform, self.dataset_train.out_transform)
+        self.dataset_test.set_normalize(
+            self.dataset_train.inp_transform, self.dataset_train.out_transform
+        )
 
     def get_lat_lon(self):
         return self.lat, self.lon

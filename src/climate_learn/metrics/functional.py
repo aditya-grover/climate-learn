@@ -85,8 +85,8 @@ def acc(
     target = target - climatology
     per_channel_acc = []
     for i in range(pred.shape[1]):
-        pred_prime = pred[:,i] - pred[:,i].mean()
-        target_prime = target[:,i] - target[:,i].mean()
+        pred_prime = pred[:, i] - pred[:, i].mean()
+        target_prime = target[:, i] - target[:, i].mean()
         numer = (lat_weights * pred_prime * target_prime).sum()
         denom1 = (lat_weights * pred_prime.square()).sum()
         denom2 = (lat_weights * target_prime.square()).sum()
@@ -124,9 +124,7 @@ def mean_bias(
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     per_channel_mb = []
     for i in range(pred.shape[1]):
-        per_channel_mb.append(
-            target[:,i].mean() - pred[:,i].mean()
-        )
+        per_channel_mb.append(target[:, i].mean() - pred[:, i].mean())
     per_channel_mb = torch.stack(per_channel_mb)
     result = per_channel_mb.mean()
     if aggregate_only:
@@ -156,12 +154,11 @@ def gaussian_crps(
     mean, std = pred.loc, pred.scale
     z = (target - mean) / std
     standard_normal = torch.distributions.Normal(
-        torch.zeros_like(pred),
-        torch.ones_like(pred)
+        torch.zeros_like(pred), torch.ones_like(pred)
     )
     pdf = torch.exp(standard_normal.log_prob(z))
     cdf = standard_normal.cdf(z)
-    crps = std * (z * (2*cdf - 1) + 2*pdf - 1/torch.pi)
+    crps = std * (z * (2 * cdf - 1) + 2 * pdf - 1 / torch.pi)
     if lat_weights is not None:
         crps = crps * lat_weights
     per_channel_losses = crps.mean([0, 2, 3])

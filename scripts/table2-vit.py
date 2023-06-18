@@ -17,7 +17,7 @@ def main():
     parser.add_argument("root_dir")
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
-    
+
     variables = [
         "land_sea_mask",
         "orography",
@@ -31,7 +31,7 @@ def main():
         "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
-        "v_component_of_wind"
+        "v_component_of_wind",
     ]
     in_vars = []
     for var in variables:
@@ -41,11 +41,7 @@ def main():
         else:
             in_vars.append(var)
 
-    out_variables = [
-        "2m_temperature",
-        "geopotential_500",
-        "temperature_850"
-    ]
+    out_variables = ["2m_temperature", "geopotential_500", "temperature_850"]
     out_vars = []
     for var in out_variables:
         if var in PRESSURE_LEVEL_VARS:
@@ -53,7 +49,7 @@ def main():
                 out_vars.append(var + "_" + str(level))
         else:
             out_vars.append(var)
-    
+
     history = 3
     window = 6
     min_pred_range = Hours(6)
@@ -61,8 +57,8 @@ def main():
     hrs_each_step = Hours(1)
     subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"results/vit_new_forecasting_1_worker_continuous"
-    
+    default_root_dir = f"results/vit_new_forecasting_1_worker_continuous"
+
     dm = ContinuousIterDataModule(
         "forecasting",
         args.root_dir,
@@ -78,10 +74,10 @@ def main():
         subsample=subsample,
         buffer_size=2000,
         batch_size=batch_size,
-        num_workers=1
+        num_workers=1,
     )
     # dm.setup()
-    
+
     model = cl.models.hub.VisionTransformer(
         img_size=(32, 64),
         in_channels=50,
@@ -103,17 +99,17 @@ def main():
     lr_scheduler = cl.load_lr_scheduler(
         "linear-warmup-cosine-annealing",
         optimizer,
-        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
+        {
+            "warmup_epochs": 5,
+            "max_epochs": 50,
+            "warmup_start_lr": 1e-8,
+            "eta_min": 1e-8,
+        },
     )
     vit = cl.load_forecasting_module(
-        data_module=dm,
-        model=model,
-        optim=optimizer,
-        sched=lr_scheduler
+        data_module=dm, model=model, optim=optimizer, sched=lr_scheduler
     )
-    logger = TensorBoardLogger(
-        save_dir=f"{default_root_dir}/logs"
-    )
+    logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
         patience=5,
@@ -122,15 +118,13 @@ def main():
         precision=16,
         max_epochs=50,
         default_root_dir=default_root_dir,
-        logger=logger
+        logger=logger,
     )
-    
+
     trainer.fit(vit, datamodule=dm)
 
     for lead_time in [6, 24, 72, 120, 240]:
-        test_logger = TensorBoardLogger(
-            save_dir=f"{default_root_dir}/logs"
-        )
+        test_logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
 
         test_trainer = cl.Trainer(
             early_stopping="val/lat_mse:aggregate",
@@ -140,7 +134,7 @@ def main():
             precision=16,
             max_epochs=50,
             default_root_dir=default_root_dir,
-            logger=test_logger
+            logger=test_logger,
         )
 
         test_dm = ContinuousIterDataModule(
@@ -158,11 +152,11 @@ def main():
             subsample=subsample,
             buffer_size=2000,
             batch_size=batch_size,
-            num_workers=1
+            num_workers=1,
         )
-        
+
         test_trainer.test(vit, datamodule=test_dm, ckpt_path="best")
 
-    
+
 if __name__ == "__main__":
     main()

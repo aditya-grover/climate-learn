@@ -79,14 +79,14 @@ class NpyReader(IterableDataset):
 
 class Forecast(IterableDataset):
     def __init__(
-        self, 
+        self,
         dataset: NpyReader,
         random_lead_time: bool = True,
         min_pred_range=6,
         max_pred_range: int = 120,
         hrs_each_step: int = 1,
         history: int = 3,
-        window: int = 6
+        window: int = 6,
     ) -> None:
         super().__init__()
         if not random_lead_time:
@@ -121,21 +121,27 @@ class Forecast(IterableDataset):
                 k: inp_data[k][:, :last_idx].transpose(0, 1)
                 for k in inp_data.keys()  # N, T, H, W
             }
-            
+
             inp_data_len = inp_data[variables[0]].size(0)
             dtype = inp_data[variables[0]].dtype
 
             if self.random_lead_time:
                 predict_ranges = torch.randint(
                     low=self.min_pred_range,
-                    high=self.max_pred_range+1,
-                    size=(inp_data_len,)
+                    high=self.max_pred_range + 1,
+                    size=(inp_data_len,),
                 )
             else:
-                predict_ranges = torch.ones(inp_data_len).to(torch.long) * self.max_pred_range
+                predict_ranges = (
+                    torch.ones(inp_data_len).to(torch.long) * self.max_pred_range
+                )
             lead_times = self.hrs_each_step * predict_ranges / 100
             lead_times = lead_times.to(dtype)
-            output_ids = torch.arange(inp_data_len) + (self.history - 1) * self.window + predict_ranges
+            output_ids = (
+                torch.arange(inp_data_len)
+                + (self.history - 1) * self.window
+                + predict_ranges
+            )
 
             out_data = {k: out_data[k][output_ids] for k in out_data.keys()}
             yield inp_data, out_data, lead_times, variables, out_variables

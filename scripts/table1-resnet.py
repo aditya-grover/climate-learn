@@ -17,14 +17,14 @@ def main():
     parser.add_argument("root_dir")
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
-    
+
     variables = [
         "air_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
         "u_component_of_wind",
-        "v_component_of_wind"
+        "v_component_of_wind",
     ]
     in_vars = []
     for var in variables:
@@ -34,11 +34,7 @@ def main():
         else:
             in_vars.append(var)
 
-    out_variables = [
-        "air_temperature",
-        "geopotential_500",
-        "temperature_850"
-    ]
+    out_variables = ["air_temperature", "geopotential_500", "temperature_850"]
     out_vars = []
     for var in out_variables:
         if var in PRESSURE_LEVEL_VARS:
@@ -46,14 +42,14 @@ def main():
                 out_vars.append(var + "_" + str(level))
         else:
             out_vars.append(var)
-    
+
     history = 3
     window = 6
     pred_range = Hours(args.pred_range)
     subsample = Hours(1)
     batch_size = 128
-    default_root_dir=f"results/resnet_new_forecasting_{args.pred_range}"
-    
+    default_root_dir = f"results/resnet_new_forecasting_{args.pred_range}"
+
     dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
@@ -66,10 +62,10 @@ def main():
         subsample,
         buffer_size=2000,
         batch_size=batch_size,
-        num_workers=4
+        num_workers=4,
     )
     # dm.setup()
-    
+
     model = cl.models.hub.ResNet(
         in_channels=36,
         out_channels=3,
@@ -86,17 +82,17 @@ def main():
     lr_scheduler = cl.load_lr_scheduler(
         "linear-warmup-cosine-annealing",
         optimizer,
-        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
+        {
+            "warmup_epochs": 5,
+            "max_epochs": 50,
+            "warmup_start_lr": 1e-8,
+            "eta_min": 1e-8,
+        },
     )
     resnet = cl.load_forecasting_module(
-        data_module=dm,
-        model=model,
-        optim=optimizer,
-        sched=lr_scheduler
+        data_module=dm, model=model, optim=optimizer, sched=lr_scheduler
     )
-    logger = TensorBoardLogger(
-        save_dir=f"{default_root_dir}/logs"
-    )
+    logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
         patience=5,
@@ -105,12 +101,12 @@ def main():
         precision=16,
         max_epochs=50,
         default_root_dir=default_root_dir,
-        logger=logger
+        logger=logger,
     )
-    
+
     trainer.fit(resnet, datamodule=dm)
     trainer.test(resnet, datamodule=dm, ckpt_path="best")
 
-    
+
 if __name__ == "__main__":
     main()

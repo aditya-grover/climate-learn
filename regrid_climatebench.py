@@ -16,19 +16,24 @@ from regrid import regrid
 
 # print (y)
 
+
 @click.command()
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--save_path", type=str)
 @click.option("--ddeg_out", type=float, default=5.625)
-def main(
-    path,
-    save_path,
-    ddeg_out
-):
+def main(path, save_path, ddeg_out):
     if not os.path.exists(save_path):
         os.makedirs(save_path, exist_ok=True)
 
-    list_simu = ['hist-GHG.nc', 'hist-aer.nc', 'historical.nc', 'ssp126.nc', 'ssp370.nc', 'ssp585.nc', 'ssp245.nc']
+    list_simu = [
+        "hist-GHG.nc",
+        "hist-aer.nc",
+        "historical.nc",
+        "ssp126.nc",
+        "ssp370.nc",
+        "ssp585.nc",
+        "ssp245.nc",
+    ]
     ps = glob(os.path.join(path, f"*.nc"))
     ps_ = []
     for p in ps:
@@ -37,14 +42,17 @@ def main(
                 ps_.append(p)
     ps = ps_
 
-    constant_vars = ['CO2', 'CH4']
+    constant_vars = ["CO2", "CH4"]
     for p in ps:
         x = xr.open_dataset(p)
-        if 'input' in p:
+        if "input" in p:
             for v in constant_vars:
-                x[v] = x[v].expand_dims(dim={'latitude': 96, 'longitude': 144}, axis=(1,2))
+                x[v] = x[v].expand_dims(
+                    dim={"latitude": 96, "longitude": 144}, axis=(1, 2)
+                )
         x_regridded = regrid(x, ddeg_out, reuse_weights=False)
         x_regridded.to_netcdf(os.path.join(save_path, os.path.basename(p)))
+
 
 if __name__ == "__main__":
     main()

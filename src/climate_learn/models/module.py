@@ -48,14 +48,14 @@ class LitModule(pl.LightningModule):
                     " losses which do not rqeuire transformation."
                 )
         self.test_target_transforms = test_target_transforms
-        self.mode = 'direct'
+        self.mode = "direct"
 
     def set_mode(self, mode):
         self.mode = mode
 
     def set_n_iters(self, iters):
         self.n_iters = iters
-    
+
     def replace_constant(self, y, yhat, out_variables):
         for i in range(yhat.shape[1]):
             # if constant replace with ground-truth value
@@ -109,9 +109,9 @@ class LitModule(pl.LightningModule):
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
         batch_idx: int,
     ) -> torch.Tensor:
-        if self.mode == 'direct':
+        if self.mode == "direct":
             self.evaluate(batch, "test")
-        if self.mode == 'iter':
+        if self.mode == "iter":
             self.evaluate_iter(batch, self.n_iters, "test")
 
     def evaluate(
@@ -152,9 +152,10 @@ class LitModule(pl.LightningModule):
         return loss_dict
 
     def evaluate_iter(
-        self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
         n_iters: int,
-        stage: str
+        stage: str,
     ):
         x, y, in_variables, out_variables = batch
 

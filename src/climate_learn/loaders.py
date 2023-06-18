@@ -13,7 +13,7 @@ from .models.hub import (
     Persistence,
     ResNet,
     Unet,
-    VisionTransformer
+    VisionTransformer,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -88,11 +88,15 @@ def load_model_module(
     elif isinstance(sched, str):
         print(f"Loading learning rate scheduler: {sched}")
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
-    elif isinstance(sched, LRScheduler) or isinstance(sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
+    elif isinstance(sched, LRScheduler) or isinstance(
+        sched, torch.optim.lr_scheduler.ReduceLROnPlateau
+    ):
         lr_scheduler = sched
         print("Using custom learning rate scheduler")
     else:
-        raise TypeError("'sched' must be str, None, or torch.optim.lr_scheduler._LRScheduler")
+        raise TypeError(
+            "'sched' must be str, None, or torch.optim.lr_scheduler._LRScheduler"
+        )
     # Load training loss
     in_vars, out_vars = get_data_variables(data_module)
     lat, lon = data_module.get_lat_lon()
@@ -312,10 +316,12 @@ def load_preset(task, data_module, preset):
             if preset == "resnet":
                 backbone = ResNet(in_channels, out_channels, n_blocks=28)
             elif preset == "unet":
-                backbone = Unet(in_channels, out_channels, ch_mults=[1,1,2], n_blocks=4)
+                backbone = Unet(
+                    in_channels, out_channels, ch_mults=[1, 1, 2], n_blocks=4
+                )
             elif preset == "vit":
                 backbone = VisionTransformer(
-                    (64,128),
+                    (64, 128),
                     in_channels,
                     out_channels,
                     history=1,
@@ -325,18 +331,15 @@ def load_preset(task, data_module, preset):
                     depth=4,
                     decoder_depth=1,
                     num_heads=4,
-                    mlp_ratio=4
+                    mlp_ratio=4,
                 )
             else:
                 raise_not_impl()
             model = nn.Sequential(
-                Interpolation((out_height, out_width), "bilinear"),
-                backbone
+                Interpolation((out_height, out_width), "bilinear"), backbone
             )
             optimizer = load_optimizer(
-                model,
-                "adamw",
-                {"lr": 1e-5, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
+                model, "adamw", {"lr": 1e-5, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
             )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",
@@ -345,8 +348,8 @@ def load_preset(task, data_module, preset):
                     "warmup_epochs": 5,
                     "max_epochs": 50,
                     "warmup_start_lr": 1e-8,
-                    "eta_min": 1e-8
-                }
+                    "eta_min": 1e-8,
+                },
             )
     return model, optimizer, lr_scheduler
 
@@ -384,8 +387,10 @@ def load_lr_scheduler(
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, **sched_kwargs)
     elif sched == "linear-warmup-cosine-annealing":
         lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer, **sched_kwargs)
-    elif sched == 'reduce-lr-on-plateau':
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **sched_kwargs)
+    elif sched == "reduce-lr-on-plateau":
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, **sched_kwargs
+        )
     else:
         raise NotImplementedError(
             f"{sched} is not an implemented learning rate scheduler. If you"
@@ -418,11 +423,14 @@ def load_transform(transform_name, data_module):
     transform = transform_cls(data_module)
     return transform
 
+
 def get_data_dims(data_module):
     return data_module.get_data_dims()
 
+
 def get_data_variables(data_module):
     return data_module.get_data_variables()
+
 
 # def get_data_dims(data_module):
 #     for batch in data_module.train_dataloader():
@@ -435,11 +443,12 @@ def get_data_variables(data_module):
 #     out_vars = data_module.train_dataset.task.out_vars
 #     return in_vars, out_vars
 
+
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)
     if clim is None:
         raise RuntimeError("Climatology has not yet been set.")
     # Hotfix to work with dict style data
     if isinstance(clim, dict):
-        clim = torch.stack(tuple(clim.values()))    
+        clim = torch.stack(tuple(clim.values()))
     return clim

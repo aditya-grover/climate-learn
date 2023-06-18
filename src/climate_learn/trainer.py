@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,
-    LearningRateMonitor
+    LearningRateMonitor,
 )
 
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
@@ -18,7 +18,13 @@ class Trainer(pl.Trainer):
     """Wrapper for Lightning's trainer."""
 
     def __init__(
-        self, early_stopping=None, patience=0, summary_depth=-1, seed=0, default_root_dir=None, **kwargs
+        self,
+        early_stopping=None,
+        patience=0,
+        summary_depth=-1,
+        seed=0,
+        default_root_dir=None,
+        **kwargs,
     ):
         pl.seed_everything(seed)
         default_root_dir = kwargs["default_root_dir"]
@@ -42,12 +48,10 @@ class Trainer(pl.Trainer):
                 checkpoint_callback,
                 summary_callback,
                 progress_callback,
-                lr_monitor
+                lr_monitor,
             ]
             if early_stopping:
-                early_stop_callback = EarlyStopping(
-                    early_stopping, 0.0, patience
-                )
+                early_stop_callback = EarlyStopping(early_stopping, 0.0, patience)
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
         if "strategy" not in kwargs:

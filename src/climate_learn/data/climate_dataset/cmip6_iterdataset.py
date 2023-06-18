@@ -84,10 +84,10 @@ class Forecast(IterableDataset):
         super().__init__()
         self.dataset = dataset
         assert pred_range % 6 == 0
-        self.pred_range = pred_range//6
+        self.pred_range = pred_range // 6
         self.history = history
         assert window % 6 == 0
-        self.window = window//6
+        self.window = window // 6
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:

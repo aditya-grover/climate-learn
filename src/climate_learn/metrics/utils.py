@@ -27,6 +27,7 @@ def register(name):
         METRICS_REGISTRY[name] = metric_class
         metric_class.name = name
         return metric_class
+
     return decorator
 
 
@@ -36,4 +37,5 @@ def handles_probabilistic(metric):
         if isinstance(pred, torch.distributions.Normal):
             pred = pred.loc
         return metric(pred, *args, **kwargs)
+
     return wrapper

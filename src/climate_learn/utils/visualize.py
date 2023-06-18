@@ -169,7 +169,9 @@ def visualize_mean_bias(model_module, data_module, save_dir=None):
         plt.show()
 
 
-def visualize_rank_histogram(model_module, data_module, save_dir=None, ensemble_size=50):
+def visualize_rank_histogram(
+    model_module, data_module, save_dir=None, ensemble_size=50
+):
     """Visualizes rank histogram on the test set.
 
     :param model_module: A ClimateLearn model.
@@ -191,7 +193,7 @@ def visualize_rank_histogram(model_module, data_module, save_dir=None, ensemble_
     all_mean_rank = []
 
     for batch in tqdm(loader):
-        x, y, _, out_vars = batch 
+        x, y, _, out_vars = batch
         x = x.to(model_module.device)
         y = y.to(model_module.device)
         if channels == height == width == -1:
@@ -202,25 +204,23 @@ def visualize_rank_histogram(model_module, data_module, save_dir=None, ensemble_
 
         # Get mean rank across all samples in the batch
         for i in range(batch):
-            
             # Generate the ensemble forecast
             ensemble_forecast = torch.empty((ensemble_size, channels, height, width))
             for j in range(ensemble_size):
                 for k in range(channels):
-                    indiv_forecast = torch.normal(pred.loc[i,k], pred.scale[i,k])
-                    ensemble_forecast[j,k] = indiv_forecast
+                    indiv_forecast = torch.normal(pred.loc[i, k], pred.scale[i, k])
+                    ensemble_forecast[j, k] = indiv_forecast
 
             # Get the mean rank per channel
             mean_rank = torch.empty((channels))
             for j in range(channels):
-                concat_forecast = torch.concatenate((
-                    ensemble_forecast[:,j],
-                    y[i,j].unsqueeze(0))
+                concat_forecast = torch.concatenate(
+                    (ensemble_forecast[:, j], y[i, j].unsqueeze(0))
                 )
                 sorted_forecast, _ = torch.sort(concat_forecast, dim=0)
-                rank = (sorted_forecast == y[i,j]).nonzero()[:,0]
+                rank = (sorted_forecast == y[i, j]).nonzero()[:, 0]
                 mean_rank[j] = rank.to(float).mean()
-                
+
             batch_mean_rank[i] = mean_rank
 
     # Put together all the computed mean ranks
@@ -228,9 +228,9 @@ def visualize_rank_histogram(model_module, data_module, save_dir=None, ensemble_
 
     # Plot
     fig, axes = plt.subplots(1, channels, figsize=(12, 4), squeeze=False)
-    bins = torch.arange(-0.5, ensemble_size+1.5, 1)
+    bins = torch.arange(-0.5, ensemble_size + 1.5, 1)
     for i in range(channels):
-        freq, _ = np.histogram(all_mean_rank[:,i], bins=bins)
+        freq, _ = np.histogram(all_mean_rank[:, i], bins=bins)
         rel_freq = freq / np.sum(freq)
         axes[i].bar(bins[1:], rel_freq)
         axes[i].set_xlabel(f"{out_vars[i]} average rank")

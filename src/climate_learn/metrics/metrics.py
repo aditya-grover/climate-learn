@@ -182,7 +182,7 @@ class MSESS(ClimatologyBasedMetric):
         """
         super().cast_to_device(pred)
         return msess(pred, target, self.climatology, self.aggregate_only)
-    
+
 
 @register("lat_msess")
 class LatWeightedMSESS(LatitudeWeightedMetric, ClimatologyBasedMetric):
@@ -216,7 +216,9 @@ class LatWeightedMSESS(LatitudeWeightedMetric, ClimatologyBasedMetric):
         """
         LatitudeWeightedMetric.cast_to_device(self, pred)
         ClimatologyBasedMetric.cast_to_device(self, pred)
-        return msess(pred, target, self.climatology, self.aggregate_only, self.lat_weights)
+        return msess(
+            pred, target, self.climatology, self.aggregate_only, self.lat_weights
+        )
 
 
 @register("mae")
@@ -476,7 +478,7 @@ class GaussianCRPS(Metric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_crps(pred, target, self.aggregate_only)
-    
+
 
 @register("lat_gaussian_crps")
 class LatGaussianCRPS(LatitudeWeightedMetric):
@@ -502,7 +504,7 @@ class LatGaussianCRPS(LatitudeWeightedMetric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_crps(pred, target, self.aggregate_only, self.lat_weights)
-    
+
 
 @register("gaussian_spread")
 class GaussianSpread(Metric):
@@ -528,7 +530,7 @@ class GaussianSpread(Metric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_spread(pred, self.aggregate_only)
-    
+
 
 @register("lat_gaussian_spread")
 class LatWeightedGaussianSpread(LatitudeWeightedMetric):
@@ -554,7 +556,7 @@ class LatWeightedGaussianSpread(LatitudeWeightedMetric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_spread(pred, self.aggregate_only, self.lat_weights)
-    
+
 
 @register("gaussian_ssr")
 class GaussianSSR(Metric):
@@ -580,7 +582,7 @@ class GaussianSSR(Metric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_spread_skill_ratio(pred, target, self.aggregate_only)
-    
+
 
 @register("lat_gaussian_ssr")
 class LatGaussianSSR(LatitudeWeightedMetric):
@@ -606,8 +608,5 @@ class LatGaussianSSR(LatitudeWeightedMetric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         return gaussian_spread_skill_ratio(
-            pred,
-            target,
-            self.aggregate_only,
-            self.lat_weights
+            pred, target, self.aggregate_only, self.lat_weights
         )

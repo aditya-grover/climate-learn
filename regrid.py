@@ -5,13 +5,9 @@ import xesmf as xe
 from glob import glob
 import os
 
+
 def regrid(
-        ds_in,
-        ddeg_out,
-        method='bilinear',
-        reuse_weights=True,
-        cmip=False,
-        rename=None
+    ds_in, ddeg_out, method="bilinear", reuse_weights=True, cmip=False, rename=None
 ):
     """
     Regrid horizontally.
@@ -23,22 +19,22 @@ def regrid(
     """
     # import pdb; pdb.set_trace()
     # Rename to ESMF compatible coordinates
-    if 'latitude' in ds_in.coords:
-        ds_in = ds_in.rename({'latitude': 'lat', 'longitude': 'lon'})
+    if "latitude" in ds_in.coords:
+        ds_in = ds_in.rename({"latitude": "lat", "longitude": "lon"})
     if cmip:
-        ds_in = ds_in.drop(('lat_bnds', 'lon_bnds'))
-        if hasattr(ds_in, 'plev_bnds'):
-            ds_in = ds_in.drop(('plev_bnds'))
-        if hasattr(ds_in, 'time_bnds'):
-            ds_in = ds_in.drop(('time_bnds'))
+        ds_in = ds_in.drop(("lat_bnds", "lon_bnds"))
+        if hasattr(ds_in, "plev_bnds"):
+            ds_in = ds_in.drop(("plev_bnds"))
+        if hasattr(ds_in, "time_bnds"):
+            ds_in = ds_in.drop(("time_bnds"))
     if rename is not None:
         ds_in = ds_in.rename({rename[0]: rename[1]})
 
     # Create output grid
     grid_out = xr.Dataset(
         {
-            'lat': (['lat'], np.arange(-90+ddeg_out/2, 90, ddeg_out)),
-            'lon': (['lon'], np.arange(0, 360, ddeg_out)),
+            "lat": (["lat"], np.arange(-90 + ddeg_out / 2, 90, ddeg_out)),
+            "lon": (["lon"], np.arange(0, 360, ddeg_out)),
         }
     )
 
@@ -62,7 +58,7 @@ def regrid(
     #         print ('done')
     #     ds_out = xr.concat(ds_list, dim='time')
     # else:
-    ds_out = regridder(ds_in, keep_attrs=True).astype('float32')
+    ds_out = regridder(ds_in, keep_attrs=True).astype("float32")
 
     # # Set attributes since they get lost during regridding
     # for var in ds_out:
@@ -70,12 +66,14 @@ def regrid(
     # ds_out.attrs.update(ds_in.attrs)
 
     if rename is not None:
-        if rename[0] == 'zg':
-            ds_out['z'] *= 9.807
-        if rename[0] == 'rsdt':
-            ds_out['tisr'] *= 60*60
+        if rename[0] == "zg":
+            ds_out["z"] *= 9.807
+        if rename[0] == "rsdt":
+            ds_out["tisr"] *= 60 * 60
             ds_out = ds_out.isel(time=slice(1, None, 12))
-            ds_out = ds_out.assign_coords({'time': ds_out.time + np.timedelta64(90, 'm')})
+            ds_out = ds_out.assign_coords(
+                {"time": ds_out.time + np.timedelta64(90, "m")}
+            )
 
     # # Regrid dataset
     # ds_out = regridder(ds_in)
@@ -83,15 +81,15 @@ def regrid(
 
 
 def main(
-        input_fns,
-        output_dir,
-        ddeg_out,
-        method='bilinear',
-        reuse_weights=True,
-        custom_fn=None,
-        file_ending='nc',
-        cmip=False,
-        rename=None
+    input_fns,
+    output_dir,
+    ddeg_out,
+    method="bilinear",
+    reuse_weights=True,
+    custom_fn=None,
+    file_ending="nc",
+    cmip=False,
+    rename=None,
 ):
     """
     :param input_fns: Input files. Can use *. If more than one, loop over them
@@ -106,73 +104,62 @@ def main(
     # Make sure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     # Get files for starred expressions
-    if '*' in input_fns[0]:
+    if "*" in input_fns[0]:
         input_fns = sorted(glob(input_fns[0]))
     # Loop over input files
     for fn in input_fns:
-        print(f'Regridding file: {fn}')
+        print(f"Regridding file: {fn}")
         ds_in = xr.open_dataset(fn)
         ds_out = regrid(ds_in, ddeg_out, method, reuse_weights, cmip, rename)
         fn_out = (
-            custom_fn or
-            '_'.join(fn.split('/')[-1][:-3].split('_')[:-1]) + '_' + str(ddeg_out) + 'deg.' + file_ending
+            custom_fn
+            or "_".join(fn.split("/")[-1][:-3].split("_")[:-1])
+            + "_"
+            + str(ddeg_out)
+            + "deg."
+            + file_ending
         )
         print(f"Saving file: {output_dir + '/' + fn_out}")
-        ds_out.to_netcdf(output_dir + '/' + fn_out)
-        ds_in.close(); ds_out.close()
+        ds_out.to_netcdf(output_dir + "/" + fn_out)
+        ds_in.close()
+        ds_out.close()
 
-if __name__ == '__main__':
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--input_fns',
+        "--input_fns",
         type=str,
-        nargs='+',
+        nargs="+",
         help="Input files (full path). Can use *. If more than one, loop over them",
-        required=True
+        required=True,
     )
     parser.add_argument(
-        '--output_dir',
-        type=str,
-        help="Output directory",
-        required=True
+        "--output_dir", type=str, help="Output directory", required=True
     )
     parser.add_argument(
-        '--ddeg_out',
-        type=float,
-        help="Output resolution",
-        required=True
+        "--ddeg_out", type=float, help="Output resolution", required=True
     )
     parser.add_argument(
-        '--reuse_weights',
+        "--reuse_weights",
         type=int,
         help="Reuse weights for regridding. 0 or 1 (default)",
-        default=1  
+        default=1,
     )
     parser.add_argument(
-        '--custom_fn',
+        "--custom_fn",
         type=str,
         help="If not None, use custom file name. Otherwise infer from parameters.",
-        default=None
+        default=None,
     )
     parser.add_argument(
-        '--file_ending',
-        type=str,
-        help="File ending. Default = nc",
-        default='nc'
+        "--file_ending", type=str, help="File ending. Default = nc", default="nc"
     )
     parser.add_argument(
-        '--cmip',
-        type=int,
-        help="Is CMIP data. 0 or 1 (default)",
-        default=0
+        "--cmip", type=int, help="Is CMIP data. 0 or 1 (default)", default=0
     )
     parser.add_argument(
-        '--rename',
-        type=str,
-        nargs='+',
-        help="Rename var in dataset",
-        default=None
+        "--rename", type=str, nargs="+", help="Rename var in dataset", default=None
     )
     args = parser.parse_args()
 
@@ -184,5 +171,5 @@ if __name__ == '__main__':
         custom_fn=args.custom_fn,
         file_ending=args.file_ending,
         cmip=args.cmip,
-        rename=args.rename
+        rename=args.rename,
     )

@@ -17,14 +17,14 @@ def main():
     parser.add_argument("root_dir")
     parser.add_argument("gpu", type=int)
     args = parser.parse_args()
-    
+
     variables = [
         "air_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
         "u_component_of_wind",
-        "v_component_of_wind"
+        "v_component_of_wind",
     ]
     in_vars = []
     for var in variables:
@@ -34,11 +34,7 @@ def main():
         else:
             in_vars.append(var)
 
-    out_variables = [
-        "air_temperature",
-        "geopotential_500",
-        "temperature_850"
-    ]
+    out_variables = ["air_temperature", "geopotential_500", "temperature_850"]
     out_vars = []
     for var in out_variables:
         if var in PRESSURE_LEVEL_VARS:
@@ -46,13 +42,13 @@ def main():
                 out_vars.append(var + "_" + str(level))
         else:
             out_vars.append(var)
-    
+
     history = 3
     subsample = Hours(6)
     window = 6
     pred_range = Hours(args.pred_range)
     batch_size = 32
-    
+
     dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
@@ -64,25 +60,21 @@ def main():
         pred_range,
         subsample,
         batch_size=batch_size,
-        num_workers=8
+        num_workers=8,
     )
     dm.setup()
-    
-    climatology = cl.load_forecasting_module(
-        data_module=dm, preset="climatology"
-    )
-    persistence = cl.load_forecasting_module(
-        data_module=dm, preset="persistence"
-    )
+
+    climatology = cl.load_forecasting_module(data_module=dm, preset="climatology")
+    persistence = cl.load_forecasting_module(data_module=dm, preset="persistence")
     trainer = cl.Trainer(
         accelerator="gpu",
         devices=[args.gpu],
-        default_root_dir=f"baselines_forecasting_{args.pred_range}"        
+        default_root_dir=f"baselines_forecasting_{args.pred_range}",
     )
-    
+
     trainer.test(climatology, dm)
     trainer.test(persistence, dm)
 
-    
+
 if __name__ == "__main__":
     main()
