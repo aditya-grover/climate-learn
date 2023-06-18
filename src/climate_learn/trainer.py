@@ -27,7 +27,6 @@ class Trainer(pl.Trainer):
         **kwargs,
     ):
         pl.seed_everything(seed)
-        default_root_dir = kwargs["default_root_dir"]
         if "logger" not in kwargs:
             kwargs["logger"] = False
         if "callbacks" not in kwargs:
