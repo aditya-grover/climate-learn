@@ -32,8 +32,10 @@ class VisionTransformer(nn.Module):
         self.in_channels = in_channels * history
         self.out_channels = out_channels
         self.patch_size = patch_size
+        
         self.patch_embed = PatchEmbed(img_size, patch_size, self.in_channels, embed_dim)
         self.num_patches = self.patch_embed.num_patches
+        
         self.pos_embed = nn.Parameter(
             torch.zeros(1, self.num_patches, embed_dim), requires_grad=learn_pos_emb
         )
@@ -55,6 +57,7 @@ class VisionTransformer(nn.Module):
             ]
         )
         self.norm = nn.LayerNorm(embed_dim)
+
         self.head = nn.ModuleList()
         for _ in range(decoder_depth):
             self.head.append(nn.Linear(embed_dim, embed_dim))
@@ -81,8 +84,12 @@ class VisionTransformer(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-
-    def unpatchify(self, x):
+    
+    def unpatchify(self, x: torch.Tensor):
+        """
+        x: (B, L, V * patch_size**2)
+        return imgs: (B, V, H, W)
+        """
         p = self.patch_size
         c = self.out_channels
         h = self.img_size[0] // p

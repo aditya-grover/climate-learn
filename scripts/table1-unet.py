@@ -3,10 +3,11 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.era5.constants import *
+from climate_learn.data.climate_dataset.cmip6.constants import *
 import torch.multiprocessing
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 def main():
@@ -19,7 +20,7 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
@@ -35,7 +36,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -48,12 +49,13 @@ def main():
             out_vars.append(var)
     
     history = 3
-    subsample = Hours(6)
+    subsample = Hours(1)
     window = 6
     pred_range = Hours(args.pred_range)
-    batch_size = 32
+    batch_size = 128
+    default_root_dir=f"results/unet_new_forecasting_{args.pred_range}"
     
-    dm = IterDataModule(
+    dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -63,38 +65,53 @@ def main():
         window,
         pred_range,
         subsample,
+        buffer_size=2000,
         batch_size=batch_size,
-        num_workers=8
+        num_workers=4
     )
-    dm.setup()
-    
-    unet_kwargs = {
-        "in_channels": 36,
-        "out_channels": 3,
-        "history": 3,
-        "ch_mults": [1,1,2],
-        "n_blocks": 4
-    }
+    # dm.setup()
+
+    model = cl.models.hub.Unet(
+        in_channels=36,
+        out_channels=3,
+        history=history,
+        hidden_channels=64,
+        dropout=0.1,
+        ch_mults=(1, 2, 2),
+        is_attn=(False, False, False),
+        n_blocks=2,
+    )
+    optimizer = cl.load_optimizer(
+        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5}
+    )
+    lr_scheduler = cl.load_lr_scheduler(
+        "linear-warmup-cosine-annealing",
+        optimizer,
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
+    )
     unet = cl.load_forecasting_module(
         data_module=dm,
-        model="unet",
-        model_kwargs=unet_kwargs,
-        optim="adamw",
-        optim_kwargs={"lr": 1e-5},
-        sched="linear-warmup-cosine-annealing",
-        sched_kwargs={"warmup_epochs": 1000, "max_epochs": 64}
+        model=model,
+        optim=optimizer,
+        sched=lr_scheduler
+    )
+
+    logger = TensorBoardLogger(
+        save_dir=f"{default_root_dir}/logs"
     )
     trainer = cl.Trainer(
-        early_stopping="lat_rmse:aggregate",
+        early_stopping="val/lat_mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=64,
-        default_root_dir=f"unet_forecasting_{args.pred_range}"
+        precision=16,
+        max_epochs=50,
+        default_root_dir=default_root_dir,
+        logger=logger
     )
     
-    trainer.fit(unet, dm)
-    trainer.test(unet, dm)
+    trainer.fit(unet, datamodule=dm)
+    trainer.test(unet, datamodule=dm, ckpt_path="best")
 
     
 if __name__ == "__main__":

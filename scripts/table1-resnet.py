@@ -3,9 +3,12 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
 from climate_learn.utils.datetime import Hours
 from climate_learn.data.climate_dataset.era5.constants import *
+from climate_learn.data.climate_dataset.cmip6.constants import *
+import torch.multiprocessing
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 def main():
@@ -16,7 +19,7 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
@@ -32,7 +35,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -45,12 +48,13 @@ def main():
             out_vars.append(var)
     
     history = 3
-    subsample = Hours(6)
     window = 6
     pred_range = Hours(args.pred_range)
-    batch_size = 32
+    subsample = Hours(1)
+    batch_size = 128
+    default_root_dir=f"results/resnet_new_forecasting_{args.pred_range}"
     
-    dm = IterDataModule(
+    dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -60,10 +64,11 @@ def main():
         window,
         pred_range,
         subsample,
+        buffer_size=2000,
         batch_size=batch_size,
-        num_workers=8
+        num_workers=4
     )
-    dm.setup()
+    # dm.setup()
     
     model = cl.models.hub.ResNet(
         in_channels=36,
@@ -73,15 +78,15 @@ def main():
         activation="leaky",
         norm=True,
         dropout=0.1,
-        n_blocks=19,
+        n_blocks=28,
     )
     optimizer = cl.load_optimizer(
-        model, "Adam", {"lr": 1e-4, "weight_decay": 1e-5}
+        model, "AdamW", {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
     )
     lr_scheduler = cl.load_lr_scheduler(
         "linear-warmup-cosine-annealing",
         optimizer,
-        {"warmup_epochs": 1000, "max_epochs": 64}
+        {"warmup_epochs": 5, "max_epochs": 50, "warmup_start_lr": 1e-8, "eta_min": 1e-8}
     )
     resnet = cl.load_forecasting_module(
         data_module=dm,
@@ -89,19 +94,22 @@ def main():
         optim=optimizer,
         sched=lr_scheduler
     )
+    logger = TensorBoardLogger(
+        save_dir=f"{default_root_dir}/logs"
+    )
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
         patience=5,
         accelerator="gpu",
         devices=[args.gpu],
-        max_epochs=64,
-        default_root_dir=f"resnet_forecasting_{args.pred_range}",
-        precision="bf16",
-        summary_depth=1
+        precision=16,
+        max_epochs=50,
+        default_root_dir=default_root_dir,
+        logger=logger
     )
     
-    trainer.fit(resnet, dm)
-    trainer.test(resnet, dm)
+    trainer.fit(resnet, datamodule=dm)
+    trainer.test(resnet, datamodule=dm, ckpt_path="best")
 
     
 if __name__ == "__main__":

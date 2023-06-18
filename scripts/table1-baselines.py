@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.era5.constants import *
+from climate_learn.data.climate_dataset.cmip6.constants import *
 import torch.multiprocessing
 
 
@@ -19,7 +19,7 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential",
         "temperature",
         "specific_humidity",
@@ -35,7 +35,7 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "2m_temperature",
+        "air_temperature",
         "geopotential_500",
         "temperature_850"
     ]
@@ -53,7 +53,7 @@ def main():
     pred_range = Hours(args.pred_range)
     batch_size = 32
     
-    dm = IterDataModule(
+    dm = CMIP6IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,

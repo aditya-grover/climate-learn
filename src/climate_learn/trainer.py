@@ -21,6 +21,7 @@ class Trainer(pl.Trainer):
         self, early_stopping=None, patience=0, summary_depth=-1, seed=0, default_root_dir=None, **kwargs
     ):
         pl.seed_everything(seed)
+        default_root_dir = kwargs["default_root_dir"]
         if "logger" not in kwargs:
             kwargs["logger"] = False
         if "callbacks" not in kwargs:
@@ -36,10 +37,12 @@ class Trainer(pl.Trainer):
             )
             summary_callback = RichModelSummary(max_depth=summary_depth)
             progress_callback = RichProgressBar()
+            lr_monitor = LearningRateMonitor(logging_interval="step")
             callbacks = [
                 checkpoint_callback,
                 summary_callback,
                 progress_callback,
+                lr_monitor
             ]
             if early_stopping:
                 early_stop_callback = EarlyStopping(
@@ -53,6 +56,7 @@ class Trainer(pl.Trainer):
             else:
                 kwargs["strategy"] = "ddp"
         self.trainer = pl.Trainer(**kwargs)
+        self.trainer.favorite_metric = early_stopping
 
     def fit(self, model_module, *args, **kwargs):
         if model_module.optimizer is None:

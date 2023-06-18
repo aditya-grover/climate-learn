@@ -135,4 +135,15 @@ class LitModule(pl.LightningModule):
     def configure_optimizers(self):
         if self.lr_scheduler is None:
             return self.optimizer
-        return {"optimizer": self.optimizer, "lr_scheduler": self.lr_scheduler}
+        if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            scheduler = {
+                "scheduler": self.lr_scheduler,
+                "monitor": self.trainer.favorite_metric,
+                "interval": "epoch",
+                "frequency": 1,
+                "strict": True,
+            }
+        else:
+            scheduler = self.lr_scheduler
+        # scheduler = {"scheduler": self.lr_scheduler, "interval": "step", "frequency": 1}
+        return {"optimizer": self.optimizer, "lr_scheduler": scheduler}
