@@ -3,9 +3,10 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
-from climate_learn.data.cmip6_itermodule import CMIP6IterDataModule
+from climate_learn.data import IterDataModule
 from climate_learn.utils.datetime import Hours
-from climate_learn.data.climate_dataset.cmip6.constants import *
+from climate_learn.data.climate_dataset.era5.constants import *
+import torch
 import torch.multiprocessing
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -20,9 +21,16 @@ def main():
     args = parser.parse_args()
     
     variables = [
-        "air_temperature",
+        "land_sea_mask",
+        "orography",
+        "lattitude",
+        "toa_incident_solar_radiation",
+        "2m_temperature",
+        "10m_u_component_of_wind",
+        "10m_v_component_of_wind",
         "geopotential",
         "temperature",
+        "relative_humidity",
         "specific_humidity",
         "u_component_of_wind",
         "v_component_of_wind"
@@ -36,9 +44,19 @@ def main():
             in_vars.append(var)
 
     out_variables = [
-        "air_temperature",
-        "geopotential_500",
-        "temperature_850"
+        "land_sea_mask",
+        "orography",
+        "lattitude",
+        "toa_incident_solar_radiation",
+        "2m_temperature",
+        "10m_u_component_of_wind",
+        "10m_v_component_of_wind",
+        "geopotential",
+        "temperature",
+        "relative_humidity",
+        "specific_humidity",
+        "u_component_of_wind",
+        "v_component_of_wind"
     ]
     out_vars = []
     for var in out_variables:
@@ -53,9 +71,9 @@ def main():
     window = 6
     pred_range = Hours(args.pred_range)
     batch_size = 128
-    default_root_dir=f"results/unet_new_forecasting_{args.pred_range}"
+    default_root_dir=f"results/unet_forecasting_all_vars_{args.pred_range}"
     
-    dm = CMIP6IterDataModule(
+    dm = IterDataModule(
         "forecasting",
         args.root_dir,
         args.root_dir,
@@ -72,8 +90,8 @@ def main():
     # dm.setup()
 
     model = cl.models.hub.Unet(
-        in_channels=36,
-        out_channels=3,
+        in_channels=49,
+        out_channels=49,
         history=history,
         hidden_channels=64,
         dropout=0.1,
@@ -111,7 +129,48 @@ def main():
     )
     
     trainer.fit(unet, datamodule=dm)
-    trainer.test(unet, datamodule=dm, ckpt_path="best")
+
+    # ckpt_path = '/home/tungnd/climate-learn/results/unet_forecasting_all_vars_6/checkpoints/epoch_048.ckpt'
+    # ckpt = torch.load(ckpt_path)
+    # msg = unet.load_state_dict(ckpt['state_dict'])
+    # print (msg)
+
+    # for lead_time in [6, 24, 72, 120, 240]:
+    #     n_iters = lead_time // pred_range.hours()
+    #     unet.set_mode('iter')
+    #     unet.set_n_iters(n_iters)
+
+    #     test_logger = TensorBoardLogger(
+    #         save_dir=f"{default_root_dir}/logs"
+    #     )
+
+    #     test_trainer = cl.Trainer(
+    #         early_stopping="val/lat_mse:aggregate",
+    #         patience=5,
+    #         accelerator="gpu",
+    #         devices=[args.gpu],
+    #         precision=16,
+    #         max_epochs=50,
+    #         default_root_dir=default_root_dir,
+    #         logger=test_logger
+    #     )
+
+    #     test_dm = IterDataModule(
+    #         "forecasting",
+    #         args.root_dir,
+    #         args.root_dir,
+    #         in_vars,
+    #         out_vars,
+    #         history,
+    #         window,
+    #         Hours(lead_time),
+    #         subsample=subsample,
+    #         buffer_size=2000,
+    #         batch_size=batch_size,
+    #         num_workers=1
+    #     )
+
+    #     test_trainer.test(unet, datamodule=test_dm)
 
     
 if __name__ == "__main__":

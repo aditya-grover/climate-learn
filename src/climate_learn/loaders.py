@@ -217,6 +217,17 @@ load_forecasting_module = partial(
     test_target_transform=["denormalize", "denormalize"],
 )
 
+load_climatebench_module = partial(
+    load_model_module,
+    task="forecasting",
+    train_loss="mse",
+    val_loss=["mse"],
+    test_loss=["lat_nrmses", "lat_nrmseg", "lat_nrmse"],
+    train_target_transform=None,
+    val_target_transform=[nn.Identity()],
+    test_target_transform=[nn.Identity(), nn.Identity(), nn.Identity()],
+)
+
 load_downscaling_module = partial(
     load_model_module,
     task="downscaling",
