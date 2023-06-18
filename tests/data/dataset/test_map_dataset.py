@@ -1,8 +1,10 @@
 from climate_learn.data.climate_dataset.args import ClimateDatasetArgs
 from climate_learn.data.task.args import TaskArgs
 from climate_learn.data.dataset import MapDatasetArgs, MapDataset
+import pytest
 
 
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestMapDatasetInstantiation:
     def test_initialization(self):
         climate_dataset_args = ClimateDatasetArgs(

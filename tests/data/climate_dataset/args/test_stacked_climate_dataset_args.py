@@ -3,8 +3,10 @@ from climate_learn.data.climate_dataset.args import (
     ERA5Args,
     StackedClimateDatasetArgs,
 )
+import pytest
 
 
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestStackedClimateDatasetArgsInstantiation:
     def test_initialization(self):
         data_args = []

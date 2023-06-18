@@ -1,6 +1,8 @@
 from climate_learn.data.task import DownscalingArgs, Downscaling
+import pytest
 
 
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestDownscalingInstantiation:
     def test_initialization(self):
         Downscaling(

@@ -1,6 +1,8 @@
 from climate_learn.data.climate_dataset import ERA5Args, ERA5
+import pytest
 
 
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestERA5Instantiation:
     def test_initialization(self):
         ERA5(

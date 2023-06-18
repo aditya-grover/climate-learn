@@ -1,6 +1,8 @@
 from climate_learn.data.task import ForecastingArgs, Forecasting
+import pytest
 
 
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestForecastingInstantiation:
     def test_initialization(self):
         Forecasting(

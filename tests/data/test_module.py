@@ -9,7 +9,7 @@ DATA_PATH = "/data0/datasets/weatherbench/data/weatherbench/"
 GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
 
-@pytest.mark.skipif(GITHUB_ACTIONS, reason="only works locally")
+@pytest.mark.skip("Shelving map/shard datasets")
 class TestModuleInstantiation:
     def test_map_initialization(self):
         climate_dataset_args = ERA5Args(
