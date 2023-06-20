@@ -36,9 +36,19 @@ def collate_fn(
             return torch.transpose(t, 0, 1)
         return t
 
+    def handle_dict_features_inp(t: Dict[str, torch.tensor]) -> torch.tensor:
+        ## Hotfix for the models to work with dict style data
+        t = torch.cat(tuple(t.values()), dim=0)
+        # t = torch.stack(tuple(t.values()))
+        ## Handles the case for forecasting input as it has history in it
+        ## TODO: Come up with an efficient solution instead of if condition
+        if len(t.size()) == 4:
+            return torch.transpose(t, 0, 1)
+        return t
+
     ## As a hotfix inp is just stacking input and constants data
     ## via {**inp_data, **const_data} i.e. merging both of them unto one dict
-    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    inp = torch.stack([handle_dict_features_inp(batch[i][0]) for i in range(len(batch))])
     out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
     variables = list(batch[0][0].keys())
     out_variables = list(batch[0][1].keys())
@@ -56,6 +66,7 @@ class IterDataModule(LightningDataModule):
         out_root_dir,
         in_vars,
         out_vars,
+        constants = [],
         history: int = 1,
         window: int = 6,
         pred_range=Hours(6),
@@ -93,6 +104,7 @@ class IterDataModule(LightningDataModule):
                 "pred_range": pred_range.hours(),
                 "history": history,
                 "window": window,
+                "constants": constants,
             }
         else:  # downscaling
             self.dataset_caller = Downscale
@@ -124,7 +136,7 @@ class IterDataModule(LightningDataModule):
         lat = len(np.load(os.path.join(self.hparams.out_root_dir, "lat.npy")))
         lon = len(np.load(os.path.join(self.hparams.out_root_dir, "lon.npy")))
         if self.hparams.task == "forecasting":
-            in_size = torch.Size([self.hparams.batch_size, self.hparams.history, len(self.hparams.in_vars), lat, lon])
+            in_size = torch.Size([self.hparams.batch_size, self.hparams.history*(len(self.hparams.in_vars)-len(self.hparams.constants)) + len(self.hparams.constants), lat, lon])
         else:
             in_size = torch.Size([self.hparams.batch_size, len(self.hparams.in_vars), lat, lon])
         out_size = torch.Size([self.hparams.batch_size, len(self.hparams.out_vars), lat, lon])

@@ -114,7 +114,7 @@ class VisionTransformer(nn.Module):
 
     def forward(self, x):
         # x.shape = [B,T,in_channels,H,W]
-        x = x.flatten(1, 2)
+        # x = x.flatten(1, 2)
         # x.shape = [B,T*in_channels,H,W]
         x = self.forward_encoder(x)
         # x.shape = [B,num_patches,embed_dim]

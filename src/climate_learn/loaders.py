@@ -13,6 +13,7 @@ from .models.hub import (
     Persistence,
     ResNet,
     ViTPretrained,
+    VisionTransformer,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -21,6 +22,7 @@ from .metrics import MetricsMetaInfo, METRICS_REGISTRY
 # Third party
 import torch
 import torch.nn as nn
+import transformers
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 
 
@@ -40,10 +42,7 @@ def load_model_module(
     train_target_transform: Optional[Union[str, Callable]] = None,
     val_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
     test_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
-    use_pretrained_backbone: Optional[bool] = False,
-    use_pretrained_embeddings: Optional[bool] = False,
-    freeze_backbone: Optional[bool] = False,
-    freeze_embeddings: Optional[bool] = False,
+    cfg: Optional[Dict[str, Any]] = None,
 ):
     # Temporary fix, per this discussion:
     # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
@@ -55,7 +54,7 @@ def load_model_module(
         raise RuntimeError("Please specify 'preset' or 'model'")
     elif preset:
         print(f"Loading preset: {preset}")
-        model, optimizer, lr_scheduler = load_preset(task, data_module, preset, use_pretrained_backbone, use_pretrained_embeddings, freeze_backbone, freeze_embeddings)
+        model, optimizer, lr_scheduler = load_preset(task, data_module, preset, cfg)
     elif isinstance(model, str):
         print(f"Loading model: {model}")
         model_cls = MODEL_REGISTRY.get(model, None)
@@ -231,7 +230,7 @@ load_downscaling_module = partial(
 )
 
 
-def load_preset(task, data_module, preset, use_pretrained_backbone=False, use_pretrained_embeddings=False, freeze_backbone=False, freeze_embeddings=False):
+def load_preset(task, data_module, preset, cfg=None):
     in_vars, out_vars = get_data_variables(data_module)
     in_shape, out_shape = get_data_dims(data_module)
 
@@ -243,7 +242,8 @@ def load_preset(task, data_module, preset, use_pretrained_backbone=False, use_pr
         )
 
     if task == "forecasting":
-        history, in_channels, in_height, in_width = in_shape[1:]
+        # history, in_channels, in_height, in_width = in_shape[1:]
+        in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
         if preset.lower() == "climatology":
             norm = data_module.get_out_transforms()
@@ -282,18 +282,67 @@ def load_preset(task, data_module, preset, use_pretrained_backbone=False, use_pr
                 model, "Adam", {"lr": 1e-5, "weight_decay": 1e-5}
             )
             lr_scheduler = None
-        elif preset.lower() == 'vit':
-            model = ViTPretrained(
-                img_size = (in_height, in_width),
-                in_channels = in_channels,
-                out_channels = out_channels,
-                use_pretrained_backbone=use_pretrained_backbone,
-                use_pretrained_embeddings=use_pretrained_embeddings,
-                freeze_backbone=freeze_backbone,
-                freeze_embeddings=freeze_embeddings,
+        elif preset.lower() == 'vit_cl':
+            model = VisionTransformer(
+                img_size=(in_height, in_width),
+                in_channels=in_channels,
+                out_channels=out_channels,
+                history=1,
+                patch_size=cfg['patch_size'],
+                drop_path=cfg['drop_path'],
+                drop_rate=cfg['drop_rate'],
+                learn_pos_emb=cfg['learn_pos_emb'],
+                embed_dim=cfg['embed_dim'],
+                depth=cfg['depth'],
+                decoder_depth=cfg['decoder_depth'],
+                num_heads=cfg['num_heads'],
+                mlp_ratio=cfg['mlp_ratio'],
             )
             optimizer = load_optimizer(
-                model, "Adam", {"lr": 1e-5, "weight_decay": 1e-5}
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            ) 
+            # lr_scheduler = None
+        elif preset.lower() == 'vit_pretrained':
+            model = ViTPretrained(
+                in_img_size = cfg['in_img_size'],
+                out_img_size = (in_height, in_width),
+                in_channels = in_channels,
+                out_channels = out_channels,
+                learn_pos_emb=cfg['learn_pos_emb'],
+                patch_size = cfg['patch_size'],
+                embed_dim = cfg['embed_dim'],
+                decoder_depth=cfg['decoder_depth'],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                use_pretrained_embeddings=cfg['use_pretrained_embeddings'],
+                freeze_backbone=cfg['freeze_backbone'],
+                freeze_embeddings=cfg['freeze_embeddings'],
+                resize_img=cfg['resize_img'],
+                pretrained_model=cfg['pretrained_model'],
+                mlp_embed_depth=cfg['mlp_embed_depth']
+            )
+            optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
+        elif preset.lower() == 'cli-vit':
+            model = ClimaX(
+                default_vars=cfg['in_variables'] + cfg['constants'],
+                out_vars=cfg['out_variables'],
+                img_size = [in_height, in_width],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                freeze_backbone=cfg['freeze_backbone'],
+            )
+            optimizer = load_optimizer(
+                model, "Adam", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
             )
             lr_scheduler = None
         else:
@@ -383,22 +432,22 @@ def load_transform(transform_name, data_module):
     transform = transform_cls(data_module)
     return transform
 
-# def get_data_dims(data_module):
-    # return data_module.get_data_dims()
-
-# def get_data_variables(data_module):
-    # return data_module.get_data_variables()
-
 def get_data_dims(data_module):
-    for batch in data_module.train_dataloader():
-        x, y, _, _ = batch
-        break
-    return x.shape, y.shape
+    return data_module.get_data_dims()
 
 def get_data_variables(data_module):
-    in_vars = data_module.train_dataset.task.in_vars
-    out_vars = data_module.train_dataset.task.out_vars
-    return in_vars, out_vars
+    return data_module.get_data_variables()
+
+# def get_data_dims(data_module):
+#     for batch in data_module.train_dataloader():
+#         x, y, _, _ = batch
+#         break
+#     return x.shape, y.shape
+
+# def get_data_variables(data_module):
+#     in_vars = data_module.train_dataset.task.in_vars
+#     out_vars = data_module.train_dataset.task.out_vars
+#     return in_vars, out_vars
 
 def get_climatology(data_module, split):
     clim = data_module.get_climatology(split=split)

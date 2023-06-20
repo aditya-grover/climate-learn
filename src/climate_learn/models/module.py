@@ -69,14 +69,16 @@ class LitModule(pl.LightningModule):
                 loss_dict[f"{loss_name}:{var_name}"] = loss
             loss = losses[-1]
             loss_dict[f"{loss_name}:aggregate [train]"] = loss
-        
-        loss_fns = self.val_loss
+        optimization_loss = loss
+        loss_fns = self.val_loss                #Compute RMSE and other metrics on train set
         transforms = self.val_target_transforms
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
-                yhat = transforms[i](yhat)
-                y = transforms[i](y)
-            losses = lf(yhat, y)
+                yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
+                y_T = transforms[i](y)
+                losses = lf(yhat_T, y_T)
+            else:
+                losses = lf(yhat, y)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:
                 loss_dict[f"{loss_name}:agggregate [train]"] = losses
@@ -93,7 +95,7 @@ class LitModule(pl.LightningModule):
             on_epoch=True,
             batch_size=x.shape[0],
         )
-        return loss
+        return optimization_loss
 
     def validation_step(
         self,
@@ -125,9 +127,11 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
-                yhat = transforms[i](yhat)
-                y = transforms[i](y)
-            losses = lf(yhat, y)
+                yhat_T = transforms[i](yhat)                            #Fixes bug when #transforms[i] is None
+                y_T = transforms[i](y)
+                losses = lf(yhat_T, y_T)
+            else:
+                losses = lf(yhat, y)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[f"{loss_name}:agggregate [{stage}]"] = losses

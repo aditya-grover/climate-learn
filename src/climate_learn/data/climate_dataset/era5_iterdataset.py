@@ -79,13 +79,14 @@ class NpyReader(IterableDataset):
 
 class Forecast(IterableDataset):
     def __init__(
-        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6
+        self, dataset: NpyReader, pred_range: int = 6, history: int = 3, window: int = 6, constants: list = [],
     ) -> None:
         super().__init__()
         self.dataset = dataset
         self.pred_range = pred_range
         self.history = history
         self.window = window
+        self.constants = constants
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
@@ -93,6 +94,10 @@ class Forecast(IterableDataset):
                 k: torch.from_numpy(inp_data[k].astype(np.float32))
                 .unsqueeze(0)
                 .repeat_interleave(self.history, dim=0)
+                if k not in self.constants
+                else
+                torch.from_numpy(inp_data[k].astype(np.float32))
+                .unsqueeze(0)
                 for k in inp_data.keys()
             }
             out_data = {
@@ -101,7 +106,8 @@ class Forecast(IterableDataset):
             }
             for key in inp_data.keys():
                 for t in range(self.history):
-                    inp_data[key][t] = inp_data[key][t].roll(-t * self.window, dims=0)
+                    if key not in self.constants:
+                        inp_data[key][t] = inp_data[key][t].roll(-t * self.window, dims=0)
 
             last_idx = -((self.history - 1) * self.window + self.pred_range)
 
