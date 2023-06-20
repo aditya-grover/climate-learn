@@ -1,4 +1,5 @@
 # Standard library
+from argparse import ArgumentParser
 from ftplib import FTP
 import os
 import re
@@ -100,3 +101,55 @@ def download_prism(dst, variable, years=(1981, 2023)):
                 myzip.extractall(path=subdir_path)
             os.unlink(local_fn)
     ftp.quit()
+
+
+def main():
+    parser = ArgumentParser(description="ClimateLearn's download utility.")
+    subparsers = parser.add_subparsers(
+        help="Data provider to download from.",
+        dest="provider"
+    )
+    copernicus_era5 = subparsers.add_parser("copernicus-era5")
+    mpi_esm1_2_hr = subparsers.add_parser("mpi_esm1_2_hr")
+    weatherbench = subparsers.add_parser("weatherbench")
+    prism = subparsers.add_parser("prism")
+
+    copernicus_era5.add_argument("dst", help="Destination to store downloaded files.")
+    copernicus_era5.add_argument("var", help="Variable to download.")
+    copernicus_era5.add_argument("year", type=int)
+    copernicus_era5.add_argument("--pressure", action="store_true", default=False)
+    copernicus_era5.add_argument("--api_key")
+
+    mpi_esm1_2_hr.add_argument("dst", help="Destination to store downloaded files.")
+    mpi_esm1_2_hr.add_argument("var", help="Variable to download.")
+    mpi_esm1_2_hr.add_argument("--start", type=int, default=1850)
+    mpi_esm1_2_hr.add_argument("--end", type=int, default=2015)
+
+    weatherbench.add_argument("dst", help="Destination to store downloaded files.")
+    weatherbench.add_argument("dataset", choices=["era5", "cmip6"])
+    weatherbench.add_argument("var")
+    weatherbench.add_argument("--res", type=float, default=5.625)
+
+    prism.add_argument("dst", help="Destination to store downloaded files.")
+    prism.add_argument("var", help="Variable to download.")
+    prism.add_argument("--start", type=int, default=1981)
+    prism.add_argument("--end", type=int, default=2023)
+
+    args = parser.parse_args()
+    
+    if args.provider == "copernicus_era5":
+        download_copernicus_era5(
+            args.dst, args.var, args.year, args.pressure, args.api_key
+        )
+    elif args.provider == "mpi_esm1_2_hr":
+        download_mpi_esm1_2_hr(
+            args.dst, args.var, (args.start, args.end)
+        )
+    elif args.provider == "weatherbench":
+        download_weatherbench(args.dst, args.var, args.res)
+    elif args.provider == "prism":
+        download_prism(args.dst, args.var, (args.start, args.end))
+
+
+if __name__ == "__main__":
+    main()
