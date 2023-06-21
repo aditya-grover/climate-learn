@@ -28,11 +28,11 @@ class IterDataModule(pl.LightningDataModule):
     def __init__(
         self,
         task,
-        src,
         inp_root_dir,
         out_root_dir,
         in_vars,
         out_vars,
+        src=None,
         history=1,
         window=6,
         pred_range=6,

@@ -3,7 +3,7 @@ from typing import Union
 
 # Local application
 from .registry import register
-from ..data import DataModule, IterDataModule
+from ..data import IterDataModule
 
 # Third party
 import torch
@@ -12,7 +12,7 @@ from torchvision import transforms
 
 @register("denormalize")
 class Denormalize:
-    def __init__(self, data_module: Union[DataModule, IterDataModule]):
+    def __init__(self, data_module: IterDataModule):
         norm = data_module.get_out_transforms()
         if norm is None:
             raise RuntimeError("norm was 'None', did you setup the data module?")

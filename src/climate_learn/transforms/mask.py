@@ -10,9 +10,11 @@ import torch
 
 @register("mask")
 class Mask:
-    def __init__(self, mask: torch.IntTensor):
+    def __init__(self, mask: torch.IntTensor, val=0):
         self.mask = mask
+        self.val = val
 
     def __call__(self, x) -> Union[torch.FloatTensor, torch.DoubleTensor]:
-        res = torch.where(self.mask == 1, x, 0)
+        self.mask = self.mask.to(x.device)
+        res = torch.where(self.mask == 1, x, self.val)
         return res

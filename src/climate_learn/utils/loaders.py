@@ -4,7 +4,7 @@ from functools import partial
 import warnings
 
 # Local application
-from ..data import DataModule, IterDataModule
+from ..data import IterDataModule
 from ..models import LitModule, MODEL_REGISTRY
 from ..models.hub import (
     Climatology,
@@ -27,7 +27,7 @@ from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 
 def load_model_module(
     task: str,
-    data_module: Union[DataModule, IterDataModule],
+    data_module,
     preset: Optional[str] = None,
     model: Optional[Union[str, nn.Module]] = None,
     model_kwargs: Optional[Dict[str, Any]] = None,

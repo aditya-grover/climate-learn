@@ -19,6 +19,9 @@ class ERA5toPRISMDataModule(pl.LightningDataModule):
     def __init__(self, in_root_dir, out_root_dir, batch_size=32, num_workers=4):
         super().__init__()
         self.save_hyperparameters(logger=False)
+        self.hparams.out_vars = ["daily_tmax"]
+        self.hparams.history = 1
+        self.hparams.task = "downscaling"
 
     def setup(self, stage="foobar"):
         self.train_dataset = NpzDataset(
