@@ -9,8 +9,9 @@
 
 ## Usage
 
-[**Python3**](https://www.python.org/) is required.
+[**Python3**](https://www.python.org/) is required. The xESMF package has to be installed separately since one of its dependencies, ESMpy, is available only through Conda.
 ```
+conda install -c conda-forge xesmf
 pip install climate-learn
 ```
 
