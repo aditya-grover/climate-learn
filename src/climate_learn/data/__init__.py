@@ -1,4 +1,4 @@
 from .download import *
 from .itermodule import IterDataModule
-from .climatebench_module import *
-from .era5_prism import ERA5ToPrism
+from .mapmodule import ERA5toPRISMDataModule
+from .climatebench_module import ClimateBenchDataModule
