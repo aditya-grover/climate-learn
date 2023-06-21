@@ -1,102 +1,78 @@
 # Standard library
 import glob
-from typing import Dict, Optional, Sequence, Tuple
+import os
+from typing import Dict, Optional
 
 # Third party
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision.transforms import transforms
-from pytorch_lightning import LightningDataModule
+import pytorch_lightning as pl
 
 # Local application
-from .climate_dataset.era5_iterdataset import *
-from ..utils.datetime import Hours
-
-# TODO: include exceptions in docstrings
-# TODO: document legal input/output variables for each dataset
-
-
-def collate_fn(
-    batch,
-) -> Tuple[torch.tensor, torch.tensor, Sequence[str], Sequence[str]]:
-    r"""Collate function for DataLoaders.
-
-    :param batch: A batch of data samples.
-    :type batch: List[Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]]
-    :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
-    :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
-    """
-
-    def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
-        ## Hotfix for the models to work with dict style data
-        t = torch.stack(tuple(t.values()))
-        ## Handles the case for forecasting input as it has history in it
-        ## TODO: Come up with an efficient solution instead of if condition
-        if len(t.size()) == 4:
-            return torch.transpose(t, 0, 1)
-        return t
-
-    ## As a hotfix inp is just stacking input and constants data
-    ## via {**inp_data, **const_data} i.e. merging both of them unto one dict
-    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
-    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
-    variables = list(batch[0][0].keys())
-    out_variables = list(batch[0][1].keys())
-    return inp, out, variables, out_variables
+from .iterdataset import (
+    NpyReader,
+    DirectForecast,
+    ContinuousForecast,
+    Downscale,
+    IndividualDataIter,
+    ShuffleIterableDataset
+)
 
 
-class IterDataModule(LightningDataModule):
+class IterDataModule(pl.LightningDataModule):
     """ClimateLearn's iter data module interface. Encapsulates dataset/task-specific
     data modules."""
 
     def __init__(
         self,
         task,
+        src,
         inp_root_dir,
         out_root_dir,
         in_vars,
         out_vars,
-        history: int = 1,
-        window: int = 6,
-        pred_range=Hours(6),
-        subsample=Hours(1),
+        history=1,
+        window=6,
+        pred_range=6,
+        random_lead_time=True,
+        max_pred_range=120,
+        hrs_each_step=1,
+        subsample=1,
         buffer_size=10000,
         batch_size=64,
         num_workers=0,
         pin_memory=False,
     ):
-        r"""
-        .. highlight:: python
-
-        :param task: The name of the task. Currently supported options
-            are: "forecasting", "downscaling".
-        :type task: str
-        :param inp_root_dir: The path to the local directory containing the
-            specified input dataset.
-        :type inp_root_dir: str
-        :param out_root_dir: The path to the local directory containing the
-            specified out dataset.
-        :type out_root_dir: str
-        :param in_vars: A list of input variables to use.
-        :type in_vars: List[str]
-        :param out_vars: A list of output variables to use.
-        :type out_vars: List[str]
-        """
         super().__init__()
-
         self.save_hyperparameters(logger=False)
-
-        if task == "forecasting":
+        if task == "direct-forecasting":
             assert inp_root_dir == out_root_dir
-            self.dataset_caller = Forecast
+            self.dataset_caller = DirectForecast
             self.dataset_arg = {
-                "pred_range": pred_range.hours(),
+                "src": src,
+                "pred_range": pred_range,
                 "history": history,
                 "window": window,
             }
-        else:  # downscaling
+            self.collate_fn = collate_fn
+        elif task == "continuous-forecasting":
+            assert inp_root_dir == out_root_dir
+            self.dataset_caller = ContinuousForecast
+            self.dataset_arg = {
+                "random_lead_time": random_lead_time,
+                "min_pred_range": pred_range,
+                "max_pred_range": max_pred_range,
+                "hrs_each_step": hrs_each_step,
+                "history": history,
+                "window": window
+            }
+            self.collate_fn = collate_fn_continuous
+        elif task == "downscaling":
             self.dataset_caller = Downscale
             self.dataset_arg = {}
+            self.collate_fn = collate_fn
 
         self.inp_lister_train = glob.glob(os.path.join(inp_root_dir, "train", "*.npz"))
         self.out_lister_train = glob.glob(os.path.join(out_root_dir, "train", "*.npz"))
@@ -123,23 +99,21 @@ class IterDataModule(LightningDataModule):
     def get_data_dims(self):
         lat = len(np.load(os.path.join(self.hparams.out_root_dir, "lat.npy")))
         lon = len(np.load(os.path.join(self.hparams.out_root_dir, "lon.npy")))
-        if self.hparams.task == "forecasting":
-            in_size = torch.Size(
-                [
-                    self.hparams.batch_size,
-                    self.hparams.history,
-                    len(self.hparams.in_vars),
-                    lat,
-                    lon,
-                ]
-            )
-        else:
-            in_size = torch.Size(
-                [self.hparams.batch_size, len(self.hparams.in_vars), lat, lon]
-            )
-        out_size = torch.Size(
-            [self.hparams.batch_size, len(self.hparams.out_vars), lat, lon]
-        )
+        if self.hparams.task in ("direct-forecasting", "continuous-forecasting"):
+            in_size = torch.Size([
+                self.hparams.batch_size,
+                self.hparams.history,
+                len(self.hparams.in_vars),
+                lat,
+                lon
+            ])
+        elif self.hparams.task == "downscaling":
+            in_size = torch.Size([
+                self.hparams.batch_size, len(self.hparams.in_vars), lat, lon
+            ])
+        out_size = torch.Size([
+            self.hparams.batch_size, len(self.hparams.out_vars), lat, lon
+        ])
         return in_size, out_size
 
     def get_normalize(self, root_dir, variables):
@@ -179,7 +153,7 @@ class IterDataModule(LightningDataModule):
                     ),
                     transforms=self.transforms,
                     output_transforms=self.output_transforms,
-                    subsample=self.hparams.subsample.hours(),
+                    subsample=self.hparams.subsample,
                 ),
                 buffer_size=self.hparams.buffer_size,
             )
@@ -197,7 +171,7 @@ class IterDataModule(LightningDataModule):
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
-                subsample=self.hparams.subsample.hours(),
+                subsample=self.hparams.subsample,
             )
 
             self.data_test = IndividualDataIter(
@@ -213,7 +187,7 @@ class IterDataModule(LightningDataModule):
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
-                subsample=self.hparams.subsample.hours(),
+                subsample=self.hparams.subsample,
             )
 
     def train_dataloader(self):
@@ -223,7 +197,7 @@ class IterDataModule(LightningDataModule):
             drop_last=False,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
         )
 
     def val_dataloader(self):
@@ -234,7 +208,7 @@ class IterDataModule(LightningDataModule):
             drop_last=False,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
         )
 
     def test_dataloader(self):
@@ -245,5 +219,34 @@ class IterDataModule(LightningDataModule):
             drop_last=False,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
         )
+
+
+def collate_fn(batch):
+    def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+        t = torch.stack(tuple(t.values()))
+        if len(t.size()) == 4:
+            return torch.transpose(t, 0, 1)
+        return t
+    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
+    variables = list(batch[0][0].keys())
+    out_variables = list(batch[0][1].keys())
+    return inp, out, variables, out_variables
+
+def collate_fn_continuous(batch):
+    def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
+        t = torch.stack(tuple(t.values()))
+        if len(t.size()) == 4:
+            return torch.transpose(t, 0, 1)
+        return t
+    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
+    lead_times = torch.stack([batch[i][2] for i in range(len(batch))])
+    b, t, _, h, w = inp.shape
+    lead_times = lead_times.reshape(b, 1, 1, 1, 1).repeat(1, t, 1, h, w)
+    inp = torch.cat((inp, lead_times), dim=2)
+    variables = list(batch[0][0].keys())
+    out_variables = list(batch[0][1].keys())
+    return inp, out, variables, out_variables

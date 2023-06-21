@@ -9,7 +9,7 @@ import netCDF4 as nc
 from tqdm import tqdm
 
 # Local application
-from ..era5_constants import (
+from .era5_constants import (
     DEFAULT_PRESSURE_LEVELS,
     NAME_TO_VAR,
     VAR_TO_NAME,
