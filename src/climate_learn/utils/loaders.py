@@ -4,9 +4,9 @@ from functools import partial
 import warnings
 
 # Local application
-from .data import DataModule, IterDataModule
-from .models import LitModule, MODEL_REGISTRY
-from .models.hub import (
+from ..data import DataModule, IterDataModule
+from ..models import LitModule, MODEL_REGISTRY
+from ..models.hub import (
     Climatology,
     Interpolation,
     LinearRegression,
@@ -15,9 +15,9 @@ from .models.hub import (
     Unet,
     VisionTransformer,
 )
-from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
-from .transforms import TRANSFORMS_REGISTRY
-from .metrics import MetricsMetaInfo, METRICS_REGISTRY
+from ..models.lr_scheduler import LinearWarmupCosineAnnealingLR
+from ..transforms import TRANSFORMS_REGISTRY
+from ..metrics import MetricsMetaInfo, METRICS_REGISTRY
 
 # Third party
 import torch
@@ -430,18 +430,6 @@ def get_data_dims(data_module):
 
 def get_data_variables(data_module):
     return data_module.get_data_variables()
-
-
-# def get_data_dims(data_module):
-#     for batch in data_module.train_dataloader():
-#         x, y, _, _ = batch
-#         break
-#     return x.shape, y.shape
-
-# def get_data_variables(data_module):
-#     in_vars = data_module.train_dataset.task.in_vars
-#     out_vars = data_module.train_dataset.task.out_vars
-#     return in_vars, out_vars
 
 
 def get_climatology(data_module, split):

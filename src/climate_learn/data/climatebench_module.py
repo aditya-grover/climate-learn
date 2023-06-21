@@ -1,8 +1,8 @@
 import os
-from typing import Optional
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 
@@ -126,11 +126,10 @@ class ClimateBenchDataModule(LightningDataModule):
     def get_lat_lon(self):
         return self.lat, self.lon
 
-    # def set_patch_size(self, p):
-    #     self.patch_size = p
-
-    # def get_test_clim(self):
-    #     return self.dataset_test.y_normalization
+    def get_data_dims(self):
+        x, y = self.train_dataset[0]
+        y = F.pad(y, (2, 2, 3, 3))
+        return x.unsqueeze(0).shape, y.unsqueeze(0).shape
 
     def get_climatology(self, split="test"):
         return {self.hparams.out_variables[0]: self.dataset_test.y_normalization}
