@@ -1,14 +1,14 @@
 # Standard library
-from asyncio.proactor_events import constants
 from typing import Callable, List, Optional, Tuple, Union
+
+# Local application
+from ..data.processing.era5_constants import CONSTANTS
 
 # Third party
 import torch
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
-
-from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
 
 
 class LitModule(pl.LightningModule):

@@ -1,7 +1,7 @@
-import climate_learn as cl
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+from scipy.stats import rankdata
 from tqdm import tqdm
 
 
@@ -145,4 +145,27 @@ def visualize_mean_bias(dm, mm, out_transform, variable, src):
         ax.get_position().y1 - ax.get_position().y0
     ])
     fig.colorbar(ax.get_images()[0], cax=cax)
+    plt.show()
+
+
+# based on https://github.com/oliverangelil/rankhistogram/tree/master
+def rank_histogram(obs, ensemble, channel):
+    obs = obs.numpy()[:,channel]
+    ensemble = ensemble.numpy()[:,:,channel]
+    combined = np.vstack((obs[np.newaxis], ensemble))
+    ranks = np.apply_along_axis(lambda x: rankdata(x, method="min"), 0, combined)
+    ties = np.sum(ranks[0] == ranks[1:], axis=0)
+    ranks = ranks[0]
+    tie = np.unique(ties)
+    for i in range(1, len(tie)):
+        idx = ranks[ties == tie[i]]
+        ranks[ties == tie[i]] = [
+            np.random.randint(idx[j], idx[j] + tie[i] + 1, tie[i])[0]
+            for j in range(len(idx))
+        ]
+    hist = np.histogram(
+        ranks,
+        bins=np.linspace(0.5, combined.shape[0] + 0.5, combined.shape[0] + 1)
+    )
+    plt.bar(range(1, ensemble.shape[0] + 2), hist[0])
     plt.show()
