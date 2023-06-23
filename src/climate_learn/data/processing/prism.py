@@ -37,11 +37,10 @@ parser.add_argument(
 )
 parser.add_argument(
     "--test_end",
-    default="2019",
+    default="2018",
     help="The last year of testing data."
 )
 args = parser.parse_args()
-
 
 root = args.source
 subdirs = sorted(os.listdir(root))

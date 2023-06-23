@@ -1,32 +1,31 @@
 # Standard library
 from argparse import ArgumentParser
-import os
 
 # Third party
 import climate_learn as cl
 from climate_learn.transforms import Mask, Denormalize
-from climate_learn.data import ERA5ToPrism
+import pytorch_lightning as pl
 
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("gpu", type=int)
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("era5_cropped_dir")
+    parser.add_argument("prism_processed_dir")
     args = parser.parse_args()
 
-    dm = ERA5ToPrism(
-        os.path.join(os.environ["PRISM_DIR"], "era5_cropped"),
-        os.path.join(os.environ["PRISM_DIR"], "prism_processed"),
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
+    # Set up data
+    dm = cl.data.ERA5toPRISMDataModule(
+        args.era5_cropped_dir,
+        args.prism_processed_dir,
+        batch_size=32,
+        num_workers=4,
     )
     dm.setup()
 
-    mask = Mask(dm.get_out_mask().to(device=f"cuda:{args.gpu}"))
+    # Set up baseline models
+    mask = Mask(dm.get_out_mask())
     denorm = Denormalize(dm)
     denorm_mask = lambda x: denorm(mask(x))
-
     nearest = cl.load_downscaling_module(
         data_module=dm,
         preset="nearest-interpolation",
@@ -41,7 +40,9 @@ def main():
         val_target_transform=[denorm_mask, denorm_mask, denorm_mask, mask],
         test_target_transform=[denorm_mask, denorm_mask, denorm_mask],
     )
-    trainer = cl.Trainer(accelerator="gpu", devices=[args.gpu])
+
+    # Evaluate baselines (no training needed)
+    trainer = pl.Trainer()
     trainer.test(nearest, dm)
     trainer.test(bilinear, dm)
 
