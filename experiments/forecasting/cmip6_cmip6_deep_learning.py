@@ -3,6 +3,10 @@ from argparse import ArgumentParser
 
 # Third party
 import climate_learn as cl
+from climate_learn.data.processing.cmip6_constants import (
+    PRESSURE_LEVEL_VARS,
+    DEFAULT_PRESSURE_LEVELS
+)
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -14,44 +18,67 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 parser = ArgumentParser()
-parser.add_argument("climatebench_dir")
-parser.add_argument("model", choices=["resnet", "unet", "vit"])
-parser.add_argument(
-    "variable",
-    choices=["tas", "diurnal_temperature_range", "pr", "pr90"],
-    help="The variable to predict."
-)
+parser.add_argument("cmip6_dir")
+parser.add_argument("preset", choices=["resnet", "unet", "vit"])
+parser.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 parser.add_argument("--summary_depth", type=int, default=1)
 parser.add_argument("--max_epochs", type=int, default=50)
-parser.add_argument("--patience", type=int, default=10)
+parser.add_argument("--patience", type=int, default=5)
 parser.add_argument("--gpu", type=int, default=-1)
 parser.add_argument("--checkpoint", default=None)
 args = parser.parse_args()
 
 # Set up data
-variables = ["CO2", "SO2", "CH4", "BC"]
-out_variables = args.variable
-dm = cl.data.ClimateBenchDataModule(
-    args.climatebench_dir,
-    variables=variables,
-    out_variables=out_variables,
-    train_ratio=0.9,
-    history=10,
-    batch_size=16,
-    num_workers=1,
+variables = [
+    "air_temperature",
+    "geopotential",
+    "temperature",
+    "specific_humidity",
+    "u_component_of_wind",
+    "v_component_of_wind",
+]
+in_vars = []
+for var in variables:
+    if var in PRESSURE_LEVEL_VARS:
+        for level in DEFAULT_PRESSURE_LEVELS:
+            in_vars.append(var + "_" + str(level))
+    else:
+        in_vars.append(var)
+out_variables = ["air_temperature", "geopotential_500", "temperature_850"]
+out_vars = []
+for var in out_variables:
+    if var in PRESSURE_LEVEL_VARS:
+        for level in DEFAULT_PRESSURE_LEVELS:
+            out_vars.append(var + "_" + str(level))
+    else:
+        out_vars.append(var)
+dm = cl.data.IterDataModule(
+    "direct-forecasting",
+    args.cmip6_dir,
+    args.cmip6_dir,
+    in_vars,
+    out_vars,
+    history=3,
+    window=6,
+    pred_range=args.pred_range,
+    subsample=6,
+    buffer_size=2000,
+    batch_size=128,
+    num_workers=4,
 )
+dm.setup()
 
 # Set up deep learning model
 if args.model == "resnet":
     model_kwargs = {  # override some of the defaults
-        "in_channels": 49,
+        "in_channels": 36,
         "out_channels": 3,
         "history": 3,
         "n_blocks": 28
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
-        "in_channels": 49,
+        "in_channels": 36,
         "out_channels": 3,
         "history": 3,
         "ch_mults": (1, 2, 2),
@@ -60,7 +87,7 @@ elif args.model == "unet":
 elif args.model == "vit": 
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
-        "in_channels": 49,
+        "in_channels": 36,
         "out_channels": 3,
         "history": 3,
         "patch_size": 2,
@@ -70,22 +97,7 @@ elif args.model == "vit":
         "learn_pos_emb": True,
         "num_heads": 4
     }
-optimizer = cl.load_optimizer(
-    model,
-    "AdamW",
-    {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
-)
-lr_scheduler = cl.load_lr_scheduler(
-    "linear-warmup-cosine-annealing",
-    optimizer,
-    {
-        "warmup_epochs": 5,
-        "max_epochs": 50,
-        "warmup_start_lr": 1e-8,
-        "eta_min": 1e-8,
-    },
-)
-model = cl.load_climatebench_module(
+model = cl.load_forecasting_module(
     data_module=dm,
     model=args.model,
     model_kwargs=model_kwargs,
@@ -95,9 +107,9 @@ model = cl.load_climatebench_module(
     sched_kwargs={"warmup_epochs": 5, "max_epoch": 50}
 )
 
-# Set up trainer
+# Setup trainer
 pl.seed_everything(0)
-default_root_dir = f"{args.model}_climatebench_{args.out_var}"
+default_root_dir = f"{args.preset}_forecasting_{args.pred_range}"
 logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
 early_stopping = "val/mse:aggregate"
 callbacks = [
@@ -122,8 +134,7 @@ trainer = pl.Trainer(
     devices=[args.gpu] if args.gpu != -1 else None,
     max_epochs=args.max_epochs,
     strategy="ddp",
-    precision="16",
-    log_every_n_steps=1
+    precision="16"
 )
 
 # Train and evaluate model from scratch
@@ -140,6 +151,6 @@ else:
         train_loss=None,
         val_loss=None,
         test_loss=model.test_loss,
-        test_target_transforms=model.test_target_transforms
+        test_target_tranfsorms=model.test_target_transforms,
     )
     trainer.test(model, datamodule=dm)

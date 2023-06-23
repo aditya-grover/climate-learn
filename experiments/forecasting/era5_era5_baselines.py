@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 
 parser = ArgumentParser()
 parser.add_argument("era5_dir")
-parser.add_argument("pred_range", type=int)
+parser.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 args = parser.parse_args()
 
 # Set up data
@@ -28,7 +28,7 @@ dm = cl.data.IterDataModule(
     window=6,
     pred_range=args.pred_range,
     subsample=6,
-    batch_size=32,
+    batch_size=128,
     num_workers=8,
 )
 dm.setup()
