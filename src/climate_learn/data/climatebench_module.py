@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 import torch.nn.functional as F
-from pytorch_lightning import LightningDataModule
+import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
 from climate_learn.data.climatebench_dataset import (
@@ -28,7 +28,7 @@ def collate_climate_fn(batch):
     )
 
 
-class ClimateBenchDataModule(LightningDataModule):
+class ClimateBenchDataModule(pl.LightningDataModule):
     def __init__(
         self,
         root_dir,  # contains metadata and train + val + test
