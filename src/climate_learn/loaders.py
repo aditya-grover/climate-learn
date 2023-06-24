@@ -323,11 +323,34 @@ def load_preset(task, data_module, preset, cfg=None):
                 freeze_embeddings=cfg['freeze_embeddings'],
                 resize_img=cfg['resize_img'],
                 pretrained_model=cfg['pretrained_model'],
-                mlp_embed_depth=cfg['mlp_embed_depth']
+                mlp_embed_depth=cfg['mlp_embed_depth'],
+                num_backbone_blocks=cfg['num_backbone_blocks'],
             )
-            optimizer = load_optimizer(
-                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
-            )
+            # optimizer = load_optimizer(
+                    # model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            # )
+            for name, param in model.named_parameters():
+                print(name)
+            # exit
+            if cfg['use_pretrained_embeddings']:
+                optimizer = torch.optim.AdamW([
+                        {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
+                        {'params': model.head.parameters(), 'lr': cfg['new_lr']},
+                    ],
+                    betas=cfg['betas'],
+                    weight_decay=cfg['weight_decay']
+                )
+            else:
+                optimizer = torch.optim.AdamW([
+                        {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
+                        {'params': model.head.parameters(), 'lr': cfg['new_lr']},
+                        {'params': model.patch_embed.parameters(), 'lr': cfg['new_lr']},
+                        {'params': model.pos_embed, 'lr': cfg['new_lr']},
+                        {'params': model.mlp_embed.parameters(), 'lr': cfg['new_lr']},
+                    ],
+                    betas=cfg['betas'],
+                    weight_decay=cfg['weight_decay']
+                )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",
                 optimizer,

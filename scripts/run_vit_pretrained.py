@@ -10,7 +10,7 @@ import argparse
 import yaml
 from pytorch_lightning import seed_everything
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import LearningRateMonitor, TQDMProgressBar
+from pytorch_lightning.callbacks import LearningRateMonitor, TQDMProgressBar, RichProgressBar
 from datetime import datetime
 from transformers import AutoConfig, ViTImageProcessor
 
@@ -86,7 +86,11 @@ def load_data_numpy(cfg):
     return dm
 
 def main():
-    cfg = load_config('configs/config.yaml')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', default='lowres')
+    args = parser.parse_args()
+    cfg = load_config(f'configs/{args.config}.yaml')
+
     dm = load_data_numpy(cfg)
 
     # climatology is the average value over the training period
@@ -125,7 +129,7 @@ def main():
         logger=logger,
         # Print model summary
         enable_model_summary=False,
-        callbacks=[TQDMProgressBar(), lr_monitor],
+        callbacks=[lr_monitor, RichProgressBar()],
         val_check_interval=cfg['val_every_n_steps'],
     )
 

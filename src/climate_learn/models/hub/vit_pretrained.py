@@ -34,6 +34,7 @@ class ViTPretrained(nn.Module):
         decoder_depth=2,
         pretrained_model=None,
         mlp_embed_depth=0,
+        num_backbone_blocks=12,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -50,13 +51,14 @@ class ViTPretrained(nn.Module):
         self.pretrained_model_name = pretrained_model
         self.resize_img = resize_img
         self.eff_patch_size = [int((patch_size / in_img_size[0]) * out_img_size[0]), int((patch_size / in_img_size[1]) * out_img_size[1])]
+        self.num_backbone_blocks = num_backbone_blocks
 
         self.load_pretrained_model()
         
         if not use_pretrained_embeddings:
             self.patch_embed = PatchEmbed(in_img_size, patch_size, in_channels, embed_dim)
             self.pos_embed = nn.Parameter(
-                torch.zeros(1, self.num_patches, embed_dim), requires_grad=learn_pos_emb,
+                torch.zeros(1, self.num_patches+1, embed_dim), requires_grad=learn_pos_emb,
             )
             self.pos_drop = nn.Dropout(p=0.1)
 
@@ -138,7 +140,7 @@ class ViTPretrained(nn.Module):
                 self.pos_embed.shape[-1],
                 self.in_img_size[0] // self.patch_size,
                 self.in_img_size[1] // self.patch_size,
-                cls_token=False,
+                cls_token=True,
             )
             self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
         if not self.use_pretrained_weights:
@@ -172,14 +174,20 @@ class ViTPretrained(nn.Module):
 
     def forward_encoder(self, x):
         # x.shape = [B,T*in_channels,H,W]
+        if 'dino' not in self.pretrained_model_name:
+            print('CHECK')
+            exit()
         if self.resize_img:
             x = torchvision.transforms.Resize((self.in_img_size[0] ,self.in_img_size[1]))(x)
         if not self.use_pretrained_embeddings:
             x = self.patch_embed(x)
+            # x.shape = [B,num_patches,embed_dim]
+            x = torch.cat((self.pretrained_backbone.cls_token.expand(x.shape[0], -1, -1), x), dim=1)
+            # x.shape = [B,num_patches+1,embed_dim]
             x = x + self.pos_embed
             x = self.mlp_embed(x)
             x = self.pos_drop(x)
-            # x.shape = [B,num_patches,embed_dim]
+            # x.shape = [B,num_patches+1,embed_dim]
         
         if 'google/vit' in self.pretrained_model_name:
             # print('Forward Encoder 1')
@@ -197,13 +205,15 @@ class ViTPretrained(nn.Module):
             # print('Forward Encoder 2')
             if self.use_pretrained_embeddings:
                 # x.shape = [B,3,H,W]
-                x = self.pretrained_backbone.forward(x, is_training=True)
-                x = x['x_norm_patchtokens']
-            else:
-                # x.shape = [B,num_patches,embed_dim]
-                for blk in self.pretrained_backbone.blocks:
-                    x = blk(x)
-                x = self.pretrained_backbone.norm(x)
+                x = self.pretrained_backbone.prepare_tokens_with_masks(x)
+            # x.shape = [B,num_patches+1,embed_dim]
+            for blk in self.pretrained_backbone.blocks[:self.num_backbone_blocks]:
+                x = blk(x)
+            # x.shape = [B,num_patches+1,embed_dim]
+            x = self.pretrained_backbone.norm(x)
+            # x.shape = [B,num_patches+1,embed_dim]
+            x = x[:, 1:]
+            # x.shape = [B,num_patches,embed_dim]
         elif 'clip' in self.pretrained_model_name:
             # print('Forward Encoder 3')
             if self.use_pretrained_embeddings:
