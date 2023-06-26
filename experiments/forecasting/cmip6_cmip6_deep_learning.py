@@ -19,7 +19,7 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 parser = ArgumentParser()
 parser.add_argument("cmip6_dir")
-parser.add_argument("preset", choices=["resnet", "unet", "vit"])
+parser.add_argument("model", choices=["resnet", "unet", "vit"])
 parser.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 parser.add_argument("--summary_depth", type=int, default=1)
 parser.add_argument("--max_epochs", type=int, default=50)
@@ -109,9 +109,9 @@ model = cl.load_forecasting_module(
 
 # Setup trainer
 pl.seed_everything(0)
-default_root_dir = f"{args.preset}_forecasting_{args.pred_range}"
+default_root_dir = f"{args.model}_forecasting_{args.pred_range}"
 logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
-early_stopping = "val/mse:aggregate"
+early_stopping = "val/lat_mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),

@@ -18,6 +18,13 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
 parser = ArgumentParser()
+
+parser.add_argument("--summary_depth", type=int, default=1)
+parser.add_argument("--max_epochs", type=int, default=50)
+parser.add_argument("--patience", type=int, default=5)
+parser.add_argument("--gpu", type=int, default=-1)
+parser.add_argument("--checkpoint", default=None)
+
 subparsers = parser.add_subparsers(
     help="Whether to perform direct, iterative, or continuous forecasting.",
     dest="forecast_type"
@@ -27,21 +34,15 @@ iterative = subparsers.add_parser("iterative")
 continuous = subparsers.add_parser("continuous")
 
 direct.add_argument("era5_dir")
-direct.add_argument("preset", choices=["resnet", "unet", "vit"])
+direct.add_argument("model", choices=["resnet", "unet", "vit"])
 direct.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 
 iterative.add_argument("era5_dir")
-iterative.add_argument("preset", choices=["resnet", "unet", "vit"])
+iterative.add_argument("model", choices=["resnet", "unet", "vit"])
 iterative.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 
 continuous.add_argument("era5_dir")
-continuous.add_argument("preset", choices=["resnet", "unet", "vit"])
-
-parser.add_argument("--summary_depth", type=int, default=1)
-parser.add_argument("--max_epochs", type=int, default=50)
-parser.add_argument("--patience", type=int, default=5)
-parser.add_argument("--gpu", type=int, default=-1)
-parser.add_argument("--checkpoint", default=None)
+continuous.add_argument("model", choices=["resnet", "unet", "vit"])
 
 args = parser.parse_args()
 
@@ -68,7 +69,10 @@ for var in variables:
             in_vars.append(var + "_" + str(level))
     else:
         in_vars.append(var)
-out_variables = ["2m_temperature", "geopotential_500", "temperature_850"]
+if args.forecast_type in ("direct", "continuous"):
+    out_variables = ["2m_temperature", "geopotential_500", "temperature_850"]
+elif args.forecast_type == "iterative":
+    out_variables = variables
 out_vars = []
 for var in out_variables:
     if var in PRESSURE_LEVEL_VARS:
@@ -101,7 +105,7 @@ elif args.forecast_type == "continuous":
         src="era5",
         history=3,
         window=6,
-        pred_range=6,
+        pred_range=1,
         max_pred_range=120,
         random_lead_time=True,
         hrs_each_step=1,
@@ -116,17 +120,21 @@ dm.setup()
 in_channels = 49
 if args.forecast_type == "continuous":
     in_channels += 1  # time dimension
+if args.forecast_type == "iterative":  # iterative predicts every var
+    out_channels = in_channels
+else:
+    out_channels = 3
 if args.model == "resnet":
     model_kwargs = {  # override some of the defaults
         "in_channels": in_channels,
-        "out_channels": 3,
+        "out_channels": out_channels,
         "history": 3,
         "n_blocks": 28
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
         "in_channels": in_channels,
-        "out_channels": 3,
+        "out_channels": out_channels,
         "history": 3,
         "ch_mults": (1, 2, 2),
         "is_attn": (False, False, False)
@@ -135,7 +143,7 @@ elif args.model == "vit":
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
         "in_channels": in_channels,
-        "out_channels": 3,
+        "out_channels": out_channels,
         "history": 3,
         "patch_size": 2,
         "embed_dim": 128,
@@ -144,21 +152,32 @@ elif args.model == "vit":
         "learn_pos_emb": True,
         "num_heads": 4
     }
+optim_kwargs = {
+    "lr": 5e-4,
+    "weight_decay": 1e-5,
+    "betas": (0.9, 0.99)
+}
+sched_kwargs = {
+    "warmup_epochs": 5,
+    "max_epochs": 50,
+    "warmup_start_lr": 1e-8,
+    "eta_min": 1e-8,
+}
 model = cl.load_forecasting_module(
     data_module=dm,
     model=args.model,
     model_kwargs=model_kwargs,
     optim="adamw",
-    optim_kwargs={"lr": 5e-4, "weight_decay": 1e-5},
+    optim_kwargs=optim_kwargs,
     sched="linear-warmup-cosine-annealing",
-    sched_kwargs={"warmup_epochs": 5, "max_epoch": 50}
+    sched_kwargs=sched_kwargs
 )
 
 # Setup trainer
 pl.seed_everything(0)
-default_root_dir = f"{args.preset}_{args.forecast_type}_forecasting_{args.pred_range}"
+default_root_dir = f"{args.model}_{args.forecast_type}_forecasting_{args.pred_range}"
 logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
-early_stopping = "val/mse:aggregate"
+early_stopping = "val/lat_mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
@@ -187,7 +206,7 @@ trainer = pl.Trainer(
 # Define testing regime for iterative forecasting
 def iterative_testing(model, trainer, args, from_checkpoint=False):
     for lead_time in [6, 24, 72, 120, 240]:
-        n_iters = lead_time // args.pred_range.hours()
+        n_iters = lead_time // args.pred_range
         model.set_mode("iter")
         model.set_n_iters(n_iters)
         test_dm = cl.data.IterDataModule(
@@ -196,6 +215,7 @@ def iterative_testing(model, trainer, args, from_checkpoint=False):
             args.era5_dir,
             in_vars,
             out_vars,
+            src="era5",
             history=3,
             window=6,
             pred_range=lead_time,
