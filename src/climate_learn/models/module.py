@@ -76,6 +76,11 @@ class LitModule(pl.LightningModule):
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
+        
+        # needed for swin transformers
+        if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
+            y = torch.nn.functional.interpolate(y, size=(yhat.shape[2], yhat.shape[3]))
+
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")
         loss_dict = {}
@@ -132,6 +137,11 @@ class LitModule(pl.LightningModule):
             if transforms is not None and transforms[i] is not None:
                 yhat_ = transforms[i](yhat)
                 y_ = transforms[i](y)
+            
+            # needed for swin transformers
+            if yhat_.shape[2] != y_.shape[2] or yhat_.shape[3] != y_.shape[3]:
+                yhat_ = torch.nn.functional.interpolate(yhat_, size=(y_.shape[2], y_.shape[3]))
+            
             losses = lf(yhat_, y_)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss

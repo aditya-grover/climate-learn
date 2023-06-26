@@ -7,3 +7,4 @@ from .unet import Unet
 from .utils import MODEL_REGISTRY
 from .vit import VisionTransformer
 from .vit_pretrained import ViTPretrained
+from .sw_pretrained import SwinV2Pretrained

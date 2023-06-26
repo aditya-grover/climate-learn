@@ -13,6 +13,8 @@ def mse(
     lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     error = (pred - target).square()
+    if lat_weights.shape[2] != error.shape[2]:
+        lat_weights = torch.nn.functional.interpolate(lat_weights, size=(error.shape[2], 1))
     if lat_weights is not None:
         error = error * lat_weights
     per_channel_losses = error.mean([0, 2, 3])
