@@ -214,5 +214,4 @@ class LitModule(pl.LightningModule):
             }
         else:
             scheduler = self.lr_scheduler
-        # scheduler = {"scheduler": self.lr_scheduler, "interval": "step", "frequency": 1}
         return {"optimizer": self.optimizer, "lr_scheduler": scheduler}

@@ -184,6 +184,28 @@ trainer = pl.Trainer(
     precision="16"
 )
 
+# Define testing regime for iterative forecasting
+def iterative_testing(model, trainer, args, from_checkpoint=False):
+    for lead_time in [6, 24, 72, 120, 240]:
+        n_iters = lead_time // args.pred_range.hours()
+        model.set_mode("iter")
+        model.set_n_iters(n_iters)
+        test_dm = cl.data.IterDataModule(
+            "iterative-forecasting",
+            args.era5_dir,
+            args.era5_dir,
+            in_vars,
+            out_vars,
+            history=3,
+            window=6,
+            pred_range=lead_time,
+            subsample=1
+        )
+        if from_checkpoint:
+            trainer.test(model, datamodule=test_dm)
+        else:
+            trainer.test(model, datamodule=test_dm, ckpt_path="best")
+
 # Define testing regime for continuous forecasting
 def continuous_testing(model, trainer, args, from_checkpoint=False):
     for lead_time in [6, 24, 72, 120, 240]:
@@ -200,21 +222,23 @@ def continuous_testing(model, trainer, args, from_checkpoint=False):
             max_pred_range=lead_time,
             random_lead_time=False,
             hrs_each_step=1,
-            subsample=6,
+            subsample=1,
             batch_size=128,
             buffer_size=2000,
             num_workers=8,
         )
         if from_checkpoint:
-            trainer.test(model, datamodule=test_dm, ckpt_path="best")
-        else:
             trainer.test(model, datamodule=test_dm)
+        else:
+            trainer.test(model, datamodule=test_dm, ckpt_path="best")
 
 # Train and evaluate model from scratch
 if args.checkpoint is None:
     trainer.fit(model, datamodule=dm)
-    if args.forecast_type in ("direct", "iterative"):
+    if args.forecast_type == "direct":
         trainer.test(model, datamodule=dm, ckpt_path="best")
+    elif args.forecast_type == "iterative":
+        iterative_testing(model, trainer, args)
     elif args.forecast_type == "continuous":
         continuous_testing(model, trainer, args)
 # Evaluate saved model checkpoint
@@ -229,7 +253,9 @@ else:
         test_loss=model.test_loss,
         test_target_tranfsorms=model.test_target_transforms,
     )
-    if args.forecast_type in ("direct", "iterative"):
+    if args.forecast_type == "direct":
         trainer.test(model, datamodule=dm)
+    elif args.forecast_type == "iterative":
+        iterative_testing(model, trainer, args, from_checkpoint=True)
     elif args.forecast_type == "continuous":
         continuous_testing(model, trainer, args, from_checkpoint=True)

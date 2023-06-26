@@ -47,7 +47,7 @@ class IterDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.save_hyperparameters(logger=False)
-        if task == "direct-forecasting":
+        if task in ("direct-forecasting", "iterative-forecasting"):
             assert inp_root_dir == out_root_dir
             self.dataset_caller = DirectForecast
             self.dataset_arg = {
@@ -99,7 +99,12 @@ class IterDataModule(pl.LightningDataModule):
     def get_data_dims(self):
         lat = len(np.load(os.path.join(self.hparams.out_root_dir, "lat.npy")))
         lon = len(np.load(os.path.join(self.hparams.out_root_dir, "lon.npy")))
-        if self.hparams.task in ("direct-forecasting", "continuous-forecasting"):
+        forecasting_tasks = [
+            "direct-forecasting",
+            "iterative-forecasting",
+            "continuous-forecasting"
+        ]
+        if self.hparams.task in forecasting_tasks:
             in_size = torch.Size([
                 self.hparams.batch_size,
                 self.hparams.history,
