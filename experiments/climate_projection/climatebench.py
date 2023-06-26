@@ -44,25 +44,25 @@ dm = cl.data.ClimateBenchDataModule(
 # Set up deep learning model
 if args.model == "resnet":
     model_kwargs = {  # override some of the defaults
-        "in_channels": 49,
-        "out_channels": 3,
-        "history": 3,
+        "in_channels": 4,
+        "out_channels": 1,
+        "history": 10,
         "n_blocks": 28
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
-        "in_channels": 49,
-        "out_channels": 3,
-        "history": 3,
+        "in_channels": 4,
+        "out_channels": 1,
+        "history": 10,
         "ch_mults": (1, 2, 2),
         "is_attn": (False, False, False)
     }
 elif args.model == "vit": 
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
-        "in_channels": 49,
-        "out_channels": 3,
-        "history": 3,
+        "in_channels": 4,
+        "out_channels": 1,
+        "history": 10,
         "patch_size": 2,
         "embed_dim": 128,
         "depth": 8,
@@ -70,34 +70,30 @@ elif args.model == "vit":
         "learn_pos_emb": True,
         "num_heads": 4
     }
-optimizer = cl.load_optimizer(
-    model,
-    "AdamW",
-    {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
-)
-lr_scheduler = cl.load_lr_scheduler(
-    "linear-warmup-cosine-annealing",
-    optimizer,
-    {
-        "warmup_epochs": 5,
-        "max_epochs": 50,
-        "warmup_start_lr": 1e-8,
-        "eta_min": 1e-8,
-    },
-)
+optim_kwargs = {
+    "lr": 5e-4,
+    "weight_decay": 1e-5,
+    "betas": (0.9, 0.99)
+}
+sched_kwargs = {
+    "warmup_epochs": 5,
+    "max_epochs": 50,
+    "warmup_start_lr": 1e-8,
+    "eta_min": 1e-8,
+}
 model = cl.load_climatebench_module(
     data_module=dm,
     model=args.model,
     model_kwargs=model_kwargs,
     optim="adamw",
-    optim_kwargs={"lr": 5e-4, "weight_decay": 1e-5},
+    optim_kwargs=optim_kwargs,
     sched="linear-warmup-cosine-annealing",
-    sched_kwargs={"warmup_epochs": 5, "max_epoch": 50}
+    sched_kwargs=sched_kwargs
 )
 
 # Set up trainer
 pl.seed_everything(0)
-default_root_dir = f"{args.model}_climatebench_{args.out_var}"
+default_root_dir = f"{args.model}_climatebench_{args.variable}"
 logger = TensorBoardLogger(save_dir=f"{default_root_dir}/logs")
 early_stopping = "val/mse:aggregate"
 callbacks = [
