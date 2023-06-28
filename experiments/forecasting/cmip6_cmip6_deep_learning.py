@@ -5,14 +5,14 @@ from argparse import ArgumentParser
 import climate_learn as cl
 from climate_learn.data.processing.cmip6_constants import (
     PRESSURE_LEVEL_VARS,
-    DEFAULT_PRESSURE_LEVELS
+    DEFAULT_PRESSURE_LEVELS,
 )
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
-    RichProgressBar
+    RichProgressBar,
 )
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -74,7 +74,7 @@ if args.model == "resnet":
         "in_channels": 36,
         "out_channels": 3,
         "history": 3,
-        "n_blocks": 28
+        "n_blocks": 28,
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
@@ -82,9 +82,9 @@ elif args.model == "unet":
         "out_channels": 3,
         "history": 3,
         "ch_mults": (1, 2, 2),
-        "is_attn": (False, False, False)
+        "is_attn": (False, False, False),
     }
-elif args.model == "vit": 
+elif args.model == "vit":
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
         "in_channels": 36,
@@ -95,7 +95,7 @@ elif args.model == "vit":
         "depth": 8,
         "decoder_depth": 2,
         "learn_pos_emb": True,
-        "num_heads": 4
+        "num_heads": 4,
     }
 model = cl.load_forecasting_module(
     data_module=dm,
@@ -104,7 +104,7 @@ model = cl.load_forecasting_module(
     optim="adamw",
     optim_kwargs={"lr": 5e-4, "weight_decay": 1e-5},
     sched="linear-warmup-cosine-annealing",
-    sched_kwargs={"warmup_epochs": 5, "max_epoch": 50}
+    sched_kwargs={"warmup_epochs": 5, "max_epoch": 50},
 )
 
 # Setup trainer
@@ -115,16 +115,13 @@ early_stopping = "val/lat_mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
-    EarlyStopping(
-        monitor=early_stopping,
-        patience=args.patience
-    ),
+    EarlyStopping(monitor=early_stopping, patience=args.patience),
     ModelCheckpoint(
         dirpath=f"{default_root_dir}/checkpoints",
         monitor=early_stopping,
         filename="epoch_{epoch:03d}",
         auto_insert_metric_name=False,
-    )
+    ),
 ]
 trainer = pl.Trainer(
     logger=logger,
@@ -134,7 +131,7 @@ trainer = pl.Trainer(
     devices=[args.gpu] if args.gpu != -1 else None,
     max_epochs=args.max_epochs,
     strategy="ddp",
-    precision="16"
+    precision="16",
 )
 
 # Train and evaluate model from scratch

@@ -75,14 +75,7 @@ class NpyReader(IterableDataset):
 
 
 class DirectForecast(IterableDataset):
-    def __init__(
-        self,        
-        dataset,
-        src,
-        pred_range=6,
-        history=3,
-        window=6
-    ):
+    def __init__(self, dataset, src, pred_range=6, history=3, window=6):
         super().__init__()
         self.dataset = dataset
         self.history = history

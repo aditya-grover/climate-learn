@@ -45,12 +45,7 @@ def main(path, save_path, ddeg_out):
 
 
 def regrid(
-    ds_in,
-    ddeg_out,
-    method="bilinear",
-    reuse_weights=True,
-    cmip=False,
-    rename=None
+    ds_in, ddeg_out, method="bilinear", reuse_weights=True, cmip=False, rename=None
 ):
     if "latitude" in ds_in.coords:
         ds_in = ds_in.rename({"latitude": "lat", "longitude": "lon"})
@@ -64,18 +59,16 @@ def regrid(
         ds_in = ds_in.rename({rename[0]: rename[1]})
 
     # Create output grid
-    grid_out = xr.Dataset({
-        "lat": (["lat"], np.arange(-90 + ddeg_out / 2, 90, ddeg_out)),
-        "lon": (["lon"], np.arange(0, 360, ddeg_out)),
-    })
+    grid_out = xr.Dataset(
+        {
+            "lat": (["lat"], np.arange(-90 + ddeg_out / 2, 90, ddeg_out)),
+            "lon": (["lon"], np.arange(0, 360, ddeg_out)),
+        }
+    )
 
     # Create regridder
     regridder = xe.Regridder(
-        ds_in,
-        grid_out,
-        method,
-        periodic=True,
-        reuse_weights=reuse_weights
+        ds_in, grid_out, method, periodic=True, reuse_weights=reuse_weights
     )
     ds_out = regridder(ds_in, keep_attrs=True).astype("float32")
 
@@ -88,7 +81,7 @@ def regrid(
             ds_out = ds_out.assign_coords(
                 {"time": ds_out.time + np.timedelta64(90, "m")}
             )
-            
+
     return ds_out
 
 

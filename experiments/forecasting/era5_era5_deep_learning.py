@@ -5,14 +5,14 @@ from argparse import ArgumentParser
 import climate_learn as cl
 from climate_learn.data.processing.era5_constants import (
     PRESSURE_LEVEL_VARS,
-    DEFAULT_PRESSURE_LEVELS
+    DEFAULT_PRESSURE_LEVELS,
 )
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
-    RichProgressBar
+    RichProgressBar,
 )
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -27,7 +27,7 @@ parser.add_argument("--checkpoint", default=None)
 
 subparsers = parser.add_subparsers(
     help="Whether to perform direct, iterative, or continuous forecasting.",
-    dest="forecast_type"
+    dest="forecast_type",
 )
 direct = subparsers.add_parser("direct")
 iterative = subparsers.add_parser("iterative")
@@ -129,7 +129,7 @@ if args.model == "resnet":
         "in_channels": in_channels,
         "out_channels": out_channels,
         "history": 3,
-        "n_blocks": 28
+        "n_blocks": 28,
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
@@ -137,9 +137,9 @@ elif args.model == "unet":
         "out_channels": out_channels,
         "history": 3,
         "ch_mults": (1, 2, 2),
-        "is_attn": (False, False, False)
+        "is_attn": (False, False, False),
     }
-elif args.model == "vit": 
+elif args.model == "vit":
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
         "in_channels": in_channels,
@@ -150,13 +150,9 @@ elif args.model == "vit":
         "depth": 8,
         "decoder_depth": 2,
         "learn_pos_emb": True,
-        "num_heads": 4
+        "num_heads": 4,
     }
-optim_kwargs = {
-    "lr": 5e-4,
-    "weight_decay": 1e-5,
-    "betas": (0.9, 0.99)
-}
+optim_kwargs = {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
 sched_kwargs = {
     "warmup_epochs": 5,
     "max_epochs": 50,
@@ -170,7 +166,7 @@ model = cl.load_forecasting_module(
     optim="adamw",
     optim_kwargs=optim_kwargs,
     sched="linear-warmup-cosine-annealing",
-    sched_kwargs=sched_kwargs
+    sched_kwargs=sched_kwargs,
 )
 
 # Setup trainer
@@ -181,16 +177,13 @@ early_stopping = "val/lat_mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
-    EarlyStopping(
-        monitor=early_stopping,
-        patience=args.patience
-    ),
+    EarlyStopping(monitor=early_stopping, patience=args.patience),
     ModelCheckpoint(
         dirpath=f"{default_root_dir}/checkpoints",
         monitor=early_stopping,
         filename="epoch_{epoch:03d}",
         auto_insert_metric_name=False,
-    )
+    ),
 ]
 trainer = pl.Trainer(
     logger=logger,
@@ -200,8 +193,9 @@ trainer = pl.Trainer(
     devices=[args.gpu] if args.gpu != -1 else None,
     max_epochs=args.max_epochs,
     strategy="ddp",
-    precision="16"
+    precision="16",
 )
+
 
 # Define testing regime for iterative forecasting
 def iterative_testing(model, trainer, args, from_checkpoint=False):
@@ -219,12 +213,13 @@ def iterative_testing(model, trainer, args, from_checkpoint=False):
             history=3,
             window=6,
             pred_range=lead_time,
-            subsample=1
+            subsample=1,
         )
         if from_checkpoint:
             trainer.test(model, datamodule=test_dm)
         else:
             trainer.test(model, datamodule=test_dm, ckpt_path="best")
+
 
 # Define testing regime for continuous forecasting
 def continuous_testing(model, trainer, args, from_checkpoint=False):
@@ -251,6 +246,7 @@ def continuous_testing(model, trainer, args, from_checkpoint=False):
             trainer.test(model, datamodule=test_dm)
         else:
             trainer.test(model, datamodule=test_dm, ckpt_path="best")
+
 
 # Train and evaluate model from scratch
 if args.checkpoint is None:

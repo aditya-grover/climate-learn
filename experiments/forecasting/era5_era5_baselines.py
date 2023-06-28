@@ -12,11 +12,7 @@ parser.add_argument("pred_range", type=int, choices=[6, 24, 72, 120, 240])
 args = parser.parse_args()
 
 # Set up data
-in_vars = out_vars = [
-    "2m_temperature",
-    "geopotential_500",
-    "temperature_850"
-]
+in_vars = out_vars = ["2m_temperature", "geopotential_500", "temperature_850"]
 dm = cl.data.IterDataModule(
     "direct-forecasting",
     args.era5_dir,

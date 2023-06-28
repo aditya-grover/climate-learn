@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
-    RichProgressBar
+    RichProgressBar,
 )
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 import torch.nn as nn
@@ -59,11 +59,7 @@ if args.preset == "vit":
             num_heads=4,
         ),
     )
-    optim_kwargs = {
-        "lr": 1e-5,
-        "weight_decay": 1e-5,
-        "betas": (0.9, 0.99)
-    }
+    optim_kwargs = {"lr": 1e-5, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
     sched_kwargs = {
         "warmup_epochs": 5,
         "max_epochs": 50,
@@ -82,7 +78,7 @@ if args.preset == "vit":
         test_target_transform=[denorm_mask, denorm_mask, denorm_mask],
     )
 # Default presets for ResNet and U-net are ready to use out of the box
-else: 
+else:
     model = cl.load_downscaling_module(
         data_module=dm,
         preset=args.preset,
@@ -99,16 +95,13 @@ early_stopping = "val/mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
-    EarlyStopping(
-        monitor=early_stopping,
-        patience=args.patience
-    ),
+    EarlyStopping(monitor=early_stopping, patience=args.patience),
     ModelCheckpoint(
         dirpath=f"{default_root_dir}/checkpoints",
         monitor=early_stopping,
         filename="epoch_{epoch:03d}",
         auto_insert_metric_name=False,
-    )
+    ),
 ]
 trainer = pl.Trainer(
     logger=logger,
@@ -118,7 +111,7 @@ trainer = pl.Trainer(
     devices=[args.gpu] if args.gpu != -1 else None,
     max_epochs=args.max_epochs,
     strategy="ddp",
-    precision="16"
+    precision="16",
 )
 
 # Train and evaluate model from scratch

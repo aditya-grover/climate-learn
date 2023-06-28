@@ -7,6 +7,6 @@ from .utils.loaders import (
     load_optimizer,
     load_lr_scheduler,
     load_loss,
-    load_transform
+    load_transform,
 )
 from .models import LitModule

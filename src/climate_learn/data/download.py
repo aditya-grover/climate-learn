@@ -43,7 +43,7 @@ def download_mpi_esm1_2_hr(dst, variable, years=(1850, 2015)):
     src = "MPI-ESM1-2-HR"
     exp = "historical"
     for yr in tqdm(year_strings):
-        remote_fn = f"{variable}_6hrPlevPt_{src}_{exp}_r1i1p1f1_gn_{yr}.nc"        
+        remote_fn = f"{variable}_6hrPlevPt_{src}_{exp}_r1i1p1f1_gn_{yr}.nc"
         url = (
             "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/"
             f"CMIP/{inst}/{src}/{exp}/r1i1p1f1/6hrPlevPt/{variable}/gn/"
@@ -106,8 +106,7 @@ def download_prism(dst, variable, years=(1981, 2023)):
 def main():
     parser = ArgumentParser(description="ClimateLearn's download utility.")
     subparsers = parser.add_subparsers(
-        help="Data provider to download from.",
-        dest="provider"
+        help="Data provider to download from.", dest="provider"
     )
     copernicus_era5 = subparsers.add_parser("copernicus-era5")
     mpi_esm1_2_hr = subparsers.add_parser("mpi_esm1_2_hr")
@@ -136,15 +135,13 @@ def main():
     prism.add_argument("--end", type=int, default=2023)
 
     args = parser.parse_args()
-    
+
     if args.provider == "copernicus_era5":
         download_copernicus_era5(
             args.dst, args.var, args.year, args.pressure, args.api_key
         )
     elif args.provider == "mpi_esm1_2_hr":
-        download_mpi_esm1_2_hr(
-            args.dst, args.var, (args.start, args.end)
-        )
+        download_mpi_esm1_2_hr(args.dst, args.var, (args.start, args.end))
     elif args.provider == "weatherbench":
         download_weatherbench(args.dst, args.var, args.res)
     elif args.provider == "prism":

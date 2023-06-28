@@ -6,11 +6,8 @@ def enable_dropout(model_module):
         if m._get_name() == "Dropout":
             m.train()
 
-def get_monte_carlo_predictions(
-    batch,
-    model_module,
-    n_ensemble_members
-):
+
+def get_monte_carlo_predictions(batch, model_module, n_ensemble_members):
     model_module.eval()
     enable_dropout(model_module)
     ensemble_predictions = []

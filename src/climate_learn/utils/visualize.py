@@ -27,8 +27,8 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
         raise RuntimeError("Given index could not be found")
     xx = x[adj_index]
     if dm.hparams.task == "continuous-forecasting":
-        xx = xx[:,:-1]
-    
+        xx = xx[:, :-1]
+
     # Create animation/plot of the input sequence
     if history > 1:
         in_fig, in_ax = plt.subplots()
@@ -40,26 +40,18 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
             img = in_transform(xx[time_step])[channel].detach().cpu().numpy()
             if src == "era5":
                 img = np.flip(img, 0)
-            img = in_ax.imshow(
-                img,            
-                cmap=plt.cm.coolwarm,
-                animated=True,
-                extent=extent
-            )
+            img = in_ax.imshow(img, cmap=plt.cm.coolwarm, animated=True, extent=extent)
             imgs.append([img])
-        cax = in_fig.add_axes([
-            in_ax.get_position().x1 + 0.02,
-            in_ax.get_position().y0,
-            0.02,
-            in_ax.get_position().y1 - in_ax.get_position().y0
-        ])
-        in_fig.colorbar(in_ax.get_images()[0], cax=cax)
-        anim = animation.ArtistAnimation(
-            in_fig,
-            imgs,
-            interval=1000,
-            repeat_delay=2000
+        cax = in_fig.add_axes(
+            [
+                in_ax.get_position().x1 + 0.02,
+                in_ax.get_position().y0,
+                0.02,
+                in_ax.get_position().y1 - in_ax.get_position().y0,
+            ]
         )
+        in_fig.colorbar(in_ax.get_images()[0], cax=cax)
+        anim = animation.ArtistAnimation(in_fig, imgs, interval=1000, repeat_delay=2000)
         plt.close()
     else:
         if dm.hparams.task == "downscaling":
@@ -95,7 +87,7 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
 
     # None, if no history
     return anim
-    
+
 
 def visualize_sample(img, extent, title):
     fig, ax = plt.subplots()
@@ -105,12 +97,14 @@ def visualize_sample(img, extent, title):
     cmap = plt.cm.coolwarm
     cmap.set_bad("black", 1)
     ax.imshow(img, cmap=cmap, extent=extent)
-    cax = fig.add_axes([
-        ax.get_position().x1 + 0.02,
-        ax.get_position().y0,
-        0.02,
-        ax.get_position().y1 - ax.get_position().y0
-    ])
+    cax = fig.add_axes(
+        [
+            ax.get_position().x1 + 0.02,
+            ax.get_position().y0,
+            0.02,
+            ax.get_position().y1 - ax.get_position().y0,
+        ]
+    )
     fig.colorbar(ax.get_images()[0], cax=cax)
     return (fig, ax)
 
@@ -126,11 +120,11 @@ def visualize_mean_bias(dm, mm, out_transform, variable, src):
         x = x.to(mm.device)
         y = y.to(mm.device)
         pred = mm.forward(x)
-        pred = out_transform(pred)[:,channel].detach().cpu().numpy()
-        obs = out_transform(y)[:,channel].detach().cpu().numpy()
+        pred = out_transform(pred)[:, channel].detach().cpu().numpy()
+        obs = out_transform(y)[:, channel].detach().cpu().numpy()
         bias = pred - obs
         all_biases.append(bias)
-        
+
     fig, ax = plt.subplots()
     all_biases = np.concatenate(all_biases)
     mean_bias = np.mean(all_biases, axis=0)
@@ -138,20 +132,22 @@ def visualize_mean_bias(dm, mm, out_transform, variable, src):
         mean_bias = np.flip(mean_bias, 0)
     ax.imshow(mean_bias, cmap=plt.cm.coolwarm, extent=extent)
 
-    cax = fig.add_axes([
-        ax.get_position().x1 + 0.02,
-        ax.get_position().y0,
-        0.02,
-        ax.get_position().y1 - ax.get_position().y0
-    ])
+    cax = fig.add_axes(
+        [
+            ax.get_position().x1 + 0.02,
+            ax.get_position().y0,
+            0.02,
+            ax.get_position().y1 - ax.get_position().y0,
+        ]
+    )
     fig.colorbar(ax.get_images()[0], cax=cax)
     plt.show()
 
 
 # based on https://github.com/oliverangelil/rankhistogram/tree/master
 def rank_histogram(obs, ensemble, channel):
-    obs = obs.numpy()[:,channel]
-    ensemble = ensemble.numpy()[:,:,channel]
+    obs = obs.numpy()[:, channel]
+    ensemble = ensemble.numpy()[:, :, channel]
     combined = np.vstack((obs[np.newaxis], ensemble))
     ranks = np.apply_along_axis(lambda x: rankdata(x, method="min"), 0, combined)
     ties = np.sum(ranks[0] == ranks[1:], axis=0)
@@ -164,8 +160,7 @@ def rank_histogram(obs, ensemble, channel):
             for j in range(len(idx))
         ]
     hist = np.histogram(
-        ranks,
-        bins=np.linspace(0.5, combined.shape[0] + 0.5, combined.shape[0] + 1)
+        ranks, bins=np.linspace(0.5, combined.shape[0] + 0.5, combined.shape[0] + 1)
     )
     plt.bar(range(1, ensemble.shape[0] + 2), hist[0])
     plt.show()

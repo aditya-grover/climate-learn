@@ -18,7 +18,7 @@ from .iterdataset import (
     ContinuousForecast,
     Downscale,
     IndividualDataIter,
-    ShuffleIterableDataset
+    ShuffleIterableDataset,
 )
 
 
@@ -65,7 +65,7 @@ class IterDataModule(pl.LightningDataModule):
                 "max_pred_range": max_pred_range,
                 "hrs_each_step": hrs_each_step,
                 "history": history,
-                "window": window
+                "window": window,
             }
             self.collate_fn = collate_fn_continuous
         elif task == "downscaling":
@@ -73,12 +73,24 @@ class IterDataModule(pl.LightningDataModule):
             self.dataset_arg = {}
             self.collate_fn = collate_fn
 
-        self.inp_lister_train = sorted(glob.glob(os.path.join(inp_root_dir, "train", "*.npz")))
-        self.out_lister_train = sorted(glob.glob(os.path.join(out_root_dir, "train", "*.npz")))
-        self.inp_lister_val = sorted(glob.glob(os.path.join(inp_root_dir, "val", "*.npz")))
-        self.out_lister_val = sorted(glob.glob(os.path.join(out_root_dir, "val", "*.npz")))
-        self.inp_lister_test = sorted(glob.glob(os.path.join(inp_root_dir, "test", "*.npz")))
-        self.out_lister_test = sorted(glob.glob(os.path.join(out_root_dir, "test", "*.npz")))
+        self.inp_lister_train = sorted(
+            glob.glob(os.path.join(inp_root_dir, "train", "*.npz"))
+        )
+        self.out_lister_train = sorted(
+            glob.glob(os.path.join(out_root_dir, "train", "*.npz"))
+        )
+        self.inp_lister_val = sorted(
+            glob.glob(os.path.join(inp_root_dir, "val", "*.npz"))
+        )
+        self.out_lister_val = sorted(
+            glob.glob(os.path.join(out_root_dir, "val", "*.npz"))
+        )
+        self.inp_lister_test = sorted(
+            glob.glob(os.path.join(inp_root_dir, "test", "*.npz"))
+        )
+        self.out_lister_test = sorted(
+            glob.glob(os.path.join(out_root_dir, "test", "*.npz"))
+        )
 
         self.transforms = self.get_normalize(inp_root_dir, in_vars)
         self.output_transforms = self.get_normalize(out_root_dir, out_vars)
@@ -104,20 +116,22 @@ class IterDataModule(pl.LightningDataModule):
         forecasting_tasks = [
             "direct-forecasting",
             "iterative-forecasting",
-            "continuous-forecasting"
+            "continuous-forecasting",
         ]
         if self.hparams.task in forecasting_tasks:
-            in_size = torch.Size([
-                self.hparams.batch_size,
-                self.hparams.history,
-                len(self.hparams.in_vars),
-                lat,
-                lon
-            ])
+            in_size = torch.Size(
+                [
+                    self.hparams.batch_size,
+                    self.hparams.history,
+                    len(self.hparams.in_vars),
+                    lat,
+                    lon,
+                ]
+            )
         elif self.hparams.task == "downscaling":
-            in_size = torch.Size([
-                self.hparams.batch_size, len(self.hparams.in_vars), lat, lon
-            ])
+            in_size = torch.Size(
+                [self.hparams.batch_size, len(self.hparams.in_vars), lat, lon]
+            )
         ##TODO: change out size
         out_vars = copy.deepcopy(self.hparams.out_vars)
         if "2m_temperature_extreme_mask" in out_vars:
@@ -148,7 +162,9 @@ class IterDataModule(pl.LightningDataModule):
         for var in self.hparams.out_vars:
             if var == "2m_temperature_extreme_mask":
                 continue
-            new_clim_dict[var] = torch.from_numpy(np.squeeze(clim_dict[var].astype(np.float32), axis=0))
+            new_clim_dict[var] = torch.from_numpy(
+                np.squeeze(clim_dict[var].astype(np.float32), axis=0)
+            )
         return new_clim_dict
 
     def setup(self, stage: Optional[str] = None):
@@ -261,13 +277,16 @@ def collate_fn(batch):
         if len(t.size()) == 4:
             return torch.transpose(t, 0, 1)
         return t
+
     inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
     has_extreme_mask = False
     for key in batch[0][1]:
         if key == "2m_temperature_extreme_mask":
             has_extreme_mask = True
     if not has_extreme_mask:
-        out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
+        out = torch.stack(
+            [handle_dict_features(batch[i][1]) for i in range(len(batch))]
+        )
         variables = list(batch[0][0].keys())
         out_variables = list(batch[0][1].keys())
         return inp, out, variables, out_variables
@@ -291,12 +310,14 @@ def collate_fn(batch):
     out_variables = list(out_dict.keys())
     return inp, out, mask, variables, out_variables
 
+
 def collate_fn_continuous(batch):
     def handle_dict_features(t: Dict[str, torch.tensor]) -> torch.tensor:
         t = torch.stack(tuple(t.values()))
         if len(t.size()) == 4:
             return torch.transpose(t, 0, 1)
         return t
+
     inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
     out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
     lead_times = torch.stack([batch[i][2] for i in range(len(batch))])

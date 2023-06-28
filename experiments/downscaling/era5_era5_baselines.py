@@ -30,14 +30,8 @@ dm = cl.data.IterDataModule(
 dm.setup()
 
 # Set up baseline models
-nearest = cl.load_downscaling_module(
-    data_module=dm,
-    preset="nearest-interpolation"
-)
-bilinear = cl.load_downscaling_module(
-    data_module=dm,
-    preset="bilinear-interpolation"
-)
+nearest = cl.load_downscaling_module(data_module=dm, preset="nearest-interpolation")
+bilinear = cl.load_downscaling_module(data_module=dm, preset="bilinear-interpolation")
 
 # Evaluate baselines (no training needed)
 trainer = pl.Trainer()

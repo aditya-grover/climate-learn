@@ -5,26 +5,24 @@ from argparse import ArgumentParser
 import climate_learn as cl
 from climate_learn.data.processing.era5_constants import (
     PRESSURE_LEVEL_VARS,
-    DEFAULT_PRESSURE_LEVELS
+    DEFAULT_PRESSURE_LEVELS,
 )
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
-    RichProgressBar
+    RichProgressBar,
 )
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 
-parser = ArgumentParser()    
+parser = ArgumentParser()
 parser.add_argument("era5_low_res_dir")
 parser.add_argument("era5_high_res_dir")
 parser.add_argument("preset", choices=["resnet", "unet", "vit"])
 parser.add_argument(
-    "variable",
-    choices=["t2m", "z500", "t850"],
-    help="The variable to predict."
+    "variable", choices=["t2m", "z500", "t850"], help="The variable to predict."
 )
 parser.add_argument("--summary_depth", type=int, default=1)
 parser.add_argument("--max_epochs", type=int, default=50)
@@ -75,10 +73,7 @@ dm = cl.data.IterDataModule(
 dm.setup()
 
 # Set up deep learning model
-model = cl.load_downscaling_module(
-    data_module=dm,
-    preset=args.preset
-)
+model = cl.load_downscaling_module(data_module=dm, preset=args.preset)
 
 # Setup trainer
 pl.seed_everything(0)
@@ -88,16 +83,13 @@ early_stopping = "val/mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
-    EarlyStopping(
-        monitor=early_stopping,
-        patience=args.patience
-    ),
+    EarlyStopping(monitor=early_stopping, patience=args.patience),
     ModelCheckpoint(
         dirpath=f"{default_root_dir}/checkpoints",
         monitor=early_stopping,
         filename="epoch_{epoch:03d}",
         auto_insert_metric_name=False,
-    )
+    ),
 ]
 trainer = pl.Trainer(
     logger=logger,
@@ -107,7 +99,7 @@ trainer = pl.Trainer(
     devices=[args.gpu] if args.gpu != -1 else None,
     max_epochs=args.max_epochs,
     strategy="ddp",
-    precision="16"
+    precision="16",
 )
 
 # Train and evaluate model from scratch

@@ -2,7 +2,7 @@ from .visualize import (
     visualize_at_index,
     visualize_mean_bias,
     visualize_sample,
-    rank_histogram
+    rank_histogram,
 )
 from .loaders import (
     load_model_module,
@@ -13,6 +13,6 @@ from .loaders import (
     load_optimizer,
     load_lr_scheduler,
     load_loss,
-    load_transform
+    load_transform,
 )
 from .mc_dropout import get_monte_carlo_predictions

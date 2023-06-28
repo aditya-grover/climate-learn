@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
     RichModelSummary,
-    RichProgressBar
+    RichProgressBar,
 )
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
@@ -19,7 +19,7 @@ parser.add_argument("model", choices=["resnet", "unet", "vit"])
 parser.add_argument(
     "variable",
     choices=["tas", "diurnal_temperature_range", "pr", "pr90"],
-    help="The variable to predict."
+    help="The variable to predict.",
 )
 parser.add_argument("--summary_depth", type=int, default=1)
 parser.add_argument("--max_epochs", type=int, default=50)
@@ -47,7 +47,7 @@ if args.model == "resnet":
         "in_channels": 4,
         "out_channels": 1,
         "history": 10,
-        "n_blocks": 28
+        "n_blocks": 28,
     }
 elif args.model == "unet":
     model_kwargs = {  # override some of the defaults
@@ -55,9 +55,9 @@ elif args.model == "unet":
         "out_channels": 1,
         "history": 10,
         "ch_mults": (1, 2, 2),
-        "is_attn": (False, False, False)
+        "is_attn": (False, False, False),
     }
-elif args.model == "vit": 
+elif args.model == "vit":
     model_kwargs = {  # override some of the defaults
         "img_size": (32, 64),
         "in_channels": 4,
@@ -68,13 +68,9 @@ elif args.model == "vit":
         "depth": 8,
         "decoder_depth": 2,
         "learn_pos_emb": True,
-        "num_heads": 4
+        "num_heads": 4,
     }
-optim_kwargs = {
-    "lr": 5e-4,
-    "weight_decay": 1e-5,
-    "betas": (0.9, 0.99)
-}
+optim_kwargs = {"lr": 5e-4, "weight_decay": 1e-5, "betas": (0.9, 0.99)}
 sched_kwargs = {
     "warmup_epochs": 5,
     "max_epochs": 50,
@@ -88,7 +84,7 @@ model = cl.load_climatebench_module(
     optim="adamw",
     optim_kwargs=optim_kwargs,
     sched="linear-warmup-cosine-annealing",
-    sched_kwargs=sched_kwargs
+    sched_kwargs=sched_kwargs,
 )
 
 # Set up trainer
@@ -99,16 +95,13 @@ early_stopping = "val/mse:aggregate"
 callbacks = [
     RichProgressBar(),
     RichModelSummary(max_depth=args.summary_depth),
-    EarlyStopping(
-        monitor=early_stopping,
-        patience=args.patience
-    ),
+    EarlyStopping(monitor=early_stopping, patience=args.patience),
     ModelCheckpoint(
         dirpath=f"{default_root_dir}/checkpoints",
         monitor=early_stopping,
         filename="epoch_{epoch:03d}",
         auto_insert_metric_name=False,
-    )
+    ),
 ]
 trainer = pl.Trainer(
     logger=logger,
@@ -119,7 +112,7 @@ trainer = pl.Trainer(
     max_epochs=args.max_epochs,
     strategy="ddp",
     precision="16",
-    log_every_n_steps=1
+    log_every_n_steps=1,
 )
 
 # Train and evaluate model from scratch
@@ -136,6 +129,6 @@ else:
         train_loss=None,
         val_loss=None,
         test_loss=model.test_loss,
-        test_target_transforms=model.test_target_transforms
+        test_target_transforms=model.test_target_transforms,
     )
     trainer.test(model, datamodule=dm)
