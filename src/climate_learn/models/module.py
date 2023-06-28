@@ -53,7 +53,7 @@ class LitModule(pl.LightningModule):
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
         batch_idx: int,
     ) -> torch.Tensor:
-        x, y, in_variables, out_variables = batch
+        x, y, mask, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
@@ -95,7 +95,7 @@ class LitModule(pl.LightningModule):
     def evaluate(
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
-        x, y, in_variables, out_variables = batch
+        x, y, mask, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
         if stage == "val":
             loss_fns = self.val_loss
@@ -110,7 +110,10 @@ class LitModule(pl.LightningModule):
             if transforms is not None and transforms[i] is not None:
                 yhat_ = transforms[i](yhat)
                 y_ = transforms[i](y)
-            losses = lf(yhat_, y_)
+            if mask == []:
+                losses = lf(yhat_, y_)
+            else:
+                losses = lf(yhat_, y_, mask)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[f"{stage}/{loss_name}:agggregate"] = losses
