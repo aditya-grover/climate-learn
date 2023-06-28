@@ -169,7 +169,7 @@ class IterDataModule(pl.LightningDataModule):
                         ),
                         transforms=self.transforms,
                         output_transforms=self.output_transforms,
-                        subsample=self.hparams.subsample.hours(),
+                        subsample=self.hparams.subsample,
                     ),
                     buffer_size=self.hparams.buffer_size,
                 )
@@ -187,7 +187,7 @@ class IterDataModule(pl.LightningDataModule):
                     ),
                     transforms=self.transforms,
                     output_transforms=self.output_transforms,
-                    subsample=self.hparams.subsample.hours(),
+                    subsample=self.hparams.subsample,
                 )
 
                 self.data_test = IndividualDataIter(
@@ -203,7 +203,7 @@ class IterDataModule(pl.LightningDataModule):
                     ),
                     transforms=self.transforms,
                     output_transforms=self.output_transforms,
-                    subsample=self.hparams.subsample.hours(),
+                    subsample=self.hparams.subsample,
                 )
         else:
             self.data_test = IndividualDataIter(
@@ -219,7 +219,7 @@ class IterDataModule(pl.LightningDataModule):
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
-                subsample=self.hparams.subsample.hours(),
+                subsample=self.hparams.subsample,
             )
 
     def train_dataloader(self):

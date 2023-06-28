@@ -28,9 +28,6 @@ We also previewed some key features of ClimateLearn at a spotlight tutorial in t
 ### Documentation
 Find us on [ReadTheDocs](https://climatelearn.readthedocs.io/).
 
-### Integrations
-- [Weights & Biases](https://wandb.ai/site)
-
 ## About Us
 ClimateLearn is managed by the Machine Intelligence Group at UCLA, headed by [Professor Aditya Grover](https://aditya-grover.github.io).
 
