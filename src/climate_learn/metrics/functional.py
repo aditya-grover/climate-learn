@@ -62,10 +62,16 @@ def rmse(
     target: Union[torch.FloatTensor, torch.DoubleTensor],
     aggregate_only: bool = False,
     lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
+    mask = None
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     error = (pred - target).square()
     if lat_weights is not None:
         error = error * lat_weights
+    if mask is not None:
+        error = error * mask
+        eps = 1e-9
+        masked_lat_weights = torch.mean(mask, dim=(1, 2, 3), keepdim=True) + eps
+        error = error / masked_lat_weights
     per_channel_losses = error.mean([2, 3]).sqrt().mean(0)
     loss = per_channel_losses.mean()
     if aggregate_only:
@@ -80,6 +86,7 @@ def acc(
     climatology: Optional[Union[torch.FloatTensor, torch.DoubleTensor]],
     aggregate_only: bool = False,
     lat_weights: Optional[Union[torch.FloatTensor, torch.DoubleTensor]] = None,
+    mask = None
 ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
     pred = pred - climatology
     target = target - climatology
@@ -87,6 +94,15 @@ def acc(
     for i in range(pred.shape[1]):
         pred_prime = pred[:, i] - pred[:, i].mean()
         target_prime = target[:, i] - target[:, i].mean()
+        if mask is not None:
+            eps = 1e-9
+            numer = (mask * lat_weights * pred_prime * target_prime).sum()
+            denom1 = ((mask + eps) * lat_weights * pred_prime.square()).sum()
+            denom2 = ((mask + eps) * lat_weights * target_prime.square()).sum()
+        else:
+            numer = (lat_weights * pred_prime * target_prime).sum()
+            denom1 = (lat_weights * pred_prime.square()).sum()
+            denom2 = (lat_weights * target_prime.square()).sum()
         numer = (lat_weights * pred_prime * target_prime).sum()
         denom1 = (lat_weights * pred_prime.square()).sum()
         denom2 = (lat_weights * target_prime.square()).sum()
