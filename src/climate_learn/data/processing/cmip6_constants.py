@@ -21,6 +21,15 @@ PRESSURE_LEVEL_VARS = [
     "specific_humidity",
 ]
 
+VAR_TO_UNIT = {
+    "air_temperature": "C",
+    "geopotential": "m^2/s^2",
+    "u_component_of_wind": "m/s",
+    "v_component_of_wind": "m/s",
+    "temperature": "C",
+    "specific_humidity": "kg/kg"
+}
+
 DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925]
 
 CONSTANTS = []
