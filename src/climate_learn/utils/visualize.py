@@ -3,6 +3,8 @@ import matplotlib.animation as animation
 import numpy as np
 from scipy.stats import rankdata
 from tqdm import tqdm
+from ..data.processing.era5_constants import VAR_TO_UNIT as ERA5_VAR_TO_UNIT
+from ..data.processing.cmip6_constants import VAR_TO_UNIT as CMIP6_VAR_TO_UNIT
 
 
 def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index=0):
@@ -10,6 +12,14 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
     extent = [lon.min(), lon.max(), lat.min(), lat.max()]
     channel = dm.hparams.out_vars.index(variable)
     history = dm.hparams.history
+    if src == "era5":
+        variable_with_units = f"{variable} ({ERA5_VAR_TO_UNIT[variable]})"
+    elif src == "cmip6":
+        variable_with_units = f"{variable} ({CMIP6_VAR_TO_UNIT[variable]})"
+    elif src == "prism":
+        variable_with_units = f"Daily Max Temperature (C)"
+    else:
+        raise NotImplementedError(f"{src} is not a supported source")
 
     counter = 0
     adj_index = None
@@ -32,7 +42,7 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
     # Create animation/plot of the input sequence
     if history > 1:
         in_fig, in_ax = plt.subplots()
-        in_ax.set_title(f"Input Sequence: {variable}")
+        in_ax.set_title(f"Input Sequence: {variable_with_units}")
         in_ax.set_xlabel("Longitude")
         in_ax.set_ylabel("Latitude")
         imgs = []
@@ -60,7 +70,7 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
             img = in_transform(xx[0])[channel].detach().cpu().numpy()
         if src == "era5":
             img = np.flip(img, 0)
-        visualize_sample(img, extent, f"Input: {variable}")
+        visualize_sample(img, extent, f"Input: {variable_with_units}")
         anim = None
         plt.show()
 
@@ -69,7 +79,7 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
     yy = yy[channel].detach().cpu().numpy()
     if src == "era5":
         yy = np.flip(yy, 0)
-    visualize_sample(yy, extent, f"Ground truth: {variable}")
+    visualize_sample(yy, extent, f"Ground truth: {variable_with_units}")
     plt.show()
 
     # Plot the prediction
@@ -77,12 +87,12 @@ def visualize_at_index(mm, dm, in_transform, out_transform, variable, src, index
     ppred = ppred[channel].detach().cpu().numpy()
     if src == "era5":
         ppred = np.flip(ppred, 0)
-    visualize_sample(ppred, extent, f"Prediction: {variable}")
+    visualize_sample(ppred, extent, f"Prediction: {variable_with_units}")
     plt.show()
 
     # Plot the bias
     bias = ppred - yy
-    visualize_sample(bias, extent, f"Bias: {variable}")
+    visualize_sample(bias, extent, f"Bias: {variable_with_units}")
     plt.show()
 
     # None, if no history
@@ -113,6 +123,14 @@ def visualize_mean_bias(dm, mm, out_transform, variable, src):
     lat, lon = dm.get_lat_lon()
     extent = [lon.min(), lon.max(), lat.min(), lat.max()]
     channel = dm.hparams.out_vars.index(variable)
+    if src == "era5":
+        variable_with_units = f"{variable} ({ERA5_VAR_TO_UNIT[variable]})"
+    elif src == "cmip6":
+        variable_with_units = f"{variable} ({CMIP6_VAR_TO_UNIT[variable]})"
+    elif src == "prism":
+        variable_with_units = f"Daily Max Temperature (C)"
+    else:
+        raise NotImplementedError(f"{src} is not a supported source")
 
     all_biases = []
     for batch in tqdm(dm.test_dataloader()):
@@ -131,6 +149,7 @@ def visualize_mean_bias(dm, mm, out_transform, variable, src):
     if src == "era5":
         mean_bias = np.flip(mean_bias, 0)
     ax.imshow(mean_bias, cmap=plt.cm.coolwarm, extent=extent)
+    ax.set_title(f"Mean Bias: {variable_with_units}")
 
     cax = fig.add_axes(
         [
