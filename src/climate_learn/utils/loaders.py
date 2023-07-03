@@ -28,7 +28,7 @@ from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 def load_model_module(
     task: str,
     data_module,
-    preset: Optional[str] = None,
+    architecture: Optional[str] = None,
     model: Optional[Union[str, nn.Module]] = None,
     model_kwargs: Optional[Dict[str, Any]] = None,
     optim: Optional[Union[str, torch.optim.Optimizer]] = None,
@@ -48,11 +48,11 @@ def load_model_module(
     if lat is None and lon is None:
         raise RuntimeError("Data module has not been set up yet.")
     # Load the model
-    if preset is None and model is None:
-        raise RuntimeError("Please specify 'preset' or 'model'")
-    elif preset:
-        print(f"Loading preset: {preset}")
-        model, optimizer, lr_scheduler = load_preset(task, data_module, preset)
+    if architecture is None and model is None:
+        raise RuntimeError("Please specify 'architecture' or 'model'")
+    elif architecture:
+        print(f"Loading architecture: {architecture}")
+        model, optimizer, lr_scheduler = load_architecture(task, data_module, architecture)
     elif isinstance(model, str):
         print(f"Loading model: {model}")
         model_cls = MODEL_REGISTRY.get(model, None)
@@ -68,10 +68,10 @@ def load_model_module(
     else:
         raise TypeError("'model' must be str or nn.Module")
     # Load the optimizer
-    if preset is None and optim is None:
-        raise RuntimeError("Please specify 'preset' or 'optim'")
-    elif preset:
-        print("Using preset optimizer")
+    if architecture is None and optim is None:
+        raise RuntimeError("Please specify 'architecture' or 'optim'")
+    elif architecture:
+        print("Using optimizer associated with architecture")
     elif isinstance(optim, str):
         print(f"Loading optimizer {optim}")
         optimizer = load_optimizer(model, optim, optim_kwargs)
@@ -81,8 +81,8 @@ def load_model_module(
     else:
         raise TypeError("'optim' must be str or torch.optim.Optimizer")
     # Load the LR scheduler, if specified
-    if preset:
-        print("Using preset learning rate scheduler")
+    if architecture:
+        print("Using learning rate scheduler associated with architecture")
     elif sched is None:
         lr_scheduler = None
     elif isinstance(sched, str):
@@ -244,28 +244,28 @@ load_downscaling_module = partial(
 )
 
 
-def load_preset(task, data_module, preset):
+def load_architecture(task, data_module, architecture):
     in_vars, out_vars = get_data_variables(data_module)
     in_shape, out_shape = get_data_dims(data_module)
 
     def raise_not_impl():
         raise NotImplementedError(
-            f"{preset} is not an implemented preset for the {task} task. If"
-            " you think it should be, please raise an issue at"
+            f"{architecture} is not an implemented architecture for the {task}"
+            " task. If you think it should be, please raise an issue at"
             " https://github.com/aditya-grover/climate-learn/issues."
         )
 
     if task == "forecasting":
         history, in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
-        if preset.lower() == "climatology":
+        if architecture.lower() == "climatology":
             norm = data_module.get_out_transforms()
             mean_norm = torch.tensor([norm[k].mean for k in norm.keys()])
             std_norm = torch.tensor([norm[k].std for k in norm.keys()])
             clim = get_climatology(data_module, "train")
             model = Climatology(clim, mean_norm, std_norm)
             optimizer = lr_scheduler = None
-        elif preset == "persistence":
+        elif architecture == "persistence":
             if not set(out_vars).issubset(in_vars):
                 raise RuntimeError(
                     "Persistence requires the output variables to be a subset of"
@@ -274,13 +274,13 @@ def load_preset(task, data_module, preset):
             channels = [in_vars.index(o) for o in out_vars]
             model = Persistence(channels)
             optimizer = lr_scheduler = None
-        elif preset.lower() == "linear-regression":
+        elif architecture.lower() == "linear-regression":
             in_features = history * in_channels * in_height * in_width
             out_features = out_channels * out_height * out_width
             model = LinearRegression(in_features, out_features)
             optimizer = load_optimizer(model, "SGD", {"lr": 1e-5})
             lr_scheduler = None
-        elif preset.lower() == "rasp-theurey-2020":
+        elif architecture.lower() == "rasp-theurey-2020":
             model = ResNet(
                 in_channels=in_channels,
                 out_channels=out_channels,
@@ -300,7 +300,7 @@ def load_preset(task, data_module, preset):
     elif task == "downscaling":
         in_channels, in_height, in_width = in_shape[1:]
         out_channels, out_height, out_width = out_shape[1:]
-        if preset.lower() in (
+        if architecture.lower() in (
             "bilinear-interpolation",
             "nearest-interpolation",
         ):
@@ -309,17 +309,17 @@ def load_preset(task, data_module, preset):
                     "Interpolation requires the output variables to match the"
                     " input variables."
                 )
-            interpolation_mode = preset.split("-")[0]
+            interpolation_mode = architecture.split("-")[0]
             model = Interpolation((out_height, out_width), interpolation_mode)
             optimizer = lr_scheduler = None
         else:
-            if preset == "resnet":
+            if architecture == "resnet":
                 backbone = ResNet(in_channels, out_channels, n_blocks=28)
-            elif preset == "unet":
+            elif architecture == "unet":
                 backbone = Unet(
                     in_channels, out_channels, ch_mults=[1, 1, 2], n_blocks=4
                 )
-            elif preset == "vit":
+            elif architecture == "vit":
                 backbone = VisionTransformer(
                     (64, 128),
                     in_channels,

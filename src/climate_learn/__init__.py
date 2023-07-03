@@ -3,7 +3,7 @@ from .utils.loaders import (
     load_forecasting_module,
     load_climatebench_module,
     load_downscaling_module,
-    load_preset,
+    load_architecture,
     load_optimizer,
     load_lr_scheduler,
     load_loss,
