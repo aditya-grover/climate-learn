@@ -6,19 +6,16 @@ build-backend = "setuptools.build_meta"
 name = "climate_learn"
 version = "0.0.2"
 authors = [
-    { name = "MINT at UCLA", email = "jason.jewik@cs.ucla.edu" },
-    { name = "Hritik Bansal", email = "hbansal@g.ucla.edu" },
-    { name = "Shashank Goel", email = "shashankgoel@g.ucla.edu" },
-    { name = "Siddharth Nandy", email = "sidd.nandy@gmail.com" },
-    { name = "Tung Nguyen", email = "tungnd@g.ucla.edu" },
-    { name = "Seongbin Park", email = "shannonsbpark@gmail.com" },
-    { name = "Jingchen Tang", email = "tangtang1228@ucla.edu" },
-    { name = "Jason Jewik", email = "jason.jewik@cs.ucla.edu" },
+    { name = "MINT at UCLA", email = "jason.jewik@ucla.edu" },
+    { name = "Tung Nguyen", email = "tungnd@cs.ucla.edu" },
+    { name = "Jason Jewik", email = "jason.jewik@ucla.edu" },
+    { name = "Hritik Bansal", email = "hbansal@ucla.edu" },    
+    { name = "Prakhar Sharma", email = "prakhar6sharma@gmail.com" }  
     { name = "Aditya Grover", email = "adityag@cs.ucla.edu" },
 ]
-description = "ClimateLearn: Benchmarking Machine Learning for Data-driven Climate Science"
+description = "ClimateLearn: Benchmarking Machine Learning for Weather and Climate Modeling"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Programming Language :: Python :: 3",
