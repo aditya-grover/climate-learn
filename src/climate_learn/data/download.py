@@ -71,7 +71,10 @@ def download_weatherbench(dst, dataset, variable, resolution=5.625):
         remote_fn = f"{variable}_{res}{ext}"
         url = f"{url}CMIP%2FMPI-ESM%2F{res}%2F{variable}&files={remote_fn}"
     resp = requests.get(url, verify=False, stream=True)
-    local_fn = os.path.join(dst, remote_fn)
+    if variable == "constants":
+        local_fn = os.path.join(dst, "constants.nc")
+    else:
+        local_fn = os.path.join(dst, remote_fn)
     # TODO: add a progress wheel to indicate it is running.
     # I don't think a progress bar with tqdm is doable since the total size
     # of the file is not known a priori.
