@@ -10,7 +10,7 @@ authors = [
     { name = "Tung Nguyen", email = "tungnd@cs.ucla.edu" },
     { name = "Jason Jewik", email = "jason.jewik@ucla.edu" },
     { name = "Hritik Bansal", email = "hbansal@ucla.edu" },    
-    { name = "Prakhar Sharma", email = "prakhar6sharma@gmail.com" }  
+    { name = "Prakhar Sharma", email = "prakhar6sharma@gmail.com" },
     { name = "Aditya Grover", email = "adityag@cs.ucla.edu" },
 ]
 description = "ClimateLearn: Benchmarking Machine Learning for Weather and Climate Modeling"
