@@ -81,7 +81,7 @@ if args.preset == "vit":
 else:
     model = cl.load_downscaling_module(
         data_module=dm,
-        preset=args.preset,
+        architecture=args.preset,
         train_target_transform=mask,
         val_target_transform=[denorm_mask, denorm_mask, denorm_mask, mask],
         test_target_transform=[denorm_mask, denorm_mask, denorm_mask],

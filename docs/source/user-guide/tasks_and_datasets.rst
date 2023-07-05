@@ -373,6 +373,14 @@ Use the scripts at
 ``src/climate_learn/data/processing/era5_cropped.py`` and
 ``src/climate_learn/data/processing/prism.py``.
 
+.. note::
+
+    Currently, ClimateLearn normalizes all data to :math:`\mathcal{N}(0,1)`. We
+    recognize that this might not be the best transform for every variable. For
+    example, it is unreasonable to model precipitation according to a Gaussian
+    distribution. In the future, we will add support for different transforms in
+    data processing.
+
 Loading Data
 ------------
 

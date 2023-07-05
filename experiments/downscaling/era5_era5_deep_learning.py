@@ -73,7 +73,7 @@ dm = cl.data.IterDataModule(
 dm.setup()
 
 # Set up deep learning model
-model = cl.load_downscaling_module(data_module=dm, preset=args.preset)
+model = cl.load_downscaling_module(data_module=dm, architecture=args.preset)
 
 # Setup trainer
 pl.seed_everything(0)
