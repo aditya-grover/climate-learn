@@ -1,8 +1,12 @@
 # Standard library
 from typing import Callable, List, Optional, Tuple, Union
 
+# Local application
+from ..data.processing.era5_constants import CONSTANTS
+
 # Third party
 import torch
+import torch.nn.functional as F
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 
@@ -44,6 +48,20 @@ class LitModule(pl.LightningModule):
                     " losses which do not rqeuire transformation."
                 )
         self.test_target_transforms = test_target_transforms
+        self.mode = "direct"
+
+    def set_mode(self, mode):
+        self.mode = mode
+
+    def set_n_iters(self, iters):
+        self.n_iters = iters
+
+    def replace_constant(self, y, yhat, out_variables):
+        for i in range(yhat.shape[1]):
+            # if constant replace with ground-truth value
+            if out_variables[i] in CONSTANTS:
+                yhat[:, i] = y[:, i]
+        return yhat
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
@@ -55,6 +73,7 @@ class LitModule(pl.LightningModule):
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
+        yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -63,12 +82,12 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"train/{loss_name}:aggregate"] = loss
         else:  # per channel + aggregate
             for var_name, loss in zip(out_variables, losses):
-                loss_dict[f"{loss_name}:{var_name}"] = loss
+                loss_dict[f"train/{loss_name}:{var_name}"] = loss
             loss = losses[-1]
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"train/{loss_name}:aggregate"] = loss
         self.log_dict(
             loss_dict,
             prog_bar=True,
@@ -90,13 +109,17 @@ class LitModule(pl.LightningModule):
         batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
         batch_idx: int,
     ) -> torch.Tensor:
-        self.evaluate(batch, "test")
+        if self.mode == "direct":
+            self.evaluate(batch, "test")
+        if self.mode == "iter":
+            self.evaluate_iter(batch, self.n_iters, "test")
 
     def evaluate(
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
         x, y, in_variables, out_variables = batch
         yhat = self(x).to(device=y.device)
+        yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms
@@ -108,17 +131,67 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
-                yhat_T = transforms[i](yhat)
-                y_T = transforms[i](y)
-            losses = lf(yhat_T, y_T)
+                yhat_ = transforms[i](yhat)
+                y_ = transforms[i](y)
+            losses = lf(yhat_, y_)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
-                loss_dict[f"{loss_name}:agggregate"] = losses
+                loss_dict[f"{stage}/{loss_name}:agggregate"] = losses
             else:  # per channel + aggregate
                 for var_name, loss in zip(out_variables, losses):
-                    name = f"{loss_name}:{var_name}"
+                    name = f"{stage}/{loss_name}:{var_name}"
                     loss_dict[name] = loss
-                loss_dict[f"{loss_name}:aggregate"] = losses[-1]
+                loss_dict[f"{stage}/{loss_name}:aggregate"] = losses[-1]
+        self.log_dict(
+            loss_dict,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            batch_size=len(batch[0]),
+        )
+        return loss_dict
+
+    def evaluate_iter(
+        self,
+        batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]],
+        n_iters: int,
+        stage: str,
+    ):
+        x, y, in_variables, out_variables = batch
+
+        x_iter = x
+        for _ in range(n_iters):
+            yhat_iter = self(x_iter).to(device=x_iter.device)
+            yhat_iter = self.replace_constant(y, yhat_iter, out_variables)
+            x_iter = x_iter[:, 1:]
+            x_iter = torch.cat((x_iter, yhat_iter.unsqueeze(1)), dim=1)
+        yhat = yhat_iter
+
+        if stage == "val":
+            loss_fns = self.val_loss
+            transforms = self.val_target_transforms
+        elif stage == "test":
+            loss_fns = self.test_loss
+            transforms = self.test_target_transforms
+        else:
+            raise RuntimeError("Invalid evaluation stage")
+        loss_dict = {}
+        for i, lf in enumerate(loss_fns):
+            if transforms is not None and transforms[i] is not None:
+                yhat_t = transforms[i](yhat)
+                y_t = transforms[i](y)
+            else:
+                yhat_t = yhat
+                y_t = y
+            losses = lf(yhat_t, y_t)
+            loss_name = getattr(lf, "name", f"loss_{i}")
+            if losses.dim() == 0:  # aggregate loss
+                loss_dict[f"{stage}/{loss_name}:agggregate"] = losses
+            else:  # per channel + aggregate
+                for var_name, loss in zip(out_variables, losses):
+                    name = f"{stage}/{loss_name}:{var_name}"
+                    loss_dict[name] = loss
+                loss_dict[f"{stage}/{loss_name}:aggregate"] = losses[-1]
         self.log_dict(
             loss_dict,
             on_step=False,
@@ -131,4 +204,14 @@ class LitModule(pl.LightningModule):
     def configure_optimizers(self):
         if self.lr_scheduler is None:
             return self.optimizer
-        return {"optimizer": self.optimizer, "lr_scheduler": self.lr_scheduler}
+        if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            scheduler = {
+                "scheduler": self.lr_scheduler,
+                "monitor": self.trainer.favorite_metric,
+                "interval": "epoch",
+                "frequency": 1,
+                "strict": True,
+            }
+        else:
+            scheduler = self.lr_scheduler
+        return {"optimizer": self.optimizer, "lr_scheduler": scheduler}

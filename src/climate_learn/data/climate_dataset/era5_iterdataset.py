@@ -59,7 +59,7 @@ class NpyReader(IterableDataset):
                 world_size = torch.distributed.get_world_size()
             num_workers_per_ddp = worker_info.num_workers
             num_shards = num_workers_per_ddp * world_size
-            per_worker = int(math.floor(n_files / float(num_shards)))
+            per_worker = n_files // num_shards
             worker_id = rank * num_workers_per_ddp + worker_info.id
             iter_start = worker_id * per_worker
             iter_end = iter_start + per_worker
@@ -72,8 +72,8 @@ class NpyReader(IterableDataset):
                 out = inp
             else:
                 out = np.load(path_out)
-            yield {k: inp[k] for k in self.variables}, {
-                k: out[k] for k in self.out_variables
+            yield {k: np.squeeze(inp[k], axis=1) for k in self.variables}, {
+                k: np.squeeze(out[k], axis=1) for k in self.out_variables
             }, self.variables, self.out_variables
 
 
@@ -89,34 +89,37 @@ class Forecast(IterableDataset):
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
-            x = np.concatenate(
-                [inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1
-            )
-            x = torch.from_numpy(x)
-            y = np.concatenate(
-                [out_data[k].astype(np.float32) for k in out_data.keys()], axis=1
-            )
-            y = torch.from_numpy(y)
-
-            inputs = x.unsqueeze(0).repeat_interleave(self.history, dim=0)
-            for t in range(self.history):
-                inputs[t] = inputs[t].roll(-t * self.window, dims=0)
+            inp_data = {
+                k: torch.from_numpy(inp_data[k].astype(np.float32))
+                .unsqueeze(0)
+                .repeat_interleave(self.history, dim=0)
+                for k in inp_data.keys()
+            }
+            out_data = {
+                k: torch.from_numpy(out_data[k].astype(np.float32))
+                for k in out_data.keys()
+            }
+            for key in inp_data.keys():
+                for t in range(self.history):
+                    inp_data[key][t] = inp_data[key][t].roll(-t * self.window, dims=0)
 
             last_idx = -((self.history - 1) * self.window + self.pred_range)
 
-            inputs = inputs[:, :last_idx].transpose(0, 1)  # N, T, C, H, W
+            inp_data = {
+                k: inp_data[k][:, :last_idx].transpose(0, 1)
+                for k in inp_data.keys()  # N, T, H, W
+            }
 
-            predict_ranges = (
-                torch.ones(inputs.shape[0]).to(torch.long) * self.pred_range
-            )
+            inp_data_len = inp_data[variables[0]].size(0)
+
+            predict_ranges = torch.ones(inp_data_len).to(torch.long) * self.pred_range
             output_ids = (
-                torch.arange(inputs.shape[0])
+                torch.arange(inp_data_len)
                 + (self.history - 1) * self.window
                 + predict_ranges
             )
-            outputs = y[output_ids]
-
-            yield inputs, outputs, variables, out_variables
+            out_data = {k: out_data[k][output_ids] for k in out_data.keys()}
+            yield inp_data, out_data, variables, out_variables
 
 
 class Downscale(IterableDataset):
@@ -126,16 +129,15 @@ class Downscale(IterableDataset):
 
     def __iter__(self):
         for inp_data, out_data, variables, out_variables in self.dataset:
-            x = np.concatenate(
-                [inp_data[k].astype(np.float32) for k in inp_data.keys()], axis=1
-            )
-            x = torch.from_numpy(x)
-            y = np.concatenate(
-                [out_data[k].astype(np.float32) for k in out_data.keys()], axis=1
-            )
-            y = torch.from_numpy(y)
-
-            yield x, y, variables, out_variables
+            inp_data = {
+                k: torch.from_numpy(inp_data[k].astype(np.float32))
+                for k in inp_data.keys()
+            }
+            out_data = {
+                k: torch.from_numpy(out_data[k].astype(np.float32))
+                for k in out_data.keys()
+            }
+            yield inp_data, out_data, variables, out_variables
 
 
 class IndividualDataIter(IterableDataset):
@@ -144,22 +146,45 @@ class IndividualDataIter(IterableDataset):
         dataset: Union[Forecast, Downscale],
         transforms: torch.nn.Module,
         output_transforms: torch.nn.Module,
+        subsample: int = 6,
     ):
         super().__init__()
         self.dataset = dataset
         self.transforms = transforms
         self.output_transforms = output_transforms
+        self.subsample = subsample
 
     def __iter__(self):
         for inp, out, variables, out_variables in self.dataset:
-            assert inp.shape[0] == out.shape[0]
-            for i in range(inp.shape[0]):
+            inp_shapes = set([inp[k].shape[0] for k in inp.keys()])
+            out_shapes = set([out[k].shape[0] for k in out.keys()])
+            assert len(inp_shapes) == 1
+            assert len(out_shapes) == 1
+            inp_len = next(iter(inp_shapes))
+            out_len = next(iter(out_shapes))
+            assert inp_len == out_len
+            for i in range(0, inp_len, self.subsample):
+                x = {k: inp[k][i] for k in inp.keys()}
+                y = {k: out[k][i] for k in out.keys()}
                 if self.transforms is not None:
-                    yield self.transforms(inp[i]), self.output_transforms(
-                        out[i]
-                    ), variables, out_variables
-                else:
-                    yield inp[i], out[i], variables, out_variables
+                    if isinstance(self.dataset, Forecast):
+                        x = {
+                            k: self.transforms[k](x[k].unsqueeze(1)).squeeze(1)
+                            for k in x.keys()
+                        }
+                    elif isinstance(self.dataset, Downscale):
+                        x = {
+                            k: self.transforms[k](x[k].unsqueeze(0)).squeeze(0)
+                            for k in x.keys()
+                        }
+                    else:
+                        raise RuntimeError(f"Not supported task.")
+                if self.output_transforms is not None:
+                    y = {
+                        k: self.output_transforms[k](y[k].unsqueeze(0)).squeeze(0)
+                        for k in y.keys()
+                    }
+                yield x, y, variables, out_variables
 
 
 class ShuffleIterableDataset(IterableDataset):

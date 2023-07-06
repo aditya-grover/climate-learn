@@ -1,274 +1,154 @@
 # Standard library
-import argparse
+from argparse import ArgumentParser
+from ftplib import FTP
 import os
-import subprocess
+import re
+import requests
+from zipfile import ZipFile
 
 # Third party
 import cdsapi
-
-# Local application
-from .climate_dataset.era5.constants import NAME_TO_CMIP
+from tqdm import tqdm, trange
 
 
-months = [str(i).rjust(2, "0") for i in range(1, 13)]
-days = [str(i).rjust(2, "0") for i in range(1, 32)]
-times = [str(i).rjust(2, "0") + ":00" for i in range(0, 24)]
-
-# TODO: write exceptions in the docstrings
-# TODO: figure out how to better specify legal args for dataset, variable,
-#   and resolution
-# TODO: for download ESGF, do we have to download all the years?
-# TODO: can main even be run without runtime warning? maybe we should get rid of it
-
-
-def _download_copernicus(root, dataset, variable, year, pressure=False, api_key=None):
-    """Downloads data from the Copernicus Climate Data Store (CDS).
-        Data is stored at `root/dataset/variable/` as NetCDF4 (`.nc`) files.
-        Skips the download if a file of the expected naming convention already
-        exists at the download destination. More info:
-        https://cds.climate.copernicus.eu/cdsapp#!/home
-
-    :param root: The root data directory.
-    :type root: str
-    :param dataset: The dataset to download. Currently, only "era5" is
-        supported.
-    :type dataset: str
-    :param variable: The variable to download from the specified dataset.
-    :type variable: str
-    :param pressure: Whether to download data from different pressure levels
-        instead of single-level. Defaults to `False`.
-    :type pressure: bool, optional
-    :param api_key: An API key for accessing CDS. Defaults to `None`. See here
-        for more info: https://cds.climate.copernicus.eu/api-how-to.
-    :type api_key: str, optional
-    """
-    if dataset not in ["era5"]:
-        raise Exception("Dataset not supported")
-
+def download_copernicus_era5(dst, variable, year, pressure=False, api_key=None):
     if api_key is not None:
         content = f"url: https://cds.climate.copernicus.eu/api/v2\nkey: {api_key}"
-        open(f"{os.environ['HOME']}/.cdsapirc", "w").write(content)
-
-    path = os.path.join(root, dataset, variable, f"{variable}_{year}_0.25deg.nc")
-    print(
-        f"Downloading {dataset} {variable} data for year {year} from copernicus to {path}"
-    )
-
-    if os.path.exists(path):
-        return
-
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
+        home_dir = os.environ["HOME"]
+        with open(os.path.join(home_dir, ".cdsapirc"), "w") as f:
+            f.write(content)
+    os.makedirs(dst, exist_ok=True)
+    client = cdsapi.Client()
     download_args = {
         "product_type": "reanalysis",
         "format": "netcdf",
         "variable": variable,
         "year": str(year),
-        "month": months,
-        "day": days,
-        "time": times,
+        "month": [str(i).rjust(2, "0") for i in range(1, 13)],
+        "day": [str(i).rjust(2, "0") for i in range(1, 32)],
+        "time": [str(i).rjust(2, "0") + ":00" for i in range(0, 24)],
     }
-
-    client = cdsapi.Client()
-
-    if not pressure:
-        client.retrieve(
-            "reanalysis-era5-single-levels",
-            download_args,
-            path,
-        )
-    else:
+    if pressure:
+        src = "reanalysis-era5-pressure-levels"
         download_args["pressure_level"] = [1000, 850, 500, 50]
-        client.retrieve(
-            "reanalysis-era5-pressure-levels",
-            download_args,
-            path,
-        )
-
-
-def _download_esgf(
-    root,
-    dataset,
-    variable,
-    institutionID="MPI-M",
-    sourceID="MPI-ESM1-2-HR",
-    exprID="historical",
-):
-    """Downloads data from the Earth System Grid Federation (ESGF).
-        Data is stored at `root/dataset/pre-regrided/variable/` as a NetCDF4
-        (`.nc`) file. Skips the download if a file of the expected naming
-        convention already exists at the download destination. More info:
-        https://esgf-node.llnl.gov/projects/cmip6/
-
-    :param root: The root data directory.
-    :type root: str
-    :param dataset: The dataset to download. Currently, only "cmip6" is
-        supported.
-    :type dataset: str
-    :param variable: The variable to download from the specified dataset.
-    :type variable: str
-    :param instituionID: TODO
-    :type institutionID: str, optional
-    :param sourceID: TODO
-    :type sourceID: str, optional
-    :param exprID: TODO
-    :type exprID: str, optional
-    """
-    if dataset not in ["cmip6"]:
-        raise Exception("Dataset not supported")
-
-    path = os.path.join(root, dataset, "pre-regrided", variable)
-    print(f"Downloading {dataset} {variable} data from esgf to {path}")
-
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    year_strings = [f"{y}01010600-{y+5}01010000" for y in range(1850, 2015, 5)]
-    for yr in year_strings:
-        file_name = ("{var}_6hrPlevPt_{sourceID}_{exprID}_r1i1p1f1_gn_{yr}.nc").format(
-            var=NAME_TO_CMIP[variable], yr=yr, sourceID=sourceID, exprID=exprID
-        )
-
-        file_path = os.path.join(path, file_name)
-        if os.path.exists(file_path):
-            print(file_name, "exists")
-
-        else:
-            url = (
-                "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/CMIP/{institutionID}/{sourceID}/{exprID}/r1i1p1f1/6hrPlevPt/"
-                "{variable}/gn/v20190815/{file}"
-            ).format(
-                yr_string=yr,
-                variable=NAME_TO_CMIP[variable],
-                file=file_name,
-                institutionID=institutionID,
-                sourceID=sourceID,
-                exprID=exprID,
-            )
-            subprocess.check_call(["wget", "--no-check-certificate", url, "-P", path])
-
-
-def _download_weatherbench(root, dataset, variable, resolution="1.40625"):
-    """Downloads data from WeatherBench.
-        Data is stored at `root/dataset/resolution/variable/` as NetCDF4
-        (`.nc`) files. Skips the download if a file of the expected naming
-        convention already exists at the download destination. More info:
-        https://mediatum.ub.tum.de/1524895
-
-    :param root: The root data directory
-    :type root: str
-    :param dataset: The dataset to download. Currently, "era5" and "cmip6" are
-        supported.
-    :type dataset: str
-    :param variable: The variable to download from the specified dataset.
-    :type variable: str
-    :param resolution:  The desired data resolution in degrees. Can be
-        "1.40625", "2.8125", and "5.625". Default is "1.40625".
-    :type resolution: str, optional
-    """
-    if dataset not in ["era5", "cmip6"]:
-        raise Exception("Dataset not supported")
-
-    path = os.path.join(root, dataset, resolution, variable)
-    print(
-        f"Downloading {dataset} {variable} data for {resolution} resolution from weatherbench to {path}"
-    )
-    if os.path.exists(path):
-        return
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    if dataset == "era5":
-        if variable != "constants":
-            url = (
-                "https://dataserv.ub.tum.de/s/m1524895"
-                "/download?path=%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
-            ).format(resolution=resolution, variable=variable)
-        elif variable == "constants":
-            url = (
-                "https://dataserv.ub.tum.de/s/m1524895"
-                "/download?path=%2F{resolution}deg%2Fconstants&files=constants_{resolution}deg.nc"
-            ).format(resolution=resolution)
-    elif dataset == "cmip6":
-        url = (
-            "https://dataserv.ub.tum.de/s/m1524895"
-            "/download?path=%2FCMIP%2FMPI-ESM%2F{resolution}deg%2F{variable}&files={variable}_{resolution}deg.zip"
-        ).format(resolution=resolution, variable=variable)
-
-    if variable != "constants":
-        subprocess.check_call(
-            ["wget", "--no-check-certificate", url, "-O", path + ".zip"]
-        )
-        subprocess.check_call(["unzip", path + ".zip", "-d", path])
     else:
-        subprocess.check_call(["mkdir", path])
-        subprocess.check_call(
-            [
-                "wget",
-                "--no-check-certificate",
-                url,
-                "-O",
-                os.path.join(path, "constants.nc"),
-            ]
+        src = "reanalysis-era5-single-levels"
+    client.retrieve(src, download_args, dst / f"{variable}_{year}_0.25deg.nc")
+
+
+def download_mpi_esm1_2_hr(dst, variable, years=(1850, 2015)):
+    os.makedirs(dst, exist_ok=True)
+    year_strings = [f"{y}01010600-{y+5}01010000" for y in range(*years, 5)]
+    inst = "MPI-M"
+    src = "MPI-ESM1-2-HR"
+    exp = "historical"
+    for yr in tqdm(year_strings):
+        remote_fn = f"{variable}_6hrPlevPt_{src}_{exp}_r1i1p1f1_gn_{yr}.nc"
+        url = (
+            "https://esgf-data1.llnl.gov/thredds/fileServer/css03_data/CMIP6/"
+            f"CMIP/{inst}/{src}/{exp}/r1i1p1f1/6hrPlevPt/{variable}/gn/"
+            f"v20190815/{remote_fn}"
         )
+        resp = requests.get(url, verify=False, stream=True)
+        local_fn = os.path.join(dst, remote_fn)
+        with open(local_fn, "wb") as file:
+            for chunk in resp.iter_content(chunk_size=1024):
+                file.write(chunk)
 
 
-def download(source, **kwargs):
-    r"""Download interface.
+def download_weatherbench(dst, dataset, variable, resolution=5.625):
+    os.makedirs(dst, exist_ok=True)
+    if dataset not in ["era5", "cmip6"]:
+        raise RuntimeError("Dataset not supported")
+    url = "https://dataserv.ub.tum.de/s/m1524895/download?path=%2F"
+    res = f"{resolution}deg"
+    if dataset == "era5":
+        ext = ".nc" if variable == "constants" else ".zip"
+        remote_fn = f"{variable}_{res}{ext}"
+        url = f"{url}{res}%2F{variable}&files={remote_fn}"
+    elif dataset == "cmip6":
+        ext = ".zip"
+        remote_fn = f"{variable}_{res}{ext}"
+        url = f"{url}CMIP%2FMPI-ESM%2F{res}%2F{variable}&files={remote_fn}"
+    resp = requests.get(url, verify=False, stream=True)
+    if variable == "constants":
+        local_fn = os.path.join(dst, "constants.nc")
+    else:
+        local_fn = os.path.join(dst, remote_fn)
+    # TODO: add a progress wheel to indicate it is running.
+    # I don't think a progress bar with tqdm is doable since the total size
+    # of the file is not known a priori.
+    with open(local_fn, "wb") as file:
+        for chunk in resp.iter_content(chunk_size=1024):
+            file.write(chunk)
+    if ext == ".zip":
+        with ZipFile(local_fn) as myzip:
+            myzip.extractall(dst)
+        os.unlink(local_fn)
 
-    :param source: The data source to download from: "copernicus",
-        "weatherbench", or "esgf".
-    :param type: str
-    :param \**kwargs: arguments to pass to the source-specific download
-        function: :py:func:`_download_copernicus`,
-        :py:func:`_download_weatherbench`, :py:func:`_download_esgf`
-    """
 
-    # TODO: this was appropriate for the Colab tutorial, but should we
-    # keep it for future releases?
-    if "root" not in kwargs or kwargs["root"] is None:
-        kwargs["root"] = ".climate_tutorial"
-
-    kwargs["root"] = os.path.join(kwargs["root"], f"data/{source}")
-
-    if source == "copernicus":
-        _download_copernicus(**kwargs)
-    elif source == "weatherbench":
-        _download_weatherbench(**kwargs)
-    elif source == "esgf":
-        _download_esgf(**kwargs)
+def download_prism(dst, variable, years=(1981, 2023)):
+    os.makedirs(dst, exist_ok=True)
+    ftp = FTP("prism.oregonstate.edu")
+    ftp.login()
+    for year in trange(*years):
+        ftp.cwd(f"/daily/{variable}/{year}")
+        for remote_fn in tqdm(ftp.nlst(), leave=False):
+            local_fn = os.path.join(dst, remote_fn)
+            with open(local_fn, "wb") as file:
+                ftp.retrbinary(f"RETR {remote_fn}", file.write)
+            subdir_name = re.search(r"\d{8}", remote_fn)[0]
+            subdir_path = os.path.join(dst, subdir_name)
+            os.mkdir(subdir_path)
+            with ZipFile(local_fn) as myzip:
+                myzip.extractall(path=subdir_path)
+            os.unlink(local_fn)
+    ftp.quit()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-
-    subparsers = parser.add_subparsers(dest="source")
-
-    subparser = subparsers.add_parser("copernicus")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument("--dataset", type=str, choices=["era5"], required=True)
-    subparser.add_argument("--year", type=int, required=True)
-    subparser.add_argument("--pressure", action="store_true", default=False)
-    subparser.add_argument("--api_key", type=str, default=None)
-
-    subparser = subparsers.add_parser("weatherbench")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument(
-        "--dataset", type=str, choices=["era5", "cmip6"], required=True
+    parser = ArgumentParser(description="ClimateLearn's download utility.")
+    subparsers = parser.add_subparsers(
+        help="Data provider to download from.", dest="provider"
     )
-    subparser.add_argument("--resolution", type=str, default="5.625")
+    copernicus_era5 = subparsers.add_parser("copernicus-era5")
+    mpi_esm1_2_hr = subparsers.add_parser("mpi_esm1_2_hr")
+    weatherbench = subparsers.add_parser("weatherbench")
+    prism = subparsers.add_parser("prism")
 
-    subparser = subparsers.add_parser("esgf")
-    subparser.add_argument("--root", type=str, default=None)
-    subparser.add_argument("--variable", type=str, required=True)
-    subparser.add_argument("--dataset", type=str, choices=["era5"], required=True)
-    subparser.add_argument("--resolution", type=str, default="5.625")
-    subparser.add_argument("--institutionID", type=str, default="MPI-M")
-    subparser.add_argument("--sourceID", type=str, default="MPI-ESM1-2-HR")
-    subparser.add_argument("--exprID", type=str, default="historical")
+    copernicus_era5.add_argument("dst", help="Destination to store downloaded files.")
+    copernicus_era5.add_argument("var", help="Variable to download.")
+    copernicus_era5.add_argument("year", type=int)
+    copernicus_era5.add_argument("--pressure", action="store_true", default=False)
+    copernicus_era5.add_argument("--api_key")
+
+    mpi_esm1_2_hr.add_argument("dst", help="Destination to store downloaded files.")
+    mpi_esm1_2_hr.add_argument("var", help="Variable to download.")
+    mpi_esm1_2_hr.add_argument("--start", type=int, default=1850)
+    mpi_esm1_2_hr.add_argument("--end", type=int, default=2015)
+
+    weatherbench.add_argument("dst", help="Destination to store downloaded files.")
+    weatherbench.add_argument("dataset", choices=["era5", "cmip6"])
+    weatherbench.add_argument("var")
+    weatherbench.add_argument("--res", type=float, default=5.625)
+
+    prism.add_argument("dst", help="Destination to store downloaded files.")
+    prism.add_argument("var", help="Variable to download.")
+    prism.add_argument("--start", type=int, default=1981)
+    prism.add_argument("--end", type=int, default=2023)
 
     args = parser.parse_args()
-    download(**vars(args))
+
+    if args.provider == "copernicus_era5":
+        download_copernicus_era5(
+            args.dst, args.var, args.year, args.pressure, args.api_key
+        )
+    elif args.provider == "mpi_esm1_2_hr":
+        download_mpi_esm1_2_hr(args.dst, args.var, (args.start, args.end))
+    elif args.provider == "weatherbench":
+        download_weatherbench(args.dst, args.var, args.res)
+    elif args.provider == "prism":
+        download_prism(args.dst, args.var, (args.start, args.end))
 
 
 if __name__ == "__main__":

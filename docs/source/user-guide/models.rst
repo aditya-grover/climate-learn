@@ -1,179 +1,105 @@
 Models
 ======
-ClimateLearn's model modules are configurable based on the problem
-(forecasting, using the ``ForecastLitModule`` module, and downscaling,
-using the ``DownscaleLitModule`` module) and the desired model archiecture.
-Currently, three deep neural network architectures are supported:
 
-#. Convolutional neural networks: the CNN is a widely used architecture for visual recognition tasks. A constrained version of the standard neural network, CNNs capitalize on knowledge of the input's structure as an image. ClimateLearn suports two popular variants of CNNs:
+ClimateLearn supports a variety of baselines and deep learning models, as shown
+in the table below.
 
-    a. ResNet: ResNets are a popular variant of CNNs [#]_ that have been used to achieve weather forecasting for variables such as temperature and geopotential [#]_.
-    
-    b. U-Net: U-Nets are a CNN variant that entails both downsampling and upsampling convolutions. Their development and popularity in the biomedical space [#]_ paved the way for ClimateLearn's implementation, allowing users to benchmark U-Nets for climate modeling tasks.
++---------------+--------------------+----------------+----------------------------------+
+| Type          | Model              | Relevant Tasks | Notes                            |
++===============+====================+================+==================================+
+| Baseline      | Climatology        | Forecasting    |                                  |
+|               +--------------------+----------------+----------------------------------+
+|               | Persistence        | Forecasting    |                                  |
+|               +--------------------+----------------+----------------------------------+
+|               | Interpolation      | Downscaling    | Nearest, bilinear are available. |
+|               +--------------------+----------------+----------------------------------+
+|               | Linear regression  | | Forecasting  | | Not practical for hi-res data, |
+|               |                    | | Downscaling  | | or data with many variables.   |
+|               |                    | | Projection   |                                  |
++---------------+--------------------+----------------+----------------------------------+
+| Deep learning | ResNet             | | Forecasting  |                                  |
+|               |                    | | Downscaling  |                                  |
+|               |                    | | Projection   |                                  |
+|               +--------------------+----------------+----------------------------------+
+|               | U-net              | | Forecasting  |                                  |
+|               |                    | | Downscaling  |                                  |
+|               |                    | | Projection   |                                  |
+|               +--------------------+----------------+----------------------------------+
+|               | Vision transformer | | Forecasting  |                                  |
+|               |                    | | Downscaling  |                                  |
+|               |                    | | Projection   |                                  |
++---------------+--------------------+----------------+----------------------------------+
 
-#. Vision transformers: ViTs are the latest contemporary to CNNs for visual recognition [#]_. The utility of ViTs for representing climate variables is largely under-explored, but has been used for short-range temperature forecasting [#]_. 
+Loading a Model
+---------------
 
-.. [#] `Deep Residual Learning for Image Recognition <https://arxiv.org/abs/1512.03385/>`_
-.. [#] `Data-driven medium-range weather prediction with a Resnet pretrained on climate simulations: A new model for WeatherBench <https://arxiv.org/abs/2008.08626/>`_
-.. [#] `U-Net: Convolutional Networks for Biomedical Image Segmentation <https://arxiv.org/abs/1505.04597/>`_
-.. [#] `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929/>`_
-.. [#] `TENT: Tensorized Encoder Transformer for Temperature Forecasting <https://arxiv.org/abs/2106.14742/>`_
-
-
-Initialization
---------------
-
-Models are initialized by the ``load_model`` function in the
-``climate_learn.models`` module, which accepts an input for the desired
-architecture (``"vit"``, ``"resnet"``, or ``"unet"``) and the desired
-task (``"forecasting"`` or ``"downscaling"``). The function also accepts
-optional keyword arguments for the model and task optimizer specifically.
-Below is an example of initializing a ViT model for temporal forecasting.
-
-.. code-block:: python
-    :linenos:
-
-    from climate_learn.models import load_model
-    model_kwargs = {
-        "n_blocks": 4
-    }
-    optim_kwargs = {
-        "lr": 1e-4,
-    }
-    model_module = load_model(
-        name="vit",
-        task="forecasting",
-        model_kwargs=None,
-        optim_kwargs=optim_kwargs
-    )
-
-Training
---------
-
-The ``climate_learn.training`` module provides a ``Trainer`` class for
-fitting and testing models. The trainer is initialized with parameters
-such as the seed, the accelerator, and the maximimum number of epochs.
-
-The trainer has two functions, ``fit`` and ``test``, used for fitting
-and testing the argument model on the argument data module. Each
-function assumes ``model_module`` and ``data_module`` are initialized
-for the same task (both forecasting or both downscaling). See
-:doc:`Metrics <metrics>` for more information on the metrics
-on which the model is tested in ``Trainer.test()``.
-
-Below is an example of fitting and testing a model with a given data module.
+In order to construct a model, ClimateLearn requires an instantiated data
+module to determine the number of input and output channels. Suppose this
+data module is called ``dm``. Then, one can load baselines by name as such:
 
 .. code-block:: python
-    :linenos:
 
-    from climate_learn.training import Trainer
+    import climate_learn as cl
 
-    trainer = Trainer(
-        seed = 0,
-        accelerator = "gpu",
-        precision = 16,
-        max_epochs = 5,
+    climatology = cl.load_forecasting_module(
+        data_module=dm,
+        architecture="climatology"
+    )
+    interpolation = cl.load_downscaling_module(
+        data_module=dm,
+        architecture="nearest-interpolation"
     )
 
-    trainer.fit(model_module, data_module)
+We also currently provide one deep learning architecture, with its associated
+optimizer and learning rate scheduler, by
+`Rasp & Theurey (2020) <https://arxiv.org/abs/2008.08626>`_.
 
-    trainer.test(model_module, data_module)
+.. code-block:: python
 
-Example
--------
+    import climate_learn as cl
 
-The following can be run in Google Colab.
-
-.. nbinput:: ipython3
-    :execution-count: 1
-
-    %%capture
-    !pip install git+https://github.com/aditya-grover/climate-learn.git
-
-.. nbinput:: ipython3
-    :execution-count: 2
-
-    # Download WeatherBench 2m_temperature data to Google Drive
-    from google.colab import drive
-    from climate_learn.data import download
-
-    drive.mount("/content/drive")    
-    download(
-        root="/content/drive/MyDrive/Climate/.climate_tutorial",
-        source="weatherbench",
-        variable="2m_temperature",
-        dataset="era5", 
-        resolution="5.625"
+    resnet = cl.load_forecasting_module(
+        data_module=dm,
+        architecture="rasp-theurey-2020"
     )
 
-.. nbinput:: ipython3
-    :execution-count: 3
+.. note::
 
-    # Load data module for forecasting task
-    from climate_learn.utils.datetime import Year, Days, Hours
-    from climate_learn.data import DataModule
+    Our goal for the future is to implement as many architectures from the
+    literature as we can find for fair comparison and benchmarking. If you
+    would like to contribute, please open an 
+    `issue on our GitHub repository <https://github.com/aditya-grover/climate-learn/issues>`_.
 
-    data_module = DataModule(
-        dataset = "ERA5",
-        task = "forecasting",
-        root_dir = "/content/drive/MyDrive/Climate/.climate_tutorial/data/weatherbench/era5/5.625/",
-        in_vars = ["2m_temperature"],
-        out_vars = ["2m_temperature"],
-        train_start_year = Year(1979),
-        val_start_year = Year(2015),
-        test_start_year = Year(2017),
-        end_year = Year(2018),
-        pred_range = Days(3),
-        subsample = Hours(6),
-        batch_size = 128,
-        num_workers = 1
+ClimateLearn also supports customization of the provided architectures in two
+ways. First, one can specify the customization in the loading function itself.
+
+.. code-block:: python
+
+    import climate_learn as cl
+
+    model = cl.load_forecasting_module(
+        data_module=dm,
+        model="resnet",
+        model_kwargs={"n_blocks": 4, "history": 5},
+        optim="adamw",
+        optim_kwargs={"lr": 5e-4},
+        sched="linear-warmup-cosine-annealing",
+        sched_kwargs={"warmup_epochs": 5, "max_epochs": 50}
     )
 
-.. nbinput:: ipython3
-    :execution-count: 4
+Second, one can insantiate the model, optimizer, and learning rate scheduler
+directly. Note that one can mix directly instantiated and ClimateLearn-provided
+options.
 
-    # Load U-Net model
-    from climate_learn.models import load_model
+.. code-block:: python
 
-    model_kwargs = {
-        "in_channels": len(data_module.hparams.in_vars),
-        "out_channels": len(data_module.hparams.out_vars),
-        "n_blocks": 4
-    }
+    import climate_learn as cl
+    from torch.optim import SGD
+    from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-    optim_kwargs = {
-        "lr": 1e-4,
-        "weight_decay": 1e-5,
-        "warmup_epochs": 1,
-        "max_epochs": 5,
-    }
-
-    model_module = load_model(
-        name="unet",
-        task="forecasting",
-        model_kwargs=model_kwargs,
-        optim_kwargs=optim_kwargs
+    model = cl.load_forecasting_module(
+        data_module=dm,
+        model=cl.models.hub.ResNet(...),
+        optim=SGD(...),
+        sched=ReduceLROnPlateau(...)
     )
-
-.. nbinput:: ipython3
-    :execution-count: 5
-
-    from climate_learn.training import Trainer
-
-    # Initialize model trainer
-    trainer = Trainer(
-        seed = 0,
-        accelerator = "gpu",
-        precision = 16,
-        max_epochs = 5,
-    )
-
-.. nbinput:: ipython3
-    :execution-count: 6
-
-    trainer.fit(model_module, data_module)
-
-.. nbinput:: ipython3
-    :execution-count: 7
-    
-    trainer.test(model_module, data_module)

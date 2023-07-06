@@ -10,20 +10,17 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 # -- Project information
 
 project = "ClimateLearn"
-copyright = "2022; Bansal, Goel, Jewik, Nandy, Nguyen, Park, Tang, Grover"
-author = """
-    Hritik Bansal,
-    Shashank Goel,
-    Jason Jewik,
-    Siddharth Nandy,
+copyright = "2023; Nguyen, Jewik, Bansal, Sharma, Grover"
+author = """   
     Tung Nguyen,
-    Seongbin Park,
-    Jingchen Tang,
+    Jason Jewik,
+    Hritik Bansal,
+    Prakhar Sharma,
     Aditya Grover
 """
 
-release = "0.1"
-version = "0.1.0"
+release = "1.0.0"
+version = "1.0.0"
 
 # -- General configuration
 

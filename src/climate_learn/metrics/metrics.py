@@ -164,6 +164,7 @@ class RMSE(Metric):
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
+        mask=None,
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
         .. highlight:: python
@@ -178,6 +179,8 @@ class RMSE(Metric):
             RMSE, and the preceding elements are the channel-wise RMSEs.
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
+        if mask is not None:
+            return rmse(pred, target, self.aggregate_only, mask)
         return rmse(pred, target, self.aggregate_only)
 
 
@@ -189,6 +192,7 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
+        mask=None,
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
         .. highlight:: python
@@ -204,6 +208,8 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         super().cast_to_device(pred)
+        if mask is not None:
+            return rmse(pred, target, self.aggregate_only, self.lat_weights, mask)
         return rmse(pred, target, self.aggregate_only, self.lat_weights)
 
 
@@ -220,6 +226,7 @@ class ACC(ClimatologyBasedMetric):
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
+        mask=None,
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
         .. highlight:: python
@@ -237,6 +244,8 @@ class ACC(ClimatologyBasedMetric):
         :rtype: torch.FloatTensor|torch.DoubleTensor
         """
         super().cast_to_device(pred)
+        if mask is not None:
+            return acc(pred, target, self.climatology, self.aggregate_only, mask)
         return acc(pred, target, self.climatology, self.aggregate_only)
 
 
@@ -254,6 +263,7 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
         self,
         pred: Union[torch.FloatTensor, torch.DoubleTensor],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
+        mask=None,
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
         .. highlight:: python
@@ -272,6 +282,15 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
         """
         LatitudeWeightedMetric.cast_to_device(self, pred)
         ClimatologyBasedMetric.cast_to_device(self, pred)
+        if mask is not None:
+            return acc(
+                pred,
+                target,
+                self.climatology,
+                self.aggregate_only,
+                self.lat_weights,
+                mask,
+            )
         return acc(
             pred, target, self.climatology, self.aggregate_only, self.lat_weights
         )

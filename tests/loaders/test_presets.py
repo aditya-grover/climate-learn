@@ -23,7 +23,7 @@ DOWNSCALING_PRESETS = [
 def test_known_forecasting_presets(preset):
     mock_dm = MockDataModule(32, 3, 2, 2, 32, 64)
     mock_dm.setup()
-    model, optimizer, lr_scheduler = cl.load_preset(
+    model, optimizer, lr_scheduler = cl.load_architecture(
         "forecasting", mock_dm, preset=preset
     )
     if preset == FORECASTING_PRESETS[0]:
@@ -56,7 +56,7 @@ illegal_persistence_dms = [
 def test_illegal_persistence(mock_dm):
     mock_dm.setup()
     with pytest.raises(RuntimeError) as exc_info:
-        cl.load_preset("forecasting", mock_dm, preset="persistence")
+        cl.load_architecture("forecasting", mock_dm, preset="persistence")
     assert str(exc_info.value) == (
         "Persistence requires the output variables to be a subset of the input"
         " variables."
@@ -67,7 +67,7 @@ def test_illegal_persistence(mock_dm):
 def test_known_downscaling_presets(preset):
     mock_dm = MockDataModule(32, 0, 3, 3, 32, 64)
     mock_dm.setup()
-    model, optimizer, lr_scheduler = cl.load_preset(
+    model, optimizer, lr_scheduler = cl.load_architecture(
         "downscaling", mock_dm, preset=preset
     )
     if preset in DOWNSCALING_PRESETS[:3]:
