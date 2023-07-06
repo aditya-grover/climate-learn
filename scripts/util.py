@@ -6,16 +6,14 @@ from climate_learn.data import IterDataModule, CMIP6IterDataModule
 from climate_learn.utils.datetime import Hours
 
 import wandb
-import argparse
 import yaml
+import os
+import torch
 from pytorch_lightning import seed_everything
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import LearningRateMonitor, TQDMProgressBar, RichProgressBar
+from pytorch_lightning.callbacks import LearningRateMonitor, RichProgressBar, ModelCheckpoint
 from datetime import datetime
 from transformers import AutoConfig, ViTImageProcessor
-
-now = datetime.now()
-now = now.strftime("%H-%M-%S_%d-%m-%Y")
 
 
 def load_config(cfg_file):
@@ -95,36 +93,20 @@ def load_data_numpy(cfg):
     dm.setup()
     return dm
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='lowres')
-    args = parser.parse_args()
-    cfg = load_config(f'configs/{args.config}.yaml')
 
-    dm = load_data_numpy(cfg)
-
-    # climatology is the average value over the training period
-    climatology = cl.load_forecasting_module(data_module=dm, preset="climatology")
-    # persistence returns its input as its prediction
-    persistence = cl.load_forecasting_module(data_module=dm, preset="persistence")
-
-    #VIT Pretrained
-    vit_pretrained = cl.load_forecasting_module(
-        data_module=dm, 
-        preset=cfg['model'], 
-        cfg=cfg,
-    )
+def load_trainer(cfg):
 
     wandb.init(
         project='Climate', 
-        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, \
-            New Embeddings = {not cfg['use_pretrained_embeddings']}, Frozen Backbone = {cfg['freeze_backbone']}, \
-                Frozen Embeddings = {cfg['freeze_embeddings']}, {now}", 
+        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}", 
         config=cfg
     )
-    logger = WandbLogger()
 
     lr_monitor = LearningRateMonitor(logging_interval='step')
+    progress_bar = RichProgressBar()
+    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor='lat_rmse:aggregate [val]', mode='min', save_last=True)
+
+    logger = WandbLogger()
     trainer = cl.Trainer(
         # stop when latitude-weighted RMSE, a validation metric, stops improving
         early_stopping="lat_rmse:aggregate [val]",
@@ -137,23 +119,22 @@ def main():
         max_epochs=cfg["num_epochs"],
         # log to wandb
         logger=logger,
-        # Print model summary
-        enable_model_summary=False,
-        callbacks=[lr_monitor, RichProgressBar()],
+        callbacks=[lr_monitor, progress_bar, checkpoint_callback],
         val_check_interval=cfg['val_every_n_steps'],
     )
-
-    trainer.fit(vit_pretrained, dm)
-
-    print('Testing Climatology')
-    trainer.test(climatology, dm)
-
-    print('Testing Persistence')
-    trainer.test(persistence, dm)
-
-    print('Testing VIT Pretrained')
-    trainer.test(vit_pretrained, dm)
+    return trainer
 
 
-if __name__ == "__main__":
-    main()
+def load_checkpoint(ckpt, module, dm, trainer):
+    ckpt_dir = f'lightning_logs/{ckpt}/checkpoints/'
+    if len(os.listdir(ckpt_dir)) == 1:
+        ckpt_path = os.path.join(ckpt_dir, os.listdir(ckpt_dir)[0])
+        ckpt = torch.load(ckpt_path)
+    else:
+        raise ValueError('There is more than one checkpoint in the directory. Please delete the extra files.')
+    module.load_state_dict(ckpt['state_dict'])
+    print(f'Loaded checkpoint from {ckpt_path}')
+
+    # Zero shot evaluation
+    # trainer.validate(vit_pretrained, dm)
+    trainer.test(module, datamodule=dm)

@@ -14,6 +14,7 @@ from .models.hub import (
     ResNet,
     ViTPretrained,
     VisionTransformer,
+    ResNetPretrained,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -326,12 +327,6 @@ def load_preset(task, data_module, preset, cfg=None):
                 mlp_embed_depth=cfg['mlp_embed_depth'],
                 num_backbone_blocks=cfg['num_backbone_blocks'],
             )
-            # optimizer = load_optimizer(
-                    # model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
-            # )
-            for name, param in model.named_parameters():
-                print(name)
-            # exit
             if cfg['use_pretrained_embeddings']:
                 optimizer = torch.optim.AdamW([
                         {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
@@ -356,6 +351,46 @@ def load_preset(task, data_module, preset, cfg=None):
                 optimizer,
                 {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
             )
+        elif preset.lower() == 'resnet':
+            model = ResNet(
+                in_channels=len(cfg['in_variables'])*cfg['history'] + len(cfg['constants']),
+                out_channels=len(cfg['out_variables']),
+                history=1,
+                hidden_channels=cfg['hidden_channels'],
+                activation=cfg['activation'],
+                norm=cfg['norm'],
+                dropout=cfg['dropout'],
+                n_blocks=cfg['n_blocks'],
+            )
+
+            optimizer = load_optimizer(
+                model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
+        elif preset.lower() == 'resnet_pretrained':
+            model = ResNetPretrained(
+                in_channels=len(cfg['in_variables'])*cfg['history'] + len(cfg['constants']),
+                out_channels=len(cfg['out_variables']),
+                img_size=cfg['img_size'],
+                history=1,
+                activation=cfg['activation'],
+                norm=cfg['norm'],
+                pretrained_model_name=cfg['pretrained_model_name'],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                padding_mode=cfg['padding_mode'],
+            )
+            optimizer = cl.load_optimizer(
+                model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = cl.load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )   
         elif preset.lower() == 'cli-vit':
             model = ClimaX(
                 default_vars=cfg['in_variables'] + cfg['constants'],

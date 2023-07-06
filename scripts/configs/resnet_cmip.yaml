@@ -46,7 +46,7 @@ constants: ["land_sea_mask", "orography", "lattitude"]
 # constants: []
 train_years: [1850, 2011]
 val_years: [2011, 2013]
-test_years: [2017, 2019]
+test_years: [2013, 2015]
 pred_range: 72
 subsample: 1
 history: 3
@@ -54,11 +54,13 @@ window: 6
 num_workers: 1
 
 #MODEL
+model: 'resnet'
 hidden_channels: 128
 activation: 'leaky'
 norm: True
 dropout: 0.1
 n_blocks: 28
+use_pretrained_weights: False
 
 
 #OPTIMIZATION
@@ -67,7 +69,7 @@ lr: 5.0e-4
 weight_decay: 1.0e-5
 betas: [0.9, 0.99]
 warmup_epochs: 5
-max_epochs: 50
+num_epochs: 50
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
 patience: 5
@@ -75,4 +77,5 @@ val_every_n_steps: 500
 seed: 42
 
 #GPU!!!!
-gpu: 2
+gpu: 5
+ckpt: 'jwv8xrn5'

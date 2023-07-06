@@ -1,9 +1,10 @@
+dataset: 'era5'
 data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg_npz/"
 in_variables: [
           "2m_temperature",
-          "10m_u_component_of_wind",
-          "10m_v_component_of_wind",
-          "toa_incident_solar_radiation",
+        #   "10m_u_component_of_wind",
+        #   "10m_v_component_of_wind",
+        #   "toa_incident_solar_radiation",
           "geopotential_50",
           "geopotential_250",
           "geopotential_500",
@@ -32,13 +33,6 @@ in_variables: [
           "temperature_700",
           "temperature_850",
           "temperature_925",
-          "relative_humidity_50",
-          "relative_humidity_250",
-          "relative_humidity_500",
-          "relative_humidity_600",
-          "relative_humidity_700",
-          "relative_humidity_850",
-          "relative_humidity_925",
           "specific_humidity_50",
           "specific_humidity_250",
           "specific_humidity_500",
@@ -46,6 +40,13 @@ in_variables: [
           "specific_humidity_700",
           "specific_humidity_850",
           "specific_humidity_925",
+        #   "relative_humidity_50",
+        #   "relative_humidity_250",
+        #   "relative_humidity_500",
+        #   "relative_humidity_600",
+        #   "relative_humidity_700",
+        #   "relative_humidity_850",
+        #   "relative_humidity_925",
     ]
 # in_variables: ["geopotential_500"]
 # in_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
@@ -53,7 +54,7 @@ out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 # out_variables: ["geopotential_500"]
 constants: ["land_sea_mask", "orography", "lattitude"]
 # constants: []
-train_years: [1979, 2016]
+train_years: [2015, 2016]
 val_years: [2016, 2017]
 test_years: [2017, 2019]
 pred_range: 72
@@ -63,11 +64,13 @@ window: 6
 num_workers: 1
 
 #MODEL
+model: 'resnet'
 hidden_channels: 128
 activation: 'leaky'
 norm: True
 dropout: 0.1
 n_blocks: 28
+use_pretrained_weights: False
 
 
 #OPTIMIZATION
@@ -76,7 +79,7 @@ lr: 5.0e-4
 weight_decay: 1.0e-5
 betas: [0.9, 0.99]
 warmup_epochs: 5
-max_epochs: 50
+num_epochs: 50
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
 patience: 5
@@ -84,4 +87,6 @@ val_every_n_steps: 500
 seed: 42
 
 #GPU!!!!
-gpu: 0
+gpu: 5
+# ckpt: 'jwv8xrn5'
+ckpt: null
