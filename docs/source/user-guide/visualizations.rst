@@ -27,7 +27,11 @@ for intuitively understanding which direction the model is erring in.
         index=0  # visualize the first sample of the test set
     )
 
-.. image:: images/visualize_at_index.png
+.. image:: images/gt_at_index.png
+
+.. image:: images/prediction_at_index.png
+
+.. image:: images/bias_at_index.png
 
 In the case that history is greater than 1 (*i.e.*, the model is given a
 sequence of historical weather states as input), ``cl.utils.visualize``
