@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "climate_learn"
-version = "0.0.2"
+version = "1.0.0"
 authors = [
     { name = "MINT at UCLA", email = "jason.jewik@ucla.edu" },
     { name = "Tung Nguyen", email = "tungnd@cs.ucla.edu" },
