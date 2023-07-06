@@ -71,6 +71,10 @@ class ViTPretrained(nn.Module):
 
             print('Using new embeddings')
 
+        if self.freeze_embeddings:
+            self.patch_embed.requires_grad_(False)
+            self.pos_embed.requires_grad_(False)
+            self.mlp_embed.requires_grad_(False)
         
         # prediction head
         self.head = nn.ModuleList()
