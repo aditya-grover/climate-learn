@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
+from climate_learn.models.hub import ViTPretrainedClimaXEmb
 
 
 class LitModule(pl.LightningModule):
@@ -62,7 +63,9 @@ class LitModule(pl.LightningModule):
                 yhat[:, i] = y[:, i]
         return yhat
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, in_variables) -> torch.Tensor:
+        if isinstance(self.net, ViTPretrainedClimaXEmb):
+            return self.net(x, in_variables)
         return self.net(x)
 
     def training_step(
@@ -71,7 +74,7 @@ class LitModule(pl.LightningModule):
         batch_idx: int,
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
-        yhat = self(x).to(device=y.device)
+        yhat = self(x, in_variables).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
@@ -122,7 +125,7 @@ class LitModule(pl.LightningModule):
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
         x, y, in_variables, out_variables = batch
-        yhat = self(x).to(device=y.device)
+        yhat = self(x, in_variables).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss
