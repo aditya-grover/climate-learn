@@ -5,6 +5,11 @@
 # Required
 version: 2
 
+# Set the version of Python
+build:
+  tools:
+    python: "3.8"
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/source/conf.py
