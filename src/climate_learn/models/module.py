@@ -21,6 +21,7 @@ class LitModule(pl.LightningModule):
         test_target_transforms: Optional[List[Union[Callable, None]]] = None,
     ):
         super().__init__()
+        self.save_hyperparameters()
         self.net = net
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler

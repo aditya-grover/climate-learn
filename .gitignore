@@ -167,3 +167,9 @@ notebooks/wandb/
 notebooks/lightning_logs/
 scripts/wandb/
 scripts/lightning_logs/
+scripts/results/
+scripts/test*.py
+scripts/try*.py
+scripts/*.png
+scripts/*.jpg
+notebooks/test.ipynb

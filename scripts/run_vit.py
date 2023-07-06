@@ -97,12 +97,11 @@ def load_data_numpy(cfg):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='lowres')
+    parser.add_argument('--config', default='vit')
     args = parser.parse_args()
     cfg = load_config(f'configs/{args.config}.yaml')
 
     dm = load_data_numpy(cfg)
-
     # climatology is the average value over the training period
     climatology = cl.load_forecasting_module(data_module=dm, preset="climatology")
     # persistence returns its input as its prediction
@@ -117,9 +116,7 @@ def main():
 
     wandb.init(
         project='Climate', 
-        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, \
-            New Embeddings = {not cfg['use_pretrained_embeddings']}, Frozen Backbone = {cfg['freeze_backbone']}, \
-                Frozen Embeddings = {cfg['freeze_embeddings']}, {now}", 
+        name=f"Climate Learn ViT", 
         config=cfg
     )
     logger = WandbLogger()

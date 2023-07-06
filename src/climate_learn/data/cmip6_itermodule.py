@@ -9,7 +9,7 @@ from torchvision.transforms import transforms
 from pytorch_lightning import LightningDataModule
 
 # Local application
-from .climate_dataset.era5_iterdataset import *
+from .climate_dataset.cmip6_iterdataset import *
 from ..utils.datetime import Hours
 
 # TODO: include exceptions in docstrings
@@ -55,7 +55,7 @@ def collate_fn(
     return inp, out, variables, out_variables
 
 
-class IterDataModule(LightningDataModule):
+class CMIP6IterDataModule(LightningDataModule):
     """ClimateLearn's iter data module interface. Encapsulates dataset/task-specific
     data modules."""
 

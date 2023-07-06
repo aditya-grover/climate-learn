@@ -34,7 +34,7 @@ class ViTPretrained(nn.Module):
         decoder_depth=2,
         pretrained_model=None,
         mlp_embed_depth=0,
-        num_backbone_blocks=12,
+        num_backbone_blocks=1000,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -120,7 +120,6 @@ class ViTPretrained(nn.Module):
                 if self.freeze_backbone:
                     print('Freezing Backbone')
                     for name, param in self.pretrained_backbone.named_parameters():
-                        print(name)
                         if 'norm' in name or 'bias' in name:
                             continue
                         if 'embeddings' in name and not self.freeze_embeddings:
