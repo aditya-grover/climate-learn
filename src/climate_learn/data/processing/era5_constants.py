@@ -55,9 +55,9 @@ VAR_TO_UNIT = {
     "surface_pressure": "Pa",
     "toa_incident_solar_radiation": "J/m^2",
     "total_precipitation": "m",
-    "total_cloud_cover": None, # dimensionless
-    "land_sea_mask": None, # dimensionless
-    "orography": None, # dimensionless
+    "total_cloud_cover": None,  # dimensionless
+    "land_sea_mask": None,  # dimensionless
+    "orography": None,  # dimensionless
     "geopotential": "m^2/s^2",
     "u_component_of_wind": "m/s",
     "v_component_of_wind": "m/s",
@@ -65,7 +65,7 @@ VAR_TO_UNIT = {
     "relative_humidity": "%",
     "specific_humidity": "kg/kg",
     "voriticity": "1/s",
-    "potential_vorticity": "K m^2 / (kg s)"
+    "potential_vorticity": "K m^2 / (kg s)",
 }
 
 DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925]
