@@ -12,7 +12,7 @@ import ipdb
 import timm
 from transformers import ViTModel, AutoConfig, AutoModel, CLIPModel
 from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_
-from .climax import ClimaX
+from .climax import ClimaXEmbedding
 
 
 @register('vit_pretrained_climax_emb')
@@ -26,6 +26,7 @@ class ViTPretrainedClimaXEmb(nn.Module):
         history,
         use_pretrained_weights=False,
         use_pretrained_embeddings=False,
+        use_pretrained_climax=False,
         use_n_blocks=None,
         freeze_backbone=False, 
         freeze_embeddings=False,
@@ -108,17 +109,25 @@ class ViTPretrainedClimaXEmb(nn.Module):
         ]
 
         ### load climax model
-        self.climax = ClimaX(default_vars=self.input_variables)
-        checkpoint = torch.hub.load_state_dict_from_url('https://huggingface.co/tungnd/climax/resolve/main/5.625deg.ckpt')
-        state_dict = checkpoint['state_dict']
-        state_dict = {k[4:]: v for k, v in state_dict.items()}
-        print ('Loading ClimaX')
-        msg = self.climax.load_state_dict(state_dict)
-        print (msg)
-        for name, param in self.climax.named_parameters():
-            if 'token_embeds' in name or 'channel_embed' in name or 'channel_agg' in name or 'channel_query' in name or 'pos_embed' in name:
-                continue
-            param.requires_grad = False
+        self.climax_emb = ClimaXEmbedding(
+            default_vars=self.input_variables,
+            img_size=in_img_size,
+            patch_size=patch_size,
+            embed_dim=embed_dim,
+            num_heads=self.pretrained_backbone.num_heads,
+            drop_rate=0.1,
+        )
+        if use_pretrained_climax:
+            checkpoint = torch.hub.load_state_dict_from_url('https://huggingface.co/tungnd/climax/resolve/main/5.625deg.ckpt')
+            state_dict = checkpoint['state_dict']
+            state_dict = {k[4:]: v for k, v in state_dict.items()}
+            print ('Loading pretrained ClimaX')
+            msg = self.climax_emb.load_state_dict(state_dict, strict=False)
+            print (msg)
+        # for name, param in self.climax.named_parameters():
+        #     if 'token_embeds' in name or 'channel_embed' in name or 'channel_agg' in name or 'channel_query' in name or 'pos_embed' in name:
+        #         continue
+        #     param.requires_grad = False
 
         
         # if not use_pretrained_embeddings:
@@ -253,7 +262,7 @@ class ViTPretrainedClimaXEmb(nn.Module):
         #     x = self.pos_drop(x)
             # x.shape = [B,num_patches,embed_dim]
         
-        x = self.climax.forward_embedding(x, variables)
+        x = self.climax_emb(x, variables)
         
         if 'google/vit' in self.pretrained_model_name:
             # print('Forward Encoder 1')
