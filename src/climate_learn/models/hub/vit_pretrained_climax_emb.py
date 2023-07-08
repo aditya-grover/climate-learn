@@ -25,7 +25,6 @@ class ViTPretrainedClimaXEmb(nn.Module):
         out_channels,
         history,
         use_pretrained_weights=False,
-        use_pretrained_embeddings=False,
         use_pretrained_climax=False,
         use_n_blocks=None,
         freeze_backbone=False, 
@@ -46,7 +45,6 @@ class ViTPretrainedClimaXEmb(nn.Module):
         self.out_channels = out_channels
         self.num_patches = (in_img_size[0] * in_img_size[1]) // (patch_size)**2
         self.embed_dim = embed_dim
-        self.use_pretrained_embeddings = use_pretrained_embeddings
         self.use_pretrained_weights = use_pretrained_weights
         self.use_n_blocks = use_n_blocks
         self.freeze_embeddings= freeze_embeddings
@@ -145,10 +143,8 @@ class ViTPretrainedClimaXEmb(nn.Module):
 
         #     print('Using new embeddings')
 
-        # if self.freeze_embeddings:
-        #     self.patch_embed.requires_grad_(False)
-        #     self.pos_embed.requires_grad_(False)
-        #     self.mlp_embed.requires_grad_(False)
+        if self.freeze_embeddings:
+            self.climax_emb.requires_grad_(False)
         
         # prediction head
         self.head = nn.ModuleList()
@@ -213,26 +209,26 @@ class ViTPretrainedClimaXEmb(nn.Module):
             print('Not Implemented')
             exit()
 
-    def initialize_weights(self):
-        if not self.use_pretrained_embeddings:
-            pos_embed = get_2d_sincos_pos_embed(
-                self.pos_embed.shape[-1],
-                self.in_img_size[0] // self.patch_size,
-                self.in_img_size[1] // self.patch_size,
-                cls_token=False,
-            )
-            self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
-        if not self.use_pretrained_weights:
-            self.apply(self._init_weights)
+    # def initialize_weights(self):
+    #     if not self.use_pretrained_embeddings:
+    #         pos_embed = get_2d_sincos_pos_embed(
+    #             self.pos_embed.shape[-1],
+    #             self.in_img_size[0] // self.patch_size,
+    #             self.in_img_size[1] // self.patch_size,
+    #             cls_token=False,
+    #         )
+    #         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
+    #     if not self.use_pretrained_weights:
+    #         self.apply(self._init_weights)
 
-    def _init_weights(self, m):
-        if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=0.02)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.LayerNorm):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
+    # def _init_weights(self, m):
+    #     if isinstance(m, nn.Linear):
+    #         trunc_normal_(m.weight, std=0.02)
+    #         if m.bias is not None:
+    #             nn.init.constant_(m.bias, 0)
+    #     elif isinstance(m, nn.LayerNorm):
+    #         nn.init.constant_(m.bias, 0)
+    #         nn.init.constant_(m.weight, 1.0)
 
     def unpatchify(self, x: torch.Tensor, h=None, w=None):
         """
@@ -265,43 +261,26 @@ class ViTPretrainedClimaXEmb(nn.Module):
         x = self.climax_emb(x, variables)
         
         if 'google/vit' in self.pretrained_model_name:
-            # print('Forward Encoder 1')
-            if self.use_pretrained_embeddings:
-                # x.shape = [B,3,H,W]
-                x = self.pretrained_backbone(x, interpolate_pos_encoding=True)
-                x = x.last_hidden_state
-                x = x[:, 1:]
-            else:
-                # x.shape = [B,num_patches,embed_dim]
-                x = self.pretrained_backbone.encoder(x)
-                x = x[0]
-                x = self.pretrained_backbone.layernorm(x)
+            # x.shape = [B,num_patches,embed_dim]
+            x = self.pretrained_backbone.encoder(x)
+            x = x[0]
+            x = self.pretrained_backbone.layernorm(x)
         elif 'dinov2' in self.pretrained_model_name:
             # print('Forward Encoder 2')
-            if self.use_pretrained_embeddings:
-                # x.shape = [B,3,H,W]
-                x = self.pretrained_backbone.forward(x, is_training=True)
-                x = x['x_norm_patchtokens']
-            else:
-                # x.shape = [B,num_patches,embed_dim]
-                # for blk in self.pretrained_backbone.blocks:
-                #     x = blk(x)
-                use_n_blocks = self.use_n_blocks if self.use_n_blocks is not None else len(self.pretrained_backbone.blocks)
-                for i in range(use_n_blocks):
-                    blk = self.pretrained_backbone.blocks[i]
-                    x = blk(x)
-                x = self.pretrained_backbone.norm(x)
+            # x.shape = [B,num_patches,embed_dim]
+            # for blk in self.pretrained_backbone.blocks:
+            #     x = blk(x)
+            use_n_blocks = self.use_n_blocks if self.use_n_blocks is not None else len(self.pretrained_backbone.blocks)
+            for i in range(use_n_blocks):
+                blk = self.pretrained_backbone.blocks[i]
+                x = blk(x)
+            x = self.pretrained_backbone.norm(x)
         elif 'clip' in self.pretrained_model_name:
             # print('Forward Encoder 3')
-            if self.use_pretrained_embeddings:
-                # x.shape = [B,3,H,W]
-                print("Doesn't allow different patch size")
-                exit()
-            else:
-                # x.shape = [B,num_patches,embed_dim]
-                x = self.pretrained_backbone.vision_model.pre_layrnorm(x)
-                x = self.pretrained_backbone.vision_model.encoder(x)
-                x = x.last_hidden_state
+            # x.shape = [B,num_patches,embed_dim]
+            x = self.pretrained_backbone.vision_model.pre_layrnorm(x)
+            x = self.pretrained_backbone.vision_model.encoder(x)
+            x = x.last_hidden_state
         else:
             print('Not Implemented')
             exit()

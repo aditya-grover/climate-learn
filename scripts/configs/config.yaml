@@ -1,9 +1,12 @@
 data_dir: "/home/data/datasets/weatherbench/era5/5.625deg_npz/"
 in_variables: [
+            "land_sea_mask",
+            "orography",
+            "lattitude",
           "2m_temperature",
           "10m_u_component_of_wind",
           "10m_v_component_of_wind",
-          "toa_incident_solar_radiation",
+        #   "toa_incident_solar_radiation",
           "geopotential_50",
           "geopotential_250",
           "geopotential_500",
@@ -58,16 +61,17 @@ val_years: [2016, 2017]
 test_years: [2017, 2018]
 pred_range: 72
 subsample: 1
-history: 3
-window: 6
+history: 1
+window: 0
 num_workers: 1
 
-model: 'vit_pretrained'
+model: 'vit_pretrained_climax_emb'
 
 in_img_size: [32, 64]
-decoder_depth: 2
+out_img_size: [32, 64]
+decoder_depth: 1
 #if vit_pretrained, this must be consistent with the pretrained model's embed dim
-embed_dim: 384
+embed_dim: 1024
 #for pretrained model only if use_pretrained_embeddings is false
 patch_size: 2
 learn_pos_emb: True
@@ -80,18 +84,18 @@ drop_rate: 0.1
 mlp_embed_depth: 1
 
 # pretrained_model: "vit_small_patch14_dinov2.lvd142m"
-pretrained_model: "dinov2_vits14"
+pretrained_model: "dinov2_vitl14"
 use_n_blocks: null
-use_pretrained_weights: True
-use_pretrained_embeddings: False
+use_pretrained_weights: False
+use_pretrained_climax: False
 freeze_backbone: False
 freeze_embeddings: False
 resize_img: False
 
-batch_size: 64
+batch_size: 16
 patience: 5
 num_epochs: 50
-gpu: [0, 1]
+gpu: [3, 4, 7, 8]
 seed: 42
 lr: 5.0e-6
 warmup_epochs: 5

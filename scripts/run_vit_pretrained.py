@@ -9,6 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, TQDMProgressBar
 from datetime import datetime
+import torch
 
 now = datetime.now()
 now = now.strftime("%H-%M-%S_%d-%m-%Y")
@@ -19,13 +20,13 @@ def main():
     with open('scripts/configs/config.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_pretrained/dinov2_vits14_scratch_emb_finetune_backbone_all_blocks"
+    default_root_dir=f"results_pretrained/dinov2_vitl14_climax_emb_arc_scratch_backbone_pretrained_cmip6_5e-4_finetune_all_5e-6"
     
     dm = IterDataModule(
         task='forecasting',
         inp_root_dir=cfg['data_dir'],
         out_root_dir=cfg['data_dir'],
-        in_vars=cfg['in_variables'] + cfg['constants'],
+        in_vars=cfg['in_variables'],
         out_vars=cfg['out_variables'],
         history=cfg['history'],
         window=cfg['window'],
@@ -41,6 +42,10 @@ def main():
         preset=cfg['model'], 
         cfg=cfg,
     )
+
+    state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitl14_climax_emb_arc_only_scratch_backbone_5e-4/checkpoints/epoch_013.ckpt', map_location='cpu')['state_dict']
+    msg = vit_pretrained.load_state_dict(state_dict)
+    print (msg)
 
     # wandb.init(
     #     project='Climate', 
