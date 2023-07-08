@@ -1,0 +1,82 @@
+data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+in_variables: [
+          '2m_temperature',
+          'geopotential_50',
+          'geopotential_250',      
+          'geopotential_500',       
+          'geopotential_600',    
+          'geopotential_700',       
+          'geopotential_850',       
+          'geopotential_925',       
+          'specific_humidity_50',  
+          'specific_humidity_250', 
+          'specific_humidity_500',  
+          'specific_humidity_600',  
+          'specific_humidity_700',  
+          'specific_humidity_850',  
+          'specific_humidity_925',  
+          'temperature_50',         
+          'temperature_250',
+          'temperature_500',
+          'temperature_600',
+          'temperature_700',
+          'temperature_850',
+          'temperature_925',
+          'u_component_of_wind_50',
+          'u_component_of_wind_250',
+          'u_component_of_wind_500',
+          'u_component_of_wind_600',
+          'u_component_of_wind_700',
+          'u_component_of_wind_850',
+          'u_component_of_wind_925',
+          'v_component_of_wind_50',
+          'v_component_of_wind_250',
+          'v_component_of_wind_500',
+          'v_component_of_wind_600',
+          'v_component_of_wind_700',
+          'v_component_of_wind_850',
+          'v_component_of_wind_925',
+    ]
+out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+constants: ["land_sea_mask", "orography", "lattitude"]
+train_years: [1850, 2011]
+val_years: [2011, 2013]
+test_years: [2013, 2015]
+pred_range: 12
+subsample: 1
+history: 3
+window: 1
+num_workers: 1
+
+model: 'timesformer_pretrained'
+
+in_img_size: [32, 64]
+decoder_depth: 1
+#if vit_pretrained, this must be consistent with the pretrained model's embed dim
+embed_dim: 768
+#for pretrained model only if use_pretrained_embeddings is false
+patch_size: 2
+# learn_pos_emb: True
+mlp_embed_depth: 1
+
+# pretrained_model: "vit_small_patch14_dinov2.lvd142m"
+pretrained_model: "facebook/timesformer-base-finetuned-k400"
+ckpt_path: '/home/tungnd/.cache/huggingface/hub/models--facebook--timesformer-base-finetuned-k400/snapshots/8aaf40ea7d3d282dcb0a5dea01a198320d15d6c0/pytorch_model.bin'
+use_n_blocks: null
+use_pretrained_weights: True
+use_pretrained_embeddings: False
+freeze_backbone: False
+freeze_embeddings: False
+
+batch_size: 8
+patience: 5
+num_epochs: 50
+gpu: [0, 8]
+seed: 42
+lr: 5.0e-4
+warmup_epochs: 5
+warmup_start_lr: 1.0e-8
+eta_min: 1.0e-8
+weight_decay: 1.0e-5
+betas: [0.9, 0.99]
+val_every_n_steps: 1000
