@@ -9,4 +9,5 @@ from .vit import VisionTransformer
 from .vit_pretrained import ViTPretrained
 from .sw_pretrained import SwinV2Pretrained
 from .vit_pretrained_climax_emb import ViTPretrainedClimaXEmb
+from .vit_pretrained_level_emb import ViTPretrainedLevelEmb
 from .timesformer_pretrained import TimeSformerPretrained

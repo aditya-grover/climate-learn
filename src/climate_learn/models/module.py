@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
-from climate_learn.models.hub import ViTPretrainedClimaXEmb
+from climate_learn.models.hub import ViTPretrainedClimaXEmb, ViTPretrainedLevelEmb
 
 
 class LitModule(pl.LightningModule):
@@ -64,7 +64,7 @@ class LitModule(pl.LightningModule):
         return yhat
 
     def forward(self, x: torch.Tensor, in_variables) -> torch.Tensor:
-        if isinstance(self.net, ViTPretrainedClimaXEmb):
+        if isinstance(self.net, ViTPretrainedClimaXEmb) or isinstance(self.net, ViTPretrainedLevelEmb):
             return self.net(x, in_variables)
         return self.net(x)
 
