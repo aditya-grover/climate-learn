@@ -52,7 +52,9 @@ def load_model_module(
         raise RuntimeError("Please specify 'architecture' or 'model'")
     elif architecture:
         print(f"Loading architecture: {architecture}")
-        model, optimizer, lr_scheduler = load_architecture(task, data_module, architecture)
+        model, optimizer, lr_scheduler = load_architecture(
+            task, data_module, architecture
+        )
     elif isinstance(model, str):
         print(f"Loading model: {model}")
         model_cls = MODEL_REGISTRY.get(model, None)

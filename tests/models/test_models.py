@@ -26,7 +26,8 @@ class TestForecastingModels:
 
     def test_climatology(self):
         clim = torch.zeros((self.num_channels, self.height, self.width))
-        model = Climatology(clim)
+        mean = std = torch.ones_like(clim)
+        model = Climatology(clim, mean, std)
         assert model(self.x).shape == self.y_same_channels.shape
 
     @pytest.mark.parametrize("same_out_channels", [True, False])

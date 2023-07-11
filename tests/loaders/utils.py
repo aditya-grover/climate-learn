@@ -68,3 +68,9 @@ class MockDataModule:
 
     def get_lat_lon(self):
         return self.lat, self.lon
+
+    def get_data_variables(self):
+        my_vars = set(
+            self.train_dataset.task.in_vars + self.train_dataset.task.out_vars
+        )
+        return my_vars
