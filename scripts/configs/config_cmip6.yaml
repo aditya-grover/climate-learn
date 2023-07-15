@@ -36,6 +36,9 @@ in_variables: [
           'v_component_of_wind_700',
           'v_component_of_wind_850',
           'v_component_of_wind_925',
+          "land_sea_mask",
+          "orography",
+          "lattitude"
     ]
 # in_variables: ["geopotential_500"]
 # in_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
@@ -58,7 +61,7 @@ in_img_size: [32, 64]
 out_img_size: [32, 64]
 decoder_depth: 1
 #if vit_pretrained, this must be consistent with the pretrained model's embed dim
-embed_dim: 768
+embed_dim: 1024
 #for pretrained model only if use_pretrained_embeddings is false
 patch_size: 2
 learn_pos_emb: True
@@ -71,23 +74,24 @@ drop_rate: 0.1
 mlp_embed_depth: 1
 
 # pretrained_model: "vit_small_patch14_dinov2.lvd142m"
-pretrained_model: "dinov2_vitb14"
+pretrained_model: "dinov2_vitl14"
 use_n_blocks: null
-use_pretrained_weights: True
+use_pretrained_weights: False
 use_pretrained_embeddings: False
 freeze_backbone: False
 freeze_embeddings: False
 resize_img: False
 
-batch_size: 64
+batch_size: 32
 patience: 5
 num_epochs: 50
-gpu: [3, 4]
+gpu: [0, 1, 2, 3]
 seed: 42
 lr: 5.0e-4
 warmup_epochs: 5
+max_epochs: 50
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
 weight_decay: 1.0e-5
-betas: [0.9, 0.99]
+betas: [0.9, 0.95]
 val_every_n_steps: 1000

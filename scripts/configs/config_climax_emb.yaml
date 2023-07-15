@@ -1,0 +1,107 @@
+data_dir: "/home/data/datasets/weatherbench/era5/5.625deg_npz/"
+in_variables: [
+            "land_sea_mask",
+            "orography",
+            "lattitude",
+          "2m_temperature",
+          "10m_u_component_of_wind",
+          "10m_v_component_of_wind",
+        #   "toa_incident_solar_radiation",
+          "geopotential_50",
+          "geopotential_250",
+          "geopotential_500",
+          "geopotential_600",
+          "geopotential_700",
+          "geopotential_850",
+          "geopotential_925",
+          "u_component_of_wind_50",
+          "u_component_of_wind_250",
+          "u_component_of_wind_500",
+          "u_component_of_wind_600",
+          "u_component_of_wind_700",
+          "u_component_of_wind_850",
+          "u_component_of_wind_925",
+          "v_component_of_wind_50",
+          "v_component_of_wind_250",
+          "v_component_of_wind_500",
+          "v_component_of_wind_600",
+          "v_component_of_wind_700",
+          "v_component_of_wind_850",
+          "v_component_of_wind_925",
+          "temperature_50",
+          "temperature_250",
+          "temperature_500",
+          "temperature_600",
+          "temperature_700",
+          "temperature_850",
+          "temperature_925",
+          "relative_humidity_50",
+          "relative_humidity_250",
+          "relative_humidity_500",
+          "relative_humidity_600",
+          "relative_humidity_700",
+          "relative_humidity_850",
+          "relative_humidity_925",
+          "specific_humidity_50",
+          "specific_humidity_250",
+          "specific_humidity_500",
+          "specific_humidity_600",
+          "specific_humidity_700",
+          "specific_humidity_850",
+          "specific_humidity_925",
+    ]
+# in_variables: ["geopotential_500"]
+# in_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+# out_variables: ["geopotential_500"]
+constants: ["land_sea_mask", "orography", "lattitude"]
+# constants: []
+train_years: [1979, 2016]
+val_years: [2016, 2017]
+test_years: [2017, 2018]
+pred_range: 72
+subsample: 1
+history: 1
+window: 0
+num_workers: 1
+
+model: 'vit_pretrained_climax_emb'
+
+in_img_size: [32, 64]
+out_img_size: [32, 64]
+decoder_depth: 1
+#if vit_pretrained, this must be consistent with the pretrained model's embed dim
+embed_dim: 768
+#for pretrained model only if use_pretrained_embeddings is false
+patch_size: 2
+learn_pos_emb: True
+#not for vit_pretrained
+num_heads: 8
+mlp_ratio: 4
+depth: 8
+drop_path: 0.1
+drop_rate: 0.1
+mlp_embed_depth: 1
+
+# pretrained_model: "vit_small_patch14_dinov2.lvd142m"
+pretrained_model: "dinov2_vitb14"
+use_n_blocks: null
+use_pretrained_weights: False
+use_pretrained_climax: False
+freeze_backbone: False
+freeze_embeddings: False
+resize_img: False
+
+batch_size: 32
+patience: 5
+num_epochs: 50
+gpu: [6, 7]
+seed: 42
+lr: 5.0e-7
+warmup_epochs: 5
+max_epochs: 50
+warmup_start_lr: 1.0e-8
+eta_min: 1.0e-8
+weight_decay: 1.0e-5
+betas: [0.9, 0.99]
+val_every_n_steps: 1000

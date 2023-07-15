@@ -20,7 +20,7 @@ def main():
     with open('scripts/configs/config.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_pretrained/dinov2_vitl14_climax_emb_arc_scratch_backbone_pretrained_cmip6_5e-4_finetune_all_5e-6"
+    default_root_dir=f"results_pretrained/dinov2_vitb14_pretrained_2_stage_cmip6_5e-4_finetune_all_5e-7"
     
     dm = IterDataModule(
         task='forecasting',
@@ -43,7 +43,7 @@ def main():
         cfg=cfg,
     )
 
-    state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitl14_climax_emb_arc_only_scratch_backbone_5e-4/checkpoints/epoch_013.ckpt', map_location='cpu')['state_dict']
+    state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitb14_stage_2_finetune_all_5e-4/checkpoints/epoch_018.ckpt', map_location='cpu')['state_dict']
     msg = vit_pretrained.load_state_dict(state_dict)
     print (msg)
 

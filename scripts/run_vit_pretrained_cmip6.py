@@ -15,9 +15,10 @@ os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
     with open('scripts/configs/config_cmip6_climax_emb.yaml') as f:
+    # with open('scripts/configs/config_cmip6.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_pretrained_cmip6/dinov2_vitl14_climax_emb_arc_only_stage_1_freeze_backbone_5e-4"
+    default_root_dir=f"results_pretrained_cmip6/dinov2_vitb14_climax_emb_arc_only_stage_2_finetune_all_5e-4"
     
     dm = IterDataModule(
         task='forecasting',
@@ -40,9 +41,9 @@ def main():
         cfg=cfg,
     )
 
-    # state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitb14_stage_1_freeze_backbone_train_embed_head_5e-4/checkpoints/epoch_049.ckpt')['state_dict']
-    # msg = vit_pretrained.load_state_dict(state_dict)
-    # print (msg)
+    state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitb14_climax_emb_arc_only_stage_1_freeze_backbone_5e-4/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
+    msg = vit_pretrained.load_state_dict(state_dict)
+    print (msg)
 
     logger = TensorBoardLogger(
         save_dir=f"{default_root_dir}/logs"
