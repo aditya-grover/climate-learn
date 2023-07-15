@@ -3,7 +3,7 @@ import argparse
 from util import *
 import os
 
-os.environ[“NCCL_P2P_DISABLE”] = “1"
+os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
     parser = argparse.ArgumentParser()

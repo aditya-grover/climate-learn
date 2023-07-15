@@ -15,6 +15,7 @@ from .models.hub import (
     ViTPretrained,
     VisionTransformer,
     ResNetPretrained,
+    SwinPretrained,
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -341,6 +342,49 @@ def load_preset(task, data_module, preset, cfg=None):
                         {'params': model.head.parameters(), 'lr': cfg['new_lr']},
                         {'params': model.patch_embed.parameters(), 'lr': cfg['new_lr']},
                         {'params': model.pos_embed, 'lr': cfg['new_lr']},
+                        {'params': model.mlp_embed.parameters(), 'lr': cfg['new_lr']},
+                    ],
+                    betas=cfg['betas'],
+                    weight_decay=cfg['weight_decay']
+                )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
+        elif preset.lower() == 'swin_pretrained':
+            model = SwinPretrained(
+                in_img_size = cfg['in_img_size'],
+                out_img_size = (in_height, in_width),
+                in_channels = in_channels,
+                out_channels = out_channels,
+                learn_pos_emb=cfg['learn_pos_emb'],
+                patch_size = cfg['patch_size'],
+                embed_dim = cfg['embed_dim'],
+                out_embed_dim = cfg['out_embed_dim'],
+                decoder_depth=cfg['decoder_depth'],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                use_pretrained_embeddings=cfg['use_pretrained_embeddings'],
+                freeze_backbone=cfg['freeze_backbone'],
+                freeze_embeddings=cfg['freeze_embeddings'],
+                resize_img=cfg['resize_img'],
+                pretrained_model=cfg['pretrained_model'],
+                mlp_embed_depth=cfg['mlp_embed_depth'],
+                num_backbone_blocks=cfg['num_backbone_blocks'],
+            )
+            if cfg['use_pretrained_embeddings']:
+                optimizer = torch.optim.AdamW([
+                        {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
+                        {'params': model.head.parameters(), 'lr': cfg['new_lr']},
+                    ],
+                    betas=cfg['betas'],
+                    weight_decay=cfg['weight_decay']
+                )
+            else:
+                optimizer = torch.optim.AdamW([
+                        {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
+                        {'params': model.head.parameters(), 'lr': cfg['new_lr']},
+                        {'params': model.patch_embed.parameters(), 'lr': cfg['new_lr']},
                         {'params': model.mlp_embed.parameters(), 'lr': cfg['new_lr']},
                     ],
                     betas=cfg['betas'],

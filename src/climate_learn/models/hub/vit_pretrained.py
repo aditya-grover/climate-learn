@@ -30,7 +30,7 @@ class ViTPretrained(nn.Module):
         learn_pos_emb=False,
         resize_img=False,
         patch_size=16, 
-        embed_dim=1024, 
+        embed_dim=1024,
         decoder_depth=2,
         pretrained_model=None,
         mlp_embed_depth=0,
