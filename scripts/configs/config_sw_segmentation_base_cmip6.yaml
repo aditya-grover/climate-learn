@@ -1,0 +1,114 @@
+data_dir: "/data0/datasets/weatherbench/data/esgf/cmip6/5.625deg_npz_corrected/"
+in_variables: [
+        "land_sea_mask",
+        "orography",
+        "lattitude",
+        "2m_temperature",
+        "geopotential_50",
+        "geopotential_250",
+        "geopotential_500",
+        "geopotential_600",
+        "geopotential_700",
+        "geopotential_850",
+        "geopotential_925",
+        "u_component_of_wind_50",
+        "u_component_of_wind_250",
+        "u_component_of_wind_500",
+        "u_component_of_wind_600",
+        "u_component_of_wind_700",
+        "u_component_of_wind_850",
+        "u_component_of_wind_925",
+        "v_component_of_wind_50",
+        "v_component_of_wind_250",
+        "v_component_of_wind_500",
+        "v_component_of_wind_600",
+        "v_component_of_wind_700",
+        "v_component_of_wind_850",
+        "v_component_of_wind_925",
+        "temperature_50",
+        "temperature_250",
+        "temperature_500",
+        "temperature_600",
+        "temperature_700",
+        "temperature_850",
+        "temperature_925",
+        "specific_humidity_50",
+        "specific_humidity_250",
+        "specific_humidity_500",
+        "specific_humidity_600",
+        "specific_humidity_700",
+        "specific_humidity_850",
+        "specific_humidity_925",
+    ]
+# in_variables: ["geopotential_500"]
+# in_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+# out_variables: ["geopotential_500"]
+constants: ["land_sea_mask", "orography", "lattitude"]
+# constants: []
+train_years: [1850, 2011]
+val_years: [2011, 2013]
+test_years: [2013, 2015]
+pred_range: 12
+subsample: 1
+history: 1
+window: 0
+num_workers: 1
+
+model: 'swin_pretrained_segmentation'
+
+mlp_embed_depth: 1
+decoder_depth: 1
+ckpt_path: /home/tungnd/Swin-Transformer-Semantic-Segmentation/upernet_swin_base_patch4_window7_512x512.pth
+freeze_backbone: False
+freeze_embeddings: False
+
+# Backbone
+patch_size: 1
+embed_dim: 128
+depths: [2, 2, 18, 2]
+num_heads: [4, 8, 16, 32]
+window_size: 7
+mlp_ratio: 4.
+qkv_bias: True
+qk_scale: null
+drop_rate: 0.
+attn_drop_rate: 0.
+drop_path_rate: 0.3
+ape: False
+patch_norm: True
+out_indices: [0, 1, 2, 3]
+use_checkpoint: False
+
+# UPerHead
+in_channels: [128, 256, 512, 1024]
+in_index: [0, 1, 2, 3]
+pool_scales: [1, 2, 3, 6]
+channels: 512
+dropout_ratio: 0.1
+num_classes: 150
+align_corners: False
+
+# FCN Head
+fcn_in_channels: 512
+fcn_in_index: 2
+fcn_channels: 256
+num_convs: 1
+concat_input: False
+fcn_dropout_ratio: 0.1
+fcn_num_classes: 150
+fcn_align_corners: False
+
+batch_size: 64
+patience: 5
+num_epochs: 50
+gpu: [6, 7]
+seed: 42
+lr: 5.0e-4
+warmup_epochs: 5
+max_epochs: 50
+warmup_start_lr: 1.0e-8
+eta_min: 1.0e-8
+weight_decay: 1.0e-5
+betas: [0.9, 0.99]
+val_every_n_steps: 1000

@@ -11,3 +11,4 @@ from .sw_pretrained import SwinV2Pretrained
 from .vit_pretrained_climax_emb import ViTPretrainedClimaXEmb
 from .vit_pretrained_level_emb import ViTPretrainedLevelEmb
 from .timesformer_pretrained import TimeSformerPretrained
+from .swin_pretrained_segmentation import SwinPretrainedSegmentation

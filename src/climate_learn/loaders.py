@@ -16,7 +16,8 @@ from .models.hub import (
     ViTPretrainedClimaXEmb,
     ViTPretrainedLevelEmb,
     VisionTransformer,
-    TimeSformerPretrained
+    TimeSformerPretrained,
+    SwinPretrainedSegmentation
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -415,6 +416,60 @@ def load_preset(task, data_module, preset, cfg=None):
                 freeze_embeddings=cfg['freeze_embeddings'],
                 mlp_embed_depth=cfg['mlp_embed_depth']
             )
+            optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
+        elif preset.lower() == 'swin_pretrained_segmentation':
+            model = SwinPretrainedSegmentation(
+                input_channels=in_channels,
+                out_channels=out_channels,
+                mlp_embed_depth=cfg['mlp_embed_depth'],
+                decoder_depth=cfg['decoder_depth'],
+                ckpt_path=cfg['ckpt_path'],
+                freeze_backbone=cfg['freeze_backbone'],
+                freeze_embeddings=cfg['freeze_embeddings'],
+                # Backbone
+                patch_size=cfg['patch_size'],
+                embed_dim=cfg['embed_dim'],
+                depths=cfg['depths'],
+                num_heads=cfg['num_heads'],
+                window_size=cfg['window_size'],
+                mlp_ratio=cfg['mlp_ratio'],
+                qkv_bias=cfg['qkv_bias'],
+                qk_scale=cfg['qk_scale'],
+                drop_rate=cfg['drop_rate'],
+                attn_drop_rate=cfg['attn_drop_rate'],
+                drop_path_rate=cfg['drop_path_rate'],
+                ape=cfg['ape'],
+                patch_norm=cfg['patch_norm'],
+                out_indices=cfg['out_indices'],
+                use_checkpoint=cfg['use_checkpoint'],
+
+                # UPerHead
+                in_channels=cfg['in_channels'],
+                in_index=cfg['in_index'],
+                pool_scales=cfg['pool_scales'],
+                channels=cfg['channels'],
+                dropout_ratio=cfg['dropout_ratio'],
+                num_classes=cfg['num_classes'],
+                align_corners=cfg['align_corners'],
+
+                # FCN Head
+                fcn_in_channels=cfg['fcn_in_channels'],
+                fcn_in_index=cfg['fcn_in_index'],
+                fcn_channels=cfg['fcn_channels'],
+                num_convs=cfg['num_convs'],
+                concat_input=cfg['concat_input'],
+                fcn_dropout_ratio=cfg['fcn_dropout_ratio'],
+                fcn_num_classes=cfg['fcn_num_classes'],
+                fcn_align_corners=cfg['fcn_align_corners'],
+            )
+            
             optimizer = load_optimizer(
                     model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
             )
