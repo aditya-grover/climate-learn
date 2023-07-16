@@ -426,8 +426,10 @@ def load_preset(task, data_module, preset, cfg=None):
             )
         elif preset.lower() == 'swin_pretrained_segmentation':
             model = SwinPretrainedSegmentation(
+                in_img_size=cfg['in_img_size'],
                 input_channels=in_channels,
                 out_channels=out_channels,
+                embed_type=cfg['embed_type'],
                 mlp_embed_depth=cfg['mlp_embed_depth'],
                 decoder_depth=cfg['decoder_depth'],
                 ckpt_path=cfg['ckpt_path'],
