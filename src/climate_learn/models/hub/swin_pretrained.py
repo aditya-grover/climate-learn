@@ -58,7 +58,7 @@ class SwinPretrained(nn.Module):
         self.freeze_backbone = freeze_backbone
         self.pretrained_model_name = pretrained_model
         self.resize_img = resize_img
-        self.eff_patch_size = [int((patch_size / in_img_size[0]) * out_img_size[0]), int((patch_size / in_img_size[1]) * out_img_size[1])]
+        # self.eff_patch_size = [int((patch_size / in_img_size[0]) * out_img_size[0]), int((patch_size / in_img_size[1]) * out_img_size[1])]
         self.num_backbone_blocks = num_backbone_blocks
 
         self.load_pretrained_model()
@@ -70,18 +70,22 @@ class SwinPretrained(nn.Module):
             self.mlp_embed = nn.ModuleList()
             for _ in range(mlp_embed_depth):
                 self.mlp_embed.append(nn.GELU())
-                self.mlp_embed.append(nn.Linear(embed_dim, embed_dim))
+                self.mlp_embed.append(nn.Conv2d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=1))
             self.mlp_embed = nn.Sequential(*self.mlp_embed)
 
             print('Using new embeddings')
 
-        
-        # prediction head
+        # Initialize prediction head
         self.head = nn.ModuleList()
         for _ in range(decoder_depth):
-            self.head.append(nn.Linear(out_embed_dim, out_embed_dim))
+            self.head.append(nn.Conv2d(
+                in_channels=out_embed_dim, out_channels=out_embed_dim, kernel_size=1
+            ))
             self.head.append(nn.GELU())
-        self.head.append(nn.Linear(out_embed_dim, out_channels*self.eff_patch_size[0]*self.eff_patch_size[1]))
+        self.head.append(nn.Conv2d(
+            in_channels=out_embed_dim, out_channels=patch_size**2 * out_channels, kernel_size=1
+        ))
+        self.head.append(nn.PixelShuffle(patch_size))
         self.head = nn.Sequential(*self.head)
 
         self.initialize_weights()
@@ -106,8 +110,12 @@ class SwinPretrained(nn.Module):
                 DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
                     cfg.MODEL.WEIGHTS, resume=args.resume
                 )
+            print(model)
+            exit()
             model.backbone.patch_embed = nn.Identity()
             model.backbone.pos_drop = nn.Identity()
+            model.sem_seg_head.predictor = None
+            model.criterion = None
             self.pretrained_backbone = model
         else:
             print('Not Implemented')
@@ -130,15 +138,12 @@ class SwinPretrained(nn.Module):
     def forward_encoder(self, x):
         # x.shape = [B,T*in_channels,H,W]
         if self.resize_img:
-            x = torchvision.transforms.Resize((self.in_img_size[0] ,self.in_img_size[1]))(x)
+            # x = torchvision.transforms.Resize((self.in_img_size[0] ,self.in_img_size[1]))(x)
+            x = torch.nn.functional.interpolate(x, (self.in_img_size[0], self.in_img_size[1]))
         if not self.use_pretrained_embeddings:
             x = self.patch_embed(x)
             # x.shape = [B,embed_dim,H,W]
-            x = x.permute(0, 2, 3, 1)
-            # x.shape = [B,H,W,embed_dim]
             x = self.mlp_embed(x)
-            # x.shape = [B,H,W,embed_dim]
-            x = x.permute(0, 3, 1, 2)
             # x.shape = [B,embed_dim,H,W]
             x = self.pos_drop(x)
             # x.shape = [B,num_patches+1,embed_dim]
@@ -165,11 +170,7 @@ class SwinPretrained(nn.Module):
         # x.shape = [B,T*in_channels,H,W]
         x = self.forward_encoder(x)
         # x.shape = [B,out_embed_dim,H,W]
-        x = x.permute(0, 2, 3, 1)
-        # x.shape = [B,H,W,out_embed_dim]
         x = self.head(x)
-        # x.shape = [B,H,W,out_channels]
-        x = x.permute(0, 3, 1, 2)
         # x.shape = [B,out_channels,H,W]
         return x
 

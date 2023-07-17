@@ -59,6 +59,11 @@ class LitModule(pl.LightningModule):
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
+        
+        # needed for swin transformers
+        if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
+            yhat = torch.nn.functional.interpolate(yhat_, size=(y.shape[2], y.shape[3]))
+
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")
         loss_dict = {}
@@ -77,9 +82,17 @@ class LitModule(pl.LightningModule):
             if transforms is not None and transforms[i] is not None:
                 yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
                 y_T = transforms[i](y)
+
+                # needed for swin transformers
+                if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
+                    yhat_T = torch.nn.functional.interpolate(yhat_T, size=(y_T.shape[2], y_T.shape[3]))
                 losses = lf(yhat_T, y_T)
             else:
+                # needed for swin transformers
+                if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
+                    yhat = torch.nn.functional.interpolate(yhat, size=(y.shape[2], y.shape[3]))
                 losses = lf(yhat, y)
+
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:
                 loss_dict[f"{loss_name}:agggregate [train]"] = losses
@@ -130,9 +143,17 @@ class LitModule(pl.LightningModule):
             if transforms is not None and transforms[i] is not None:
                 yhat_T = transforms[i](yhat)                            #Fixes bug when #transforms[i] is None
                 y_T = transforms[i](y)
+
+                # needed for swin transformers
+                if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
+                    yhat_T = torch.nn.functional.interpolate(yhat_T, size=(y_T.shape[2], y_T.shape[3]))
                 losses = lf(yhat_T, y_T)
             else:
+                # needed for swin transformers
+                if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
+                    yhat = torch.nn.functional.interpolate(yhat, size=(y.shape[2], y.shape[3]))
                 losses = lf(yhat, y)
+
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
                 loss_dict[f"{loss_name}:agggregate [{stage}]"] = losses
