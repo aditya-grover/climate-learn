@@ -114,7 +114,7 @@ def load_trainer(cfg):
         patience=cfg["patience"],
         # uncomment to use gpu acceleration
         accelerator="gpu",
-        devices=[cfg["gpu"]],
+        devices=cfg["gpu"],
         # max epochs
         max_epochs=cfg["num_epochs"],
         # log to wandb
@@ -137,6 +137,9 @@ def load_checkpoint(ckpt, module, dm, trainer):
         else:
             ckpt_path = os.path.join(ckpt_dir, ckpt_files[0])
         ckpt = torch.load(ckpt_path)
+    elif len(os.listdir(ckpt_dir)) == 2:
+        import ipdb
+        ipdb.set_trace()
     else:
         print('Too many checkpoints in the directory')
         exit()
