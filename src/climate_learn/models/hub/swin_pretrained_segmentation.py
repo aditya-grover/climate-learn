@@ -239,6 +239,7 @@ class SwinPretrainedSegmentation(nn.Module):
 
     def forward_encoder(self, x, variables):
         # x.shape = [B,T*in_channels,H,W]
+        x = torch.nn.functional.interpolate(x, size=self.in_img_size)
         if self.embed_type == 'normal':
             patches = self.embedding(x)
         else:

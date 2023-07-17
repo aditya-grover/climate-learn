@@ -18,7 +18,7 @@ def main():
     # with open('scripts/configs/config_cmip6.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_pretrained_cmip6/sw_segmentation_base_patch_size_1_normal_emb_finetune_all_5e-4"
+    default_root_dir=f"results_pretrained_cmip6/sw_segmentation_base_patch_size_4_interpolate_512_normal_emb_finetune_all_5e-4"
     
     dm = IterDataModule(
         task='forecasting',

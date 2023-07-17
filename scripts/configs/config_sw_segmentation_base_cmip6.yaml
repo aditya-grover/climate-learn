@@ -57,8 +57,8 @@ num_workers: 1
 
 model: 'swin_pretrained_segmentation'
 
-in_img_size: [32, 64]
-embed_type: 'climax'
+in_img_size: [512, 512]
+embed_type: 'normal'
 mlp_embed_depth: 1
 decoder_depth: 1
 ckpt_path: /home/tungnd/upernet_swin_base_patch4_window7_512x512.pth
@@ -66,7 +66,7 @@ freeze_backbone: False
 freeze_embeddings: False
 
 # Backbone
-patch_size: 1
+patch_size: 4
 embed_dim: 128
 depths: [2, 2, 18, 2]
 num_heads: [4, 8, 16, 32]
@@ -101,10 +101,10 @@ fcn_dropout_ratio: 0.1
 fcn_num_classes: 150
 fcn_align_corners: False
 
-batch_size: 64
+batch_size: 8
 patience: 5
 num_epochs: 50
-gpu: [2, 3]
+gpu: [2, 3, 4, 5, 6, 7, 8, 9]
 seed: 42
 lr: 5.0e-4
 warmup_epochs: 5
