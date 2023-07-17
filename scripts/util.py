@@ -127,14 +127,18 @@ def load_trainer(cfg):
 
 def load_checkpoint(ckpt, module, dm, trainer):
     ckpt_dir = f'lightning_logs/{ckpt}/checkpoints/'
-    if len(os.listdir(ckpt_dir)) == 1:
-        ckpt_path = os.path.join(ckpt_dir, os.listdir(ckpt_dir)[0])
+    ckpt_files = os.listdir(ckpt_dir)
+    if len(ckpt_files) == 1:
+        ckpt_path = os.path.join(ckpt_dir, ckpt_files[0])
+        ckpt = torch.load(ckpt_path)
+    elif len(ckpt_files) == 2:
+        if 'last' in ckpt_files[0]:
+            ckpt_path = os.path.join(ckpt_dir, ckpt_files[1])
+        else:
+            ckpt_path = os.path.join(ckpt_dir, ckpt_files[0])
         ckpt = torch.load(ckpt_path)
     else:
-        raise ValueError('There is more than one checkpoint in the directory. Please delete the extra files.')
+        print('Too many checkpoints in the directory')
+        exit()
     module.load_state_dict(ckpt['state_dict'])
     print(f'Loaded checkpoint from {ckpt_path}')
-
-    # Zero shot evaluation
-    # trainer.validate(vit_pretrained, dm)
-    trainer.test(module, datamodule=dm)
