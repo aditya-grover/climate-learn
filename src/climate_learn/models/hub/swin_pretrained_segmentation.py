@@ -206,6 +206,7 @@ class SwinPretrainedSegmentation(nn.Module):
                 num_heads=num_heads[0],
                 drop_rate=0.1,
             )
+            self.embed_norm = nn.LayerNorm(embed_dim) if backbone.patch_norm else nn.Identity()
         
         # Initialize prediction head
         self.head = nn.ModuleList()
@@ -244,6 +245,7 @@ class SwinPretrainedSegmentation(nn.Module):
             patches = self.embedding(x)
         else:
             patches = self.embedding(x, variables) # B, L, D
+            patches = self.embed_norm(patches)
             patches = patches.transpose(1, 2).unflatten(
                 2,
                 sizes=(self.in_img_size[0] // self.patch_size, self.in_img_size[1] // self.patch_size)
