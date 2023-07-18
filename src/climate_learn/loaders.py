@@ -355,7 +355,6 @@ def load_preset(task, data_module, preset, cfg=None):
         elif preset.lower() == 'swin_pretrained':
             model = SwinPretrained(
                 in_img_size = cfg['in_img_size'],
-                out_img_size = (in_height, in_width),
                 in_channels = in_channels,
                 out_channels = out_channels,
                 learn_pos_emb=cfg['learn_pos_emb'],
@@ -371,6 +370,7 @@ def load_preset(task, data_module, preset, cfg=None):
                 pretrained_model=cfg['pretrained_model'],
                 mlp_embed_depth=cfg['mlp_embed_depth'],
                 num_backbone_blocks=cfg['num_backbone_blocks'],
+                embed_norm=cfg['embed_norm'],
             )
             if cfg['use_pretrained_embeddings']:
                 optimizer = torch.optim.AdamW([

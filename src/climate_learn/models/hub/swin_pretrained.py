@@ -27,7 +27,6 @@ class SwinPretrained(nn.Module):
 
     def __init__(self, 
         in_img_size,
-        out_img_size, 
         in_channels, 
         out_channels, 
         use_pretrained_weights=False,
@@ -43,11 +42,11 @@ class SwinPretrained(nn.Module):
         pretrained_model=None,
         mlp_embed_depth=0,
         num_backbone_blocks=1000,
+        embed_norm=False,
     ):
         super().__init__()
         self.patch_size = patch_size
         self.in_img_size = in_img_size
-        self.out_img_size = out_img_size
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.num_patches = (in_img_size[0] * in_img_size[1]) // (patch_size)**2
@@ -58,14 +57,18 @@ class SwinPretrained(nn.Module):
         self.freeze_backbone = freeze_backbone
         self.pretrained_model_name = pretrained_model
         self.resize_img = resize_img
-        # self.eff_patch_size = [int((patch_size / in_img_size[0]) * out_img_size[0]), int((patch_size / in_img_size[1]) * out_img_size[1])]
         self.num_backbone_blocks = num_backbone_blocks
+        self.embed_norm = embed_norm
 
         self.load_pretrained_model()
         
         if not use_pretrained_embeddings:
-            self.patch_embed = PatchEmbed(in_img_size, patch_size, in_channels, embed_dim, flatten=False)
+            self.patch_embed = PatchEmbed(in_img_size, patch_size, in_channels, embed_dim, 
+                flatten=False)
             self.pos_drop = nn.Dropout(p=0.1)
+
+            if embed_norm:
+                self.embed_norm_layer = nn.LayerNorm(embed_dim)
 
             self.mlp_embed = nn.ModuleList()
             for _ in range(mlp_embed_depth):
@@ -94,14 +97,14 @@ class SwinPretrained(nn.Module):
         if 'mask2former' in self.pretrained_model_name:
             print('Loading Mask2Former')
             args = Namespace(
-                        config_file='/home/rohanshah/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml', 
+                        config_file='/local/hbansal/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml', 
                         resume=False, 
                         eval_only=True, 
                         num_gpus=1, 
                         num_machines=1, 
                         machine_rank=0, 
                         dist_url='tcp://127.0.0.1:56669', 
-                        opts=['MODEL.WEIGHTS', '/home/rohanshah/Mask2Former/checkpoints/model_final_c5c739.pkl']
+                        opts=['MODEL.WEIGHTS', '/local/hbansal/Mask2Former/checkpoints/model_final_c5c739.pkl']
             )
             cfg = setup(args)
             model = DefaultTrainer.build_model(cfg)
@@ -110,8 +113,6 @@ class SwinPretrained(nn.Module):
                 DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
                     cfg.MODEL.WEIGHTS, resume=args.resume
                 )
-            print(model)
-            exit()
             model.backbone.patch_embed = nn.Identity()
             model.backbone.pos_drop = nn.Identity()
             model.sem_seg_head.predictor = None
@@ -143,6 +144,10 @@ class SwinPretrained(nn.Module):
         if not self.use_pretrained_embeddings:
             x = self.patch_embed(x)
             # x.shape = [B,embed_dim,H,W]
+            if self.embed_norm:
+                x = x.permute(0,2,3,1)
+                x = self.embed_norm_layer(x)
+                x = x.permute(0,3,1,2)
             x = self.mlp_embed(x)
             # x.shape = [B,embed_dim,H,W]
             x = self.pos_drop(x)
