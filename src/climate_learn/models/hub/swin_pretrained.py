@@ -41,7 +41,6 @@ class SwinPretrained(nn.Module):
         decoder_depth=2,
         pretrained_model=None,
         mlp_embed_depth=0,
-        num_backbone_blocks=1000,
         embed_norm=False,
     ):
         super().__init__()
@@ -57,7 +56,6 @@ class SwinPretrained(nn.Module):
         self.freeze_backbone = freeze_backbone
         self.pretrained_model_name = pretrained_model
         self.resize_img = resize_img
-        self.num_backbone_blocks = num_backbone_blocks
         self.embed_norm = embed_norm
 
         self.load_pretrained_model()

@@ -62,7 +62,7 @@ class LitModule(pl.LightningModule):
         
         # needed for swin transformers
         if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
-            yhat = torch.nn.functional.interpolate(yhat_, size=(y.shape[2], y.shape[3]))
+            yhat = torch.nn.functional.interpolate(yhat, size=(y.shape[2], y.shape[3]))
 
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")

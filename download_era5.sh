@@ -1,0 +1,1 @@
+python -m climate_learn.data.download weatherbench --root /local2/hbansal/ --dataset era5 --variable $1 --resolution 1.40625

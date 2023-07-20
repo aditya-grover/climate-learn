@@ -121,6 +121,7 @@ def load_trainer(cfg):
         logger=logger,
         callbacks=[lr_monitor, progress_bar, checkpoint_callback],
         val_check_interval=cfg['val_every_n_steps'],
+        precision=16,
     )
     return trainer
 
@@ -137,9 +138,6 @@ def load_checkpoint(ckpt, module, dm, trainer):
         else:
             ckpt_path = os.path.join(ckpt_dir, ckpt_files[0])
         ckpt = torch.load(ckpt_path)
-    elif len(os.listdir(ckpt_dir)) == 2:
-        import ipdb
-        ipdb.set_trace()
     else:
         print('Too many checkpoints in the directory')
         exit()

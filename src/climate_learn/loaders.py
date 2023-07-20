@@ -369,7 +369,6 @@ def load_preset(task, data_module, preset, cfg=None):
                 resize_img=cfg['resize_img'],
                 pretrained_model=cfg['pretrained_model'],
                 mlp_embed_depth=cfg['mlp_embed_depth'],
-                num_backbone_blocks=cfg['num_backbone_blocks'],
                 embed_norm=cfg['embed_norm'],
             )
             if cfg['use_pretrained_embeddings']:

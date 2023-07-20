@@ -1,0 +1,1 @@
+python -m climate_learn.data.download copernicus --root /local2/hbansal/ --dataset era5 --variable geopotential --year 1980 --pressure  --api_key 220220:e9295c04-3141-418c-acfc-316ba6d9fc52
