@@ -134,7 +134,7 @@ class SwinPretrained(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
 
-    def forward_encoder(self, x):
+    def forward_encoder(self, x, periodic=False):
         # x.shape = [B,T*in_channels,H,W]
         if self.resize_img:
             # x = torchvision.transforms.Resize((self.in_img_size[0] ,self.in_img_size[1]))(x)
@@ -143,9 +143,9 @@ class SwinPretrained(nn.Module):
             x = self.patch_embed(x)
             # x.shape = [B,embed_dim,H,W]
             if self.embed_norm:
-                x = x.permute(0,2,3,1)
+                x = x.permute(0,2,3,1).contiguous()
                 x = self.embed_norm_layer(x)
-                x = x.permute(0,3,1,2)
+                x = x.permute(0,3,1,2).contiguous()
             x = self.mlp_embed(x)
             # x.shape = [B,embed_dim,H,W]
             x = self.pos_drop(x)
@@ -158,7 +158,7 @@ class SwinPretrained(nn.Module):
                 exit()
             else:
                 # x.shape = [B,192,H,W]
-                x = self.pretrained_backbone.backbone(x)
+                x = self.pretrained_backbone.backbone(x, periodic)
                 # x.shape = {Multi_Scale_Feautures}
                 x, _, _ = self.pretrained_backbone.sem_seg_head.pixel_decoder.forward_features(x)
                 # x.shape = [B,256,H,W]
@@ -167,11 +167,11 @@ class SwinPretrained(nn.Module):
             exit()
         return x
 
-    def forward(self, x):
+    def forward(self, x, periodic=False):
         # x.shape = [B,T*in_channels,H,W]
         # x = x.flatten(1, 2)
         # x.shape = [B,T*in_channels,H,W]
-        x = self.forward_encoder(x)
+        x = self.forward_encoder(x, periodic)
         # x.shape = [B,out_embed_dim,H,W]
         x = self.head(x)
         # x.shape = [B,out_channels,H,W]

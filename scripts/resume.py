@@ -1,5 +1,6 @@
 import climate_learn as cl
 import argparse
+import os
 from util import *
 
 
@@ -27,7 +28,7 @@ def main():
     # load trainer
     trainer = load_trainer(cfg)    
 
-    trainer.fit(module, dm, ckpt_path=f'lightning_logs/{cfg['ckpt']}/checkpoints/last.ckpt')
+    trainer.fit(module, dm, ckpt_path=f'lightning_logs/{cfg["ckpt"]}/checkpoints/last.ckpt')
 
     # test climatolgy
     print('Testing Climatology')
