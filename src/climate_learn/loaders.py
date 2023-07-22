@@ -17,7 +17,8 @@ from .models.hub import (
     ViTPretrainedLevelEmb,
     VisionTransformer,
     TimeSformerPretrained,
-    SwinPretrainedSegmentation
+    SwinPretrainedSegmentation,
+    Mask2Former
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
 from .transforms import TRANSFORMS_REGISTRY
@@ -472,6 +473,30 @@ def load_preset(task, data_module, preset, cfg=None):
                 fcn_align_corners=cfg['fcn_align_corners'],
             )
             
+            optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
+        elif preset.lower() == 'mask2former':
+            model = Mask2Former(
+                in_img_size = cfg['in_img_size'],
+                in_channels = in_channels,
+                out_channels = out_channels,
+                embed_type=cfg['embed_type'], # normal or climax
+                mlp_embed_depth=cfg['mlp_embed_depth'],
+                decoder_depth=cfg['decoder_depth'],
+                freeze_backbone=cfg['freeze_backbone'],
+                freeze_embeddings=cfg['freeze_embeddings'],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                patch_size=cfg['patch_size'], 
+                embed_dim=cfg['embed_dim'],
+                out_embed_dim=cfg['out_embed_dim'], 
+                embed_norm=cfg['embed_norm'],
+            )
             optimizer = load_optimizer(
                     model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
             )

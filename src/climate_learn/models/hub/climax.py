@@ -3,10 +3,81 @@
 
 from functools import lru_cache
 
+import math
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_
+from timm.layers import to_2tuple
+
+def _get_conv2d_weights(
+    in_channels,
+    out_channels,
+    kernel_size,
+):
+    weight = torch.empty(out_channels, in_channels, *kernel_size)
+    return weight
+
+
+def _get_conv2d_biases(out_channels):
+    bias = torch.empty(out_channels)
+    return bias
+
+
+class ParallelVarPatchEmbed(nn.Module):
+    """Variable to Patch Embedding with multiple variables in a single kernel. Key idea is to use Grouped Convolutions.
+
+    Args:
+        max_vars (int): Maximum number of variables
+        img_size (int): Image size
+        patch_size (int): Patch size
+        embed_dim (int): Embedding dimension
+        norm_layer (nn.Module, optional): Normalization layer. Defaults to None.
+        flatten (bool, optional): Flatten the output. Defaults to True.
+    """
+
+    def __init__(self, max_vars: int, img_size, patch_size, embed_dim, norm_layer=None, flatten=True):
+        super().__init__()
+        self.max_vars = max_vars
+        self.img_size = to_2tuple(img_size)
+        self.patch_size = to_2tuple(patch_size)
+        self.grid_size = (img_size[0] // self.patch_size[0], img_size[1] // self.patch_size[1])
+        self.num_patches = self.grid_size[0] * self.grid_size[1]
+        self.flatten = flatten
+
+        grouped_weights = torch.stack(
+            [_get_conv2d_weights(1, embed_dim, self.patch_size) for _ in range(max_vars)], dim=0
+        )
+        self.proj_weights = nn.Parameter(grouped_weights)
+        grouped_biases = torch.stack([_get_conv2d_biases(embed_dim) for _ in range(max_vars)], dim=0)
+        self.proj_biases = nn.Parameter(grouped_biases)
+        self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for idx in range(self.max_vars):
+            nn.init.kaiming_uniform_(self.proj_weights[idx], a=math.sqrt(5))
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.proj_weights[idx])
+            if fan_in != 0:
+                bound = 1 / math.sqrt(fan_in)
+                nn.init.uniform_(self.proj_biases[idx], -bound, bound)
+
+    def forward(self, x, vars=None):
+        B, C, H, W = x.shape
+        if vars is None:
+            vars = range(self.max_vars)
+        weights = self.proj_weights[vars].flatten(0, 1)
+        biases = self.proj_biases[vars].flatten(0, 1)
+
+        groups = len(vars)
+        proj = F.conv2d(x, weights, biases, groups=groups, stride=self.patch_size)
+        if self.flatten:
+            proj = proj.reshape(B, groups, -1, *proj.shape[-2:])
+            proj = proj.flatten(3).transpose(2, 3)
+
+        proj = self.norm(proj)
+        return proj
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size_h, grid_size_w, cls_token=False):
     """
@@ -67,6 +138,7 @@ class ClimaXEmbedding(nn.Module):
         embed_dim=1024,
         num_heads=16,
         drop_rate=0.1,
+        parallel_patch_embed=True,
     ):
         super().__init__()
 
@@ -74,12 +146,17 @@ class ClimaXEmbedding(nn.Module):
         self.img_size = img_size
         self.patch_size = patch_size
         self.default_vars = default_vars
+        self.parallel_patch_embed = parallel_patch_embed
 
         # variable tokenization: separate embedding layer for each input variable
-        self.token_embeds = nn.ModuleList(
-            [PatchEmbed(img_size, patch_size, 1, embed_dim) for i in range(len(default_vars))]
-        )
-        self.num_patches = self.token_embeds[0].num_patches
+        if parallel_patch_embed:
+            self.token_embeds = ParallelVarPatchEmbed(len(default_vars), img_size, patch_size, embed_dim)
+            self.num_patches = self.token_embeds.num_patches
+        else:
+            self.token_embeds = nn.ModuleList(
+                [PatchEmbed(img_size, patch_size, 1, embed_dim) for i in range(len(default_vars))]
+            )
+            self.num_patches = self.token_embeds[0].num_patches
 
         # variable embedding to denote which variable each token belongs to
         # helps in aggregating variables
@@ -108,9 +185,14 @@ class ClimaXEmbedding(nn.Module):
         self.channel_embed.data.copy_(torch.from_numpy(channel_embed).float().unsqueeze(0))
 
         # token embedding layer
-        for i in range(len(self.token_embeds)):
-            w = self.token_embeds[i].proj.weight.data
-            trunc_normal_(w.view([w.shape[0], -1]), std=0.02)
+        if self.parallel_patch_embed:
+            for i in range(len(self.token_embeds.proj_weights)):
+                w = self.token_embeds.proj_weights[i].data
+                trunc_normal_(w.view([w.shape[0], -1]), std=0.02)
+        else:
+            for i in range(len(self.token_embeds)):
+                w = self.token_embeds[i].proj.weight.data
+                trunc_normal_(w.view([w.shape[0], -1]), std=0.02)
 
         # initialize nn.Linear and nn.LayerNorm
         self.apply(self._init_weights)
@@ -166,10 +248,13 @@ class ClimaXEmbedding(nn.Module):
         embeds = []
         var_ids = self.get_var_ids(variables, x.device)
 
-        for i in range(len(var_ids)):
-            id = var_ids[i]
-            embeds.append(self.token_embeds[id](x[:, i : i + 1]))
-        x = torch.stack(embeds, dim=1)  # B, V, L, D
+        if self.parallel_patch_embed:
+            x = self.token_embeds(x, var_ids)  # B, V, L, D
+        else:
+            for i in range(len(var_ids)):
+                id = var_ids[i]
+                embeds.append(self.token_embeds[id](x[:, i : i + 1]))
+            x = torch.stack(embeds, dim=1)  # B, V, L, D
 
         # add variable embedding
         var_embed = self.get_var_emb(self.channel_embed, variables)
