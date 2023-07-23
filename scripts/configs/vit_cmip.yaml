@@ -1,5 +1,6 @@
 dataset: "cmip6"
-data_dir: "/data0/datasets/weatherbench/data/esgf/cmip6/5.625deg_npz_corrected/"
+data_dir: "/local2/hbansal/cmip6/5.625deg_npz_corrected/"
+# data_dir: "/data0/datasets/weatherbench/data/esgf/cmip6/5.625deg_npz_corrected/"
 in_variables: [
   '2m_temperature',
   'geopotential_50',

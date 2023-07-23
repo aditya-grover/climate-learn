@@ -1,4 +1,5 @@
-data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg_npz/"
+data_dir: "/local2/hbansal/era5/5.625deg_npz/"
+# data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg_npz/"
 in_variables: [
           "2m_temperature",
           "10m_u_component_of_wind",

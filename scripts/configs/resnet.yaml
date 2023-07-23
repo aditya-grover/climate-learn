@@ -1,5 +1,6 @@
 dataset: 'era5'
-data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg_npz/"
+data_dir: "/local2/hbansal/era5/5.625deg_npz/"
+# data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg_npz/"
 in_variables: [
           "2m_temperature",
         #   "10m_u_component_of_wind",
@@ -54,7 +55,7 @@ out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 # out_variables: ["geopotential_500"]
 constants: ["land_sea_mask", "orography", "lattitude"]
 # constants: []
-train_years: [2015, 2016]
+train_years: [1979, 2016]
 val_years: [2016, 2017]
 test_years: [2017, 2019]
 pred_range: 72
@@ -75,7 +76,7 @@ use_pretrained_weights: False
 
 #OPTIMIZATION
 batch_size: 128
-lr: 5.0e-4
+lr: 5.0e-7
 weight_decay: 1.0e-5
 betas: [0.9, 0.99]
 warmup_epochs: 5
@@ -87,6 +88,6 @@ val_every_n_steps: 500
 seed: 42
 
 #GPU!!!!
-gpu: 5
-# ckpt: 'jwv8xrn5'
-ckpt: null
+gpu: 2
+ckpt: 'jwv8xrn5'
+# ckpt: null
