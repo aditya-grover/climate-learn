@@ -83,7 +83,7 @@ drop_rate: 0.1
 
 # pretrained_model: "vit_small_patch14_dinov2.lvd142m"
 pretrained_model: "mask2former"
-use_pretrained_weights: True
+use_pretrained_weights: False
 use_pretrained_embeddings: False
 freeze_backbone: False
 freeze_embeddings: False
@@ -104,4 +104,4 @@ val_every_n_steps: 1000
 
 #GPU!!
 gpu: [0,1,2,3]
-ckpt: 'ff8rrlfn'
+ckpt: '9bup8tvf'
