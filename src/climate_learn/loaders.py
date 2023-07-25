@@ -370,6 +370,8 @@ def load_preset(task, data_module, preset, cfg=None):
                 pretrained_model=cfg['pretrained_model'],
                 mlp_embed_depth=cfg['mlp_embed_depth'],
                 embed_norm=cfg['embed_norm'],
+                embed_type=cfg['embed_type'],
+                default_variables=cfg['in_variables']+cfg['constants'],
             )
             if cfg['use_pretrained_embeddings']:
                 optimizer = torch.optim.AdamW([
@@ -380,14 +382,17 @@ def load_preset(task, data_module, preset, cfg=None):
                     weight_decay=cfg['weight_decay']
                 )
             else:
-                optimizer = torch.optim.AdamW([
-                        {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
-                        {'params': model.head.parameters(), 'lr': cfg['new_lr']},
-                        {'params': model.patch_embed.parameters(), 'lr': cfg['new_lr']},
-                        {'params': model.mlp_embed.parameters(), 'lr': cfg['new_lr']},
-                    ],
-                    betas=cfg['betas'],
-                    weight_decay=cfg['weight_decay']
+                # optimizer = torch.optim.AdamW([
+                #         {'params': model.pretrained_backbone.parameters(), 'lr': cfg['pretrained_lr']},
+                #         {'params': model.head.parameters(), 'lr': cfg['new_lr']},
+                #         {'params': model.patch_embed.parameters(), 'lr': cfg['new_lr']},
+                #         {'params': model.mlp_embed.parameters(), 'lr': cfg['new_lr']},
+                #     ],
+                #     betas=cfg['betas'],
+                #     weight_decay=cfg['weight_decay']
+                # )
+                optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
                 )
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",
