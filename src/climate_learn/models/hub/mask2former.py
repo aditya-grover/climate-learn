@@ -154,6 +154,20 @@ class Mask2Former(nn.Module):
 
         self.load_pretrained_model()
 
+        if freeze_backbone:
+            # self.pretrained_backbone.requires_grad_(False)
+            for name, param in self.pretrained_backbone.named_parameters():
+                if 'norm' in name: # finetune norm layer
+                    continue
+                else:
+                    param.requires_grad = False
+        if freeze_embeddings:
+            if embed_type == 'normal':
+                self.patch_embed.requires_grad_(False)
+                self.mlp_embed.requires_grad_(False)
+            elif embed_type =='climax':
+                self.embedding.requires_grad_(False)
+
     def load_pretrained_model(self):
         print('Initializing Mask2Former')
         cfg = self.cfg
