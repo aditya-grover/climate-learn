@@ -38,6 +38,10 @@ def main():
     # train
     trainer.fit(module, dm)
 
+    # test module
+    print('Testing Module')
+    trainer.test(module, dm)
+
     # test climatolgy
     print('Testing Climatology')
     trainer.test(climatology, dm)
@@ -46,9 +50,6 @@ def main():
     print('Testing Persistence')
     trainer.test(persistence, dm)
 
-    # test module
-    print('Testing Module')
-    trainer.test(module, dm)
 
 
 if __name__ == "__main__":

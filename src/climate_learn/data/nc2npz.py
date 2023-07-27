@@ -187,3 +187,13 @@ def convert_nc2npz(
     lon = np.array(x["lon"])
     np.save(os.path.join(save_dir, "lat.npy"), lat)
     np.save(os.path.join(save_dir, "lon.npy"), lon)
+
+
+# if __name__ == '__main__':
+#     convert_nc2npz(root_dir='/local2/hbansal/data/weatherbench/era5/1.40625/', save_dir='/local2/hbansal/data/weatherbench/era5/1.40625_npz/', 
+#         variables=['temperature', 'geopotential', 'u_component_of_wind', 'v_component_of_wind', 'specific_humidity', 'relative_humidity', '2m_temperature', '10m_u_component_of_wind', '10m_v_component_of_wind', 'toa_incident_solar_radiation'],
+#         start_train_year=1979,
+#         start_val_year=2016,
+#         start_test_year=2017,
+#         end_year=2019,
+#         num_shards=32)
