@@ -170,3 +170,8 @@ cython_debug/
 table*.pdf
 table*.png
 test.py
+scripts/wandb/
+wandb/
+scripts/output/
+output/
+scripts/pretrained_models/

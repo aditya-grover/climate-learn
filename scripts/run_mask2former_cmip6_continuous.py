@@ -1,11 +1,13 @@
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data import ContinuousIterDataModule
 from climate_learn.utils.datetime import Hours
 
 import torch
 import yaml
 import os
+import wandb
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 from datetime import datetime
 
 now = datetime.now()
@@ -14,12 +16,12 @@ now = now.strftime("%H-%M-%S_%d-%m-%Y")
 os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
-    with open('scripts/configs/config_cmip6_mask2former.yaml') as f:
+    with open('scripts/configs/config_cmip6_mask2former_continuous.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_pretrained_cmip6/mask2former_climax_emb_finetune_all_5e-4"
+    # default_root_dir=f"results_era5/mask2former_climax_emb_finetune_all_5e-4"
     
-    dm = IterDataModule(
+    dm = ContinuousDataModule(
         task='forecasting',
         inp_root_dir=cfg['data_dir'],
         out_root_dir=cfg['data_dir'],
@@ -27,11 +29,13 @@ def main():
         out_vars=cfg['out_variables'],
         history=cfg['history'],
         window=cfg['window'],
-        pred_range=Hours(cfg['pred_range']),
+        random_lead_time=True,
+        min_pred_range=Hours(cfg['min_pred_range']),
+        max_pred_range=Hours(cfg['max_pred_range']),
+        hrs_each_step=Hours(cfg['hrs_each_step']),
         subsample=Hours(cfg['subsample']),
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],
-        fixed_lead_time_eval=cfg['fixed_lead_time_eval'],
     )
 
     # load module
@@ -41,13 +45,18 @@ def main():
         cfg=cfg,
     )
 
-    # state_dict = torch.load('/home/tungnd/climate-learn/results_pretrained_cmip6/dinov2_vitb14_climax_emb_arc_only_stage_1_freeze_backbone_5e-4/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
-    # msg = module.load_state_dict(state_dict)
-    # print (msg)
+    state_dict = torch.load('/local/hbansal/climate-learn/results_pretrained_cmip6/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
+    msg = module.load_state_dict(state_dict)
     
-    logger = TensorBoardLogger(
+    tb_logger = TensorBoardLogger(
         save_dir=f"{default_root_dir}/logs"
     )
+    wandb.init(
+        project='Climate', 
+        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}", 
+        config=cfg
+    )
+    wandb_logger = WandbLogger()
 
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
@@ -57,7 +66,7 @@ def main():
         precision=16,
         max_epochs=cfg["num_epochs"],
         default_root_dir=default_root_dir,
-        logger=logger,
+        logger=[wandb_logger],
     )
 
     trainer.fit(module, datamodule=dm)

@@ -11,7 +11,8 @@ from timm.models.vision_transformer import PatchEmbed, trunc_normal_
 from .climax import ClimaXEmbedding
 
 
-sys.path.append(os.path.abspath('/home/tungnd/Mask2Former'))
+# sys.path.append(os.path.abspath('/home/tungnd/Mask2Former'))
+sys.path.append(os.path.abspath('/local/hbansal/Mask2Former'))
 from mask2former import add_maskformer2_config
 from detectron2.engine import DefaultTrainer
 from train_net_video import setup
@@ -35,6 +36,7 @@ class Mask2Former(nn.Module):
         embed_dim=192,
         out_embed_dim=256, 
         embed_norm=False,
+        continuous_model=False,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -48,17 +50,19 @@ class Mask2Former(nn.Module):
         self.freeze_embeddings= freeze_embeddings
         self.freeze_backbone = freeze_backbone
         self.embed_norm = embed_norm
-        
+        self.continuous_model = continuous_model
         # load config of the segmentation model
         args = Namespace(
-            config_file='/home/tungnd/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml', 
+            # config_file='/home/tungnd/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml', 
+            config_file='/local/hbansal/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml',
             resume=False, 
             eval_only=True, 
             num_gpus=1, 
             num_machines=1, 
             machine_rank=0, 
             dist_url='tcp://127.0.0.1:56669', 
-            opts=['MODEL.WEIGHTS', '/home/tungnd/Mask2Former/checkpoints/model_final_c5c739.pkl']
+            # opts=['MODEL.WEIGHTS', '/home/tungnd/Mask2Former/checkpoints/model_final_c5c739.pkl']
+            opts=['MODEL.WEIGHTS', '/local/hbansal/Mask2Former/checkpoints/model_final_c5c739.pkl']
         )
         cfg = setup(args)
         self.cfg = cfg
@@ -137,6 +141,9 @@ class Mask2Former(nn.Module):
         
         self.embed_norm_layer = nn.LayerNorm(embed_dim) if embed_norm else nn.Identity()
 
+        if self.continuous_model:
+            self.lead_time_embed = nn.Linear(1, embed_dim)
+
         # initialize prediction head
         self.head = nn.ModuleList()
         for _ in range(decoder_depth):
@@ -198,7 +205,7 @@ class Mask2Former(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
 
-    def forward_encoder(self, x, variables):
+    def forward_encoder(self, x, variables, lead_times):
         # x.shape = [B,T*in_channels,H,W]
         x = torch.nn.functional.interpolate(x, size=self.in_img_size)
 
@@ -220,6 +227,14 @@ class Mask2Former(nn.Module):
         if self.embed_type == 'normal':
             x = self.mlp_embed(x)
             x = self.pos_drop(x)
+        # x.shape = [B,embed_dim,H,W]
+        
+        if self.continuous_model:
+            lead_time_emb = self.lead_time_embed(lead_times.unsqueeze(-1))
+            lead_time_emb = lead_time_emb[..., None, None]
+            # lead_time_emb.shape = [B, embed_dim, 1, 1]
+            x = x + lead_time_emb
+
         
         # x.shape = [B,192,H,W]
         x = self.pretrained_backbone.backbone(x)
@@ -229,12 +244,17 @@ class Mask2Former(nn.Module):
 
         return x
 
-    def forward(self, x, variables):
+    def forward(self, x, variables, lead_times=None):
+        if self.continuous_model:
+            assert lead_times is not None, 'Lead times must be provided for continuous models'
+        else:
+            assert lead_times is None, 'Different lead times can only be provided to continuous models'
+
         # x.shape = [B,T*in_channels,H,W]
         if len(x.shape) == 5:
             x = x.flatten(1, 2)
         # x.shape = [B,T*in_channels,H,W]
-        x = self.forward_encoder(x, variables)
+        x = self.forward_encoder(x, variables, lead_times)
         # x.shape = [B,out_embed_dim,H,W]
         x = self.head(x)
         # x.shape = [B,out_channels,H,W]

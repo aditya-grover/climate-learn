@@ -1,5 +1,4 @@
-# data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
-data_dir: "/local2/hbansal/era5/5.625deg_npz/"
+data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
 in_variables: [
   "land_sea_mask",
   "orography",
@@ -43,14 +42,17 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-train_years: [1979, 2016]
-val_years: [2016, 2017]
-test_years: [2017, 2019]
-pred_range: 72
+train_years: [1850, 2011]
+val_years: [2011, 2013]
+test_years: [2013, 2015]
+min_pred_range: 1
+max_pred_range: 20
+hrs_each_step: 6
 subsample: 1
 history: 1
 window: 0
 num_workers: 1
+fixed_lead_time_eval: 72
 
 model: 'mask2former'
 
@@ -66,12 +68,12 @@ embed_dim: 192
 out_embed_dim: 256
 embed_norm: True
 
-batch_size: 8
+batch_size: 4
 patience: 5
 num_epochs: 50
-gpu: [0,1,2,3,4,5,6,7]
+gpu: [0, 1, 2, 3, 4, 5, 6, 7]
 seed: 42
-lr: 5.0e-7
+lr: 5.0e-4
 warmup_epochs: 5
 max_epochs: 50
 warmup_start_lr: 1.0e-8

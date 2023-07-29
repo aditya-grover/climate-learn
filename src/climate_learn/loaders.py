@@ -17,7 +17,7 @@ from .models.hub import (
     ViTPretrainedLevelEmb,
     VisionTransformer,
     TimeSformerPretrained,
-    SwinPretrainedSegmentation,
+    # SwinPretrainedSegmentation,
     Mask2Former
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR

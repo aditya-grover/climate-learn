@@ -42,11 +42,11 @@ def collate_fn_continuous(
     out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))]) # B, C', H, W
     lead_times = torch.stack([batch[i][2] for i in range(len(batch))]) # B, 
     b, t, _, h, w = inp.shape
-    lead_times = lead_times.reshape(b, 1, 1, 1, 1).repeat(1, t, 1, h, w)
-    inp = torch.cat((inp, lead_times), dim=2)
+    # lead_times = lead_times.reshape(b, 1, 1, 1, 1).repeat(1, t, 1, h, w)
+    # inp = torch.cat((inp, lead_times), dim=2)
     variables = list(batch[0][0].keys())
     out_variables = list(batch[0][1].keys())
-    return inp, out, variables, out_variables
+    return inp, out, lead_times, variables, out_variables
 
 
 class ContinuousIterDataModule(LightningDataModule):
@@ -71,6 +71,7 @@ class ContinuousIterDataModule(LightningDataModule):
         batch_size=64,
         num_workers=0,
         pin_memory=False,
+        fixed_lead_time_eval=None,
     ):
         r"""
         .. highlight:: python
@@ -103,6 +104,18 @@ class ContinuousIterDataModule(LightningDataModule):
             "history": history,
             "window": window,
         }
+
+        if fixed_lead_time_eval is not None:
+            self.eval_arg = {
+                "random_lead_time": False,
+                "min_pred_range": fixed_lead_time_eval // hrs_each_step.hours(),
+                "max_pred_range": fixed_lead_time_eval // hrs_each_step_hours(),
+                "hrs_each_step": hrs_each_step.hours(),
+                "history": history,
+                "window": window,
+            }
+        else:
+            self.eval_arg = self.dataset_arg
 
         self.inp_lister_train = glob.glob(os.path.join(inp_root_dir, "train", "*.npz"))
         self.out_lister_train = glob.glob(os.path.join(out_root_dir, "train", "*.npz"))
@@ -187,7 +200,7 @@ class ContinuousIterDataModule(LightningDataModule):
                         out_variables=self.hparams.out_vars,
                         shuffle=False,
                     ),
-                    **self.dataset_arg,
+                    **self.eval_arg,
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
@@ -203,7 +216,7 @@ class ContinuousIterDataModule(LightningDataModule):
                         out_variables=self.hparams.out_vars,
                         shuffle=False,
                     ),
-                    **self.dataset_arg,
+                    **self.eval_arg,
                 ),
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
