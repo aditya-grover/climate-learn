@@ -19,9 +19,8 @@ def main():
     with open('scripts/configs/config_cmip6_mask2former_continuous.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    # default_root_dir=f"results_era5/mask2former_climax_emb_finetune_all_5e-4"
-    
-    dm = ContinuousDataModule(
+    default_root_dir=f"continuous_test/tmp/"
+    dm = ContinuousIterDataModule(
         task='forecasting',
         inp_root_dir=cfg['data_dir'],
         out_root_dir=cfg['data_dir'],
@@ -36,6 +35,7 @@ def main():
         subsample=Hours(cfg['subsample']),
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],
+        fixed_lead_time_eval=cfg['fixed_lead_time_eval']
     )
 
     # load module
@@ -45,12 +45,12 @@ def main():
         cfg=cfg,
     )
 
-    state_dict = torch.load('/local/hbansal/climate-learn/results_pretrained_cmip6/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
-    msg = module.load_state_dict(state_dict)
+    # state_dict = torch.load('/local/hbansal/climate-learn/results_pretrained_cmip6/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
+    # msg = module.load_state_dict(state_dict)
     
-    tb_logger = TensorBoardLogger(
-        save_dir=f"{default_root_dir}/logs"
-    )
+    # tb_logger = TensorBoardLogger(
+        # save_dir=f"{default_root_dir}/logs"
+    # )
     wandb.init(
         project='Climate', 
         name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}", 

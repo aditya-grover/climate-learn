@@ -1,4 +1,5 @@
-data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+# data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+data_dir: "/local2/hbansal/cmip6/5.625deg_npz_corrected/"
 in_variables: [
   "land_sea_mask",
   "orography",
@@ -63,6 +64,7 @@ decoder_depth: 1
 use_pretrained_weights: True
 freeze_backbone: False
 freeze_embeddings: False
+continuous_model: True
 patch_size: 4
 embed_dim: 192
 out_embed_dim: 256
@@ -71,7 +73,7 @@ embed_norm: True
 batch_size: 4
 patience: 5
 num_epochs: 50
-gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+gpu: [0]
 seed: 42
 lr: 5.0e-4
 warmup_epochs: 5

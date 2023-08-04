@@ -6,6 +6,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
+import copy
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
 from climate_learn.models.hub import ViTPretrainedClimaXEmb, ViTPretrainedLevelEmb, Mask2Former
@@ -81,6 +82,8 @@ class LitModule(pl.LightningModule):
             lead_times = None
         else:
             x, y, lead_times, in_variables, out_variables = batch
+        
+        original_y = copy.deepcopy(y)
         yhat = self(x, in_variables, lead_times).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
@@ -109,7 +112,7 @@ class LitModule(pl.LightningModule):
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
                 yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
-                y_T = transforms[i](y)
+                y_T = transforms[i](original_y)
 
                 # needed for swin transformers
                 if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
@@ -117,9 +120,9 @@ class LitModule(pl.LightningModule):
                 losses = lf(yhat_T, y_T)
             else:
                 # needed for swin transformers
-                if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
-                    yhat = torch.nn.functional.interpolate(yhat, size=(y.shape[2], y.shape[3]))
-                losses = lf(yhat, y)
+                if yhat.shape[2] != original_y.shape[2] or yhat.shape[3] != original_y.shape[3]:
+                    yhat = torch.nn.functional.interpolate(yhat, size=(original_y.shape[2], original_y.shape[3]))
+                losses = lf(yhat, original_y)
 
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:
@@ -137,7 +140,7 @@ class LitModule(pl.LightningModule):
             on_epoch=False,
             batch_size=x.shape[0],
         )
-        return optmization_loss
+        return optimization_loss
 
     def validation_step(
         self,
@@ -159,8 +162,12 @@ class LitModule(pl.LightningModule):
     def evaluate(
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
-        x, y, in_variables, out_variables = batch
-        yhat = self(x, in_variables).to(device=y.device)
+        if len(batch) == 4:
+            x, y, in_variables, out_variables = batch
+            lead_times = None
+        else:
+            x, y, lead_times, in_variables, out_variables = batch    
+        yhat = self(x, in_variables, lead_times).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss

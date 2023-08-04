@@ -65,6 +65,7 @@ patch_size: 4
 embed_dim: 192
 out_embed_dim: 256
 embed_norm: True
+continuous_model: False
 
 batch_size: 8
 patience: 5
