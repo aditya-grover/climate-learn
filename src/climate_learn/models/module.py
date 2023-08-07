@@ -6,6 +6,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
+import copy
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
 from climate_learn.models.hub import ViTPretrainedClimaXEmb, ViTPretrainedLevelEmb, Mask2Former
@@ -64,7 +65,7 @@ class LitModule(pl.LightningModule):
                 yhat[:, i] = y[:, i]
         return yhat
 
-    def forward(self, x: torch.Tensor, in_variables, lead_times) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, in_variables, lead_times=None) -> torch.Tensor:
         if isinstance(self.net, ViTPretrainedClimaXEmb) or\
             isinstance(self.net, ViTPretrainedLevelEmb) or \
             isinstance(self.net, Mask2Former):
@@ -81,6 +82,7 @@ class LitModule(pl.LightningModule):
             lead_times = None
         else:
             x, y, lead_times, in_variables, out_variables = batch
+        y_original = copy.deepcopy(y)
         yhat = self(x, in_variables, lead_times).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
@@ -109,7 +111,7 @@ class LitModule(pl.LightningModule):
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
                 yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
-                y_T = transforms[i](y)
+                y_T = transforms[i](y_original)
 
                 # needed for swin transformers
                 if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
@@ -117,9 +119,9 @@ class LitModule(pl.LightningModule):
                 losses = lf(yhat_T, y_T)
             else:
                 # needed for swin transformers
-                if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
-                    yhat = torch.nn.functional.interpolate(yhat, size=(y.shape[2], y.shape[3]))
-                losses = lf(yhat, y)
+                if yhat.shape[2] != y_original.shape[2] or yhat.shape[3] != y_original.shape[3]:
+                    yhat = torch.nn.functional.interpolate(yhat, size=(y_original.shape[2], y_original.shape[3]))
+                losses = lf(yhat, y_original)
 
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:
@@ -137,7 +139,7 @@ class LitModule(pl.LightningModule):
             on_epoch=False,
             batch_size=x.shape[0],
         )
-        return optmization_loss
+        return optimization_loss
 
     def validation_step(
         self,

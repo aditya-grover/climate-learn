@@ -1,5 +1,6 @@
 # data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
 data_dir: "/local2/hbansal/era5/5.625deg_npz/"
+# data_dir: "/data0/datasets/weatherbench/data/weatherbench/era5/5.625deg/"
 in_variables: [
   "land_sea_mask",
   "orography",
