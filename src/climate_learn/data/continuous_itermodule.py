@@ -109,7 +109,7 @@ class ContinuousIterDataModule(LightningDataModule):
             self.eval_arg = {
                 "random_lead_time": False,
                 "min_pred_range": fixed_lead_time_eval // hrs_each_step.hours(),
-                "max_pred_range": fixed_lead_time_eval // hrs_each_step_hours(),
+                "max_pred_range": fixed_lead_time_eval // hrs_each_step.hours(),
                 "hrs_each_step": hrs_each_step.hours(),
                 "history": history,
                 "window": window,

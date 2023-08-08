@@ -82,7 +82,8 @@ class LitModule(pl.LightningModule):
             lead_times = None
         else:
             x, y, lead_times, in_variables, out_variables = batch
-        y_original = copy.deepcopy(y)
+        
+        original_y = copy.deepcopy(y)
         yhat = self(x, in_variables, lead_times).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
@@ -111,7 +112,7 @@ class LitModule(pl.LightningModule):
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
                 yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
-                y_T = transforms[i](y_original)
+                y_T = transforms[i](original_y)
 
                 # needed for swin transformers
                 if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
@@ -119,9 +120,9 @@ class LitModule(pl.LightningModule):
                 losses = lf(yhat_T, y_T)
             else:
                 # needed for swin transformers
-                if yhat.shape[2] != y_original.shape[2] or yhat.shape[3] != y_original.shape[3]:
-                    yhat = torch.nn.functional.interpolate(yhat, size=(y_original.shape[2], y_original.shape[3]))
-                losses = lf(yhat, y_original)
+                if yhat.shape[2] != original_y.shape[2] or yhat.shape[3] != original_y.shape[3]:
+                    yhat = torch.nn.functional.interpolate(yhat, size=(original_y.shape[2], original_y.shape[3]))
+                losses = lf(yhat, original_y)
 
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:
@@ -161,8 +162,12 @@ class LitModule(pl.LightningModule):
     def evaluate(
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
-        x, y, in_variables, out_variables = batch
-        yhat = self(x, in_variables).to(device=y.device)
+        if len(batch) == 4:
+            x, y, in_variables, out_variables = batch
+            lead_times = None
+        else:
+            x, y, lead_times, in_variables, out_variables = batch    
+        yhat = self(x, in_variables, lead_times).to(device=y.device)
         yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss

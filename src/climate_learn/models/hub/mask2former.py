@@ -11,11 +11,10 @@ from timm.models.vision_transformer import PatchEmbed, trunc_normal_
 from .climax import ClimaXEmbedding
 
 
-# sys.path.append(os.path.abspath('/home/tungnd/Mask2Former'))
-sys.path.append(os.path.abspath('/local/hbansal/Mask2Former'))
-from mask2former import add_maskformer2_config
+
+#Local application
+from .utils import register
 from detectron2.engine import DefaultTrainer
-from train_net_video import setup
 from detectron2.checkpoint import DetectionCheckpointer
 
 
@@ -37,6 +36,7 @@ class Mask2Former(nn.Module):
         out_embed_dim=256, 
         embed_norm=False,
         continuous_model=False,
+        mask2former_dir=None,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -53,17 +53,17 @@ class Mask2Former(nn.Module):
         self.continuous_model = continuous_model
         # load config of the segmentation model
         args = Namespace(
-            # config_file='/home/tungnd/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml', 
-            config_file='/local/hbansal/Mask2Former/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml',
-            resume=False, 
-            eval_only=True, 
-            num_gpus=1, 
-            num_machines=1, 
-            machine_rank=0, 
-            dist_url='tcp://127.0.0.1:56669', 
-            # opts=['MODEL.WEIGHTS', '/home/tungnd/Mask2Former/checkpoints/model_final_c5c739.pkl']
-            opts=['MODEL.WEIGHTS', '/local/hbansal/Mask2Former/checkpoints/model_final_c5c739.pkl']
+            config_file=f'{mask2former_dir}/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml',
+            resume=False,
+            eval_only=True,
+            num_gpus=1,
+            num_machines=1,
+            machine_rank=0,
+            dist_url='tcp://127.0.0.1:56669',
+            opts=['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_c5c739.pkl']
         )
+        sys.path.append(mask2former_dir)
+        from train_net_video import setup
         cfg = setup(args)
         self.cfg = cfg
         self.args = args
@@ -164,10 +164,10 @@ class Mask2Former(nn.Module):
         if freeze_backbone:
             # self.pretrained_backbone.requires_grad_(False)
             for name, param in self.pretrained_backbone.named_parameters():
-                if 'norm' in name: # finetune norm layer
+                if 'norm' in name or 'bias' in name: # finetune norm layer
                     continue
-                else:
-                    param.requires_grad = False
+                param.requires_grad = False
+
         if freeze_embeddings:
             if embed_type == 'normal':
                 self.patch_embed.requires_grad_(False)
