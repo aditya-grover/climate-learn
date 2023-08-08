@@ -54,7 +54,7 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-pred_range: 12
+# pred_range: 12
 subsample: 1
 history: 1
 window: 0
@@ -74,9 +74,9 @@ freeze_embeddings: False
 embed_norm: True
 continuous_model: True
 min_pred_range: 1
-max_pred_range: 20
+max_pred_range: 28
 hrs_each_step: 6
-fixed_lead_time_eval: 12
+fixed_lead_time_eval: 72
 
 stage: 2
 num_epochs: 50

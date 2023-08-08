@@ -1,8 +1,8 @@
 #Change depending on device
-data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
-mask2former_dir: "/home/rohanshah/Mask2Former"
-default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [0]
+data_dir: "/local2/hbansal/cmip6/1.40625_npz"
+mask2former_dir: "/local/hbansal/Mask2Former"
+default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
+gpu: [0,1,2,3,4,5,6,7]
 batch_size: 8
 grad_acc: 1
 #####################
@@ -53,11 +53,11 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-pred_range: 12
+# pred_range: 12c
 subsample: 1
 history: 1
 window: 0
-num_workers: 1
+num_workers: 2
 
 model: 'mask2former'
 
@@ -73,16 +73,16 @@ freeze_embeddings: False
 embed_norm: True
 continuous_model: True
 min_pred_range: 1
-max_pred_range: 20
+max_pred_range: 28
 hrs_each_step: 6
-fixed_lead_time_eval: 12
+fixed_lead_time_eval: 72
 ckpt_dir: null
 
 stage: 1
 num_epochs: 20
-warmup_epochs: 5
+warmup_epochs: 0
 patience: 5
-val_every_n_steps: 5
+val_every_n_steps: 1000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
