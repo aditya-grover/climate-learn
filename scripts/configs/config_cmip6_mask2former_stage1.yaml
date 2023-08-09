@@ -1,10 +1,10 @@
 #Change depending on device
-data_dir: "/local2/hbansal/cmip6/1.40625_npz"
-mask2former_dir: "/local/hbansal/Mask2Former"
-default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [0,1,2,3,4,5,6,7]
-batch_size: 8
-grad_acc: 1
+data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
+mask2former_dir: "/home/rohanshah/Mask2Former"
+default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
+gpu: [0,1]
+batch_size: 4
+grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
@@ -57,7 +57,7 @@ constants: ["land_sea_mask", "orography", "lattitude"]
 subsample: 1
 history: 1
 window: 0
-num_workers: 2
+num_workers: 1
 
 model: 'mask2former'
 

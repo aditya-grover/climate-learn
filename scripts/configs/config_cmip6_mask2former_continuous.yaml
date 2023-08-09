@@ -47,7 +47,7 @@ train_years: [1850, 2011]
 val_years: [2011, 2013]
 test_years: [2013, 2015]
 min_pred_range: 1
-max_pred_range: 20
+max_pred_range: 28
 hrs_each_step: 6
 subsample: 1
 history: 1

@@ -175,3 +175,4 @@ wandb/
 scripts/output/
 output/
 scripts/pretrained_models/
+*/lightning_logs/*
