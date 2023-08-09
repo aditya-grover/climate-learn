@@ -1,8 +1,8 @@
 #Change depending on device
 data_dir: "/local2/hbansal/cmip6/1.40625_npz"
 mask2former_dir: "/local/hbansal/Mask2Former"
-default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
-ckpt_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
+default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage2/"
+ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
 gpu: [0, 2]
 batch_size: 8
 grad_acc: 1
@@ -81,7 +81,7 @@ stage: 2
 num_epochs: 50
 warmup_epochs: 5
 patience: 5
-val_every_n_steps: 1000
+val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8

@@ -81,7 +81,7 @@ stage: 1
 num_epochs: 20
 warmup_epochs: 5
 patience: 5
-val_every_n_steps: 1000
+val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8

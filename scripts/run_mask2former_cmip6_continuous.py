@@ -10,8 +10,6 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 from pytorch_lightning.loggers import WandbLogger
 from datetime import datetime
 
-now = datetime.now()
-now = now.strftime("%H-%M-%S_%d-%m-%Y")
 
 def get_best_checkpoint(dir):
     ckpt_paths = os.listdir(f'{dir}/checkpoints/')
@@ -23,7 +21,7 @@ def get_best_checkpoint(dir):
 os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
-    with open('scripts/configs/config_cmip6_mask2former_stage1.yaml') as f:
+    with open('scripts/configs/config_cmip6_mask2former_stage2.yaml') as f:
         cfg = yaml.safe_load(f)
     
     default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/"
