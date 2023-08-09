@@ -67,7 +67,7 @@ class ContinuousIterDataModule(LightningDataModule):
         max_pred_range=Hours(120),
         hrs_each_step=Hours(1),
         subsample=Hours(1),
-        buffer_size=10000,
+        buffer_size=1000,
         batch_size=64,
         num_workers=0,
         pin_memory=False,
