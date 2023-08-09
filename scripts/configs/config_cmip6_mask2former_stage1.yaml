@@ -2,14 +2,14 @@
 data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
 mask2former_dir: "/home/rohanshah/Mask2Former"
 default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [1,2]
+gpu: [0,1,2,3]
 #use gradient accumulation to maintain a fixed batch size across devices
 batch_size: 8
-grad_acc: 1
+grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
-use_pretrained_weights: True
+use_pretrained_weights: False
 
 in_variables: [
   "land_sea_mask",
