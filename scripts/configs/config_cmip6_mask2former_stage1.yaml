@@ -54,11 +54,10 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-# pred_range: 12c
 subsample: 1
 history: 1
 window: 0
-num_workers: 8
+num_workers: 1
 
 model: 'mask2former'
 
@@ -81,7 +80,7 @@ ckpt_dir: null
 
 stage: 1
 num_epochs: 20
-warmup_epochs: 0
+warmup_epochs: 5
 patience: 5
 val_every_n_steps: 1000
 lr: 5.0e-4

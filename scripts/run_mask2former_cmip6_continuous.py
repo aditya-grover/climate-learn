@@ -46,7 +46,7 @@ def main():
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],
         fixed_lead_time_eval=cfg['fixed_lead_time_eval'],
-        pin_memory=True
+        pin_memory=True,
     )
 
     # load module

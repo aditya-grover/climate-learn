@@ -55,7 +55,6 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-# pred_range: 12
 subsample: 1
 history: 1
 window: 0
