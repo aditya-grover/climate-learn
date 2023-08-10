@@ -46,7 +46,7 @@ class Trainer(pl.Trainer):
                 lr_monitor
             ]
             if early_stopping:
-                if min_delta not in kwargs:
+                if 'min_delta' not in kwargs:
                     min_delta = 0.0
                 else:
                     min_delta = kwargs['min_delta']
