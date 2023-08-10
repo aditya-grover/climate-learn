@@ -65,7 +65,7 @@ class LitModule(pl.LightningModule):
                 yhat[:, i] = y[:, i]
         return yhat
 
-    def forward(self, x: torch.Tensor, in_variables, lead_times) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, in_variables, lead_times=None) -> torch.Tensor:
         if isinstance(self.net, ViTPretrainedClimaXEmb) or\
             isinstance(self.net, ViTPretrainedLevelEmb) or \
             isinstance(self.net, Mask2Former):

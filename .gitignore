@@ -169,9 +169,11 @@ cython_debug/
 *results*/
 table*.pdf
 table*.png
-test.py
+*/test*.py
+*/try*.py
 scripts/wandb/
 wandb/
 scripts/output/
 output/
 scripts/pretrained_models/
+*/lightning_logs/*

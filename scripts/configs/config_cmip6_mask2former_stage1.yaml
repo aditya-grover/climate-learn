@@ -1,15 +1,16 @@
-#Change depending on device (use absolute paths)
-data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
+#Change depending on device
+data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
 mask2former_dir: "/home/rohanshah/Mask2Former"
 default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [0,1,2,3]
-#use gradient accumulation to maintain a fixed batch size across devices
-batch_size: 8
+gpu: [0,1,2,3,4,5,6,7]
+batch_size: 4
 grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
-use_pretrained_weights: False
+use_pretrained_weights: True
+#Switch between video and image segmentation weights
+pretrained_weights: 'image'
 
 in_variables: [
   "land_sea_mask",
@@ -81,7 +82,7 @@ ckpt_dir: null
 stage: 1
 num_epochs: 20
 warmup_epochs: 5
-patience: 5
+patience: 5000
 val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8

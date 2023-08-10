@@ -498,6 +498,7 @@ def load_preset(task, data_module, preset, cfg=None):
                 embed_norm=cfg['embed_norm'],
                 continuous_model=cfg['continuous_model'],
                 mask2former_dir=cfg['mask2former_dir'],
+                pretrained_weights=cfg['pretrained_weights'],
             )
             optimizer = load_optimizer(
                     model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
