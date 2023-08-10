@@ -1,9 +1,10 @@
-#Change depending on device
-data_dir: "/local2/hbansal/cmip6/1.40625_npz"
-mask2former_dir: "/local/hbansal/Mask2Former"
-default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage2/"
-ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [0, 2]
+#Change depending on device (use absolute paths)
+data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
+mask2former_dir: "/home/rohanshah/Mask2Former"
+default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage2/"
+ckpt_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
+gpu: [0,1,2,3,4,5,6,7]
+#use gradient accumulation to maintain a fixed batch size across devices
 batch_size: 8
 grad_acc: 1
 #####################
