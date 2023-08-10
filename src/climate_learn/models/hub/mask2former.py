@@ -37,6 +37,7 @@ class Mask2Former(nn.Module):
         embed_norm=False,
         continuous_model=False,
         mask2former_dir=None,
+        pretrained_weights=None,
     ):
         super().__init__()
         self.patch_size = patch_size
@@ -52,18 +53,28 @@ class Mask2Former(nn.Module):
         self.embed_norm = embed_norm
         self.continuous_model = continuous_model
         # load config of the segmentation model
+        if pretrained_weights == 'video':
+            mask2former_config_file = f'{mask2former_dir}/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml'
+            mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_c5c739.pkl']
+            from train_net_video import setup
+        elif pretrained_weights == 'image':
+            mask2former_config_file = f'{mask2former_dir}/configs/coco/panoptic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml'
+            mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_f07440.pkl']
+            from train_net import setup
+        else:
+            print('Pretrained weights must be either video or image')
+            exit()
         args = Namespace(
-            config_file=f'{mask2former_dir}/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml',
+            config_file=mask2former_config_file,
             resume=False,
             eval_only=True,
             num_gpus=1,
             num_machines=1,
             machine_rank=0,
             dist_url='tcp://127.0.0.1:56669',
-            opts=['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_c5c739.pkl']
+            opts=mask2former_opts,
         )
         sys.path.append(mask2former_dir)
-        from train_net_video import setup
         cfg = setup(args)
         self.cfg = cfg
         self.args = args
