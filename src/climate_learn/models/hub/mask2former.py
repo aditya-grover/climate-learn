@@ -53,6 +53,7 @@ class Mask2Former(nn.Module):
         self.embed_norm = embed_norm
         self.continuous_model = continuous_model
         # load config of the segmentation model
+        sys.path.append(mask2former_dir)
         if pretrained_weights == 'video':
             mask2former_config_file = f'{mask2former_dir}/configs/youtubevis_2019/swin/video_maskformer2_swin_large_IN21k_384_bs16_8ep.yaml'
             mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_c5c739.pkl']
@@ -74,7 +75,6 @@ class Mask2Former(nn.Module):
             dist_url='tcp://127.0.0.1:56669',
             opts=mask2former_opts,
         )
-        sys.path.append(mask2former_dir)
         cfg = setup(args)
         self.cfg = cfg
         self.args = args
