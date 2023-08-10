@@ -1,4 +1,5 @@
-data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+# data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
 in_variables: [
   "land_sea_mask",
   "orography",
@@ -65,11 +66,12 @@ embed_dim: 192
 out_embed_dim: 256
 embed_norm: True
 continuous_model: False
+ckpt: null
 
-batch_size: 4
+batch_size: 8
 patience: 5
 num_epochs: 50
-gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+gpu: [0]
 seed: 42
 lr: 5.0e-4
 warmup_epochs: 5
