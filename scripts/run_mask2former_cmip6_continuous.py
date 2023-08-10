@@ -64,9 +64,8 @@ def main():
         # save_dir=f"{default_root_dir}/logs"
     # )
     wandb.init(
-        project='Climate',
+        project='climate-vision23',
         dir=default_root_dir,
-        entity='climate-vision2023',
         name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}", 
         config=cfg
     )

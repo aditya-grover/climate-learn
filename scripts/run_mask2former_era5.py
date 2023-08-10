@@ -60,11 +60,10 @@ def main():
         # save_dir=f"{default_root_dir}/logs"
     # )
     wandb.init(
-        project='Climate',
         dir=default_root_dir,
-        entity='climate-vision2023',
+        project='climate-vision23',
         name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}", 
-        config=cfg
+        config=cfg,
     )
     wandb_logger = WandbLogger()
 
