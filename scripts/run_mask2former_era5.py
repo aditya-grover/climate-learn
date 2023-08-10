@@ -10,16 +10,22 @@ from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 from pytorch_lightning.loggers import WandbLogger
 from datetime import datetime
 
-now = datetime.now()
-now = now.strftime("%H-%M-%S_%d-%m-%Y")
 
-os.environ["NCCL_P2P_DISABLE"] = "1"
+def get_best_checkpoint(dir):
+    ckpt_paths = os.listdir(f'{dir}/checkpoints/')
+    assert len(ckpt_paths) == 2
+    for ckpt_path in ckpt_paths:
+        if 'last' not in ckpt_paths:
+            return os.path.join(dir, 'checkpoints/', ckpt_path)
+
+# os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
     with open('scripts/configs/config_era5_mask2former.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"results_era5/mask2former_climax_emb_finetune_all_5e-4"
+    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
+    os.makedirs(default_root_dir, exist_ok=True)
     
     dm = IterDataModule(
         task='forecasting',
@@ -33,6 +39,7 @@ def main():
         subsample=Hours(cfg['subsample']),
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],
+        pin_memory=True,
     )
 
     # load module
@@ -42,15 +49,21 @@ def main():
         cfg=cfg,
     )
 
-    state_dict = torch.load('/local/hbansal/climate-learn/results_pretrained_cmip6/checkpoints/epoch_049.ckpt', map_location='cpu')['state_dict']
-    msg = module.load_state_dict(state_dict)
     
-    tb_logger = TensorBoardLogger(
-        save_dir=f"{default_root_dir}/logs"
-    )
+    if cfg['ckpt_dir'] is not None:
+        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
+        state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
+        msg = module.load_state_dict(state_dict)
+        print(msg)
+
+    # tb_logger = TensorBoardLogger(
+        # save_dir=f"{default_root_dir}/logs"
+    # )
     wandb.init(
-        project='Climate', 
-        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}", 
+        project='Climate',
+        dir=default_root_dir,
+        entity='climate-vision2023',
+        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}", 
         config=cfg
     )
     wandb_logger = WandbLogger()
@@ -64,6 +77,9 @@ def main():
         max_epochs=cfg["num_epochs"],
         default_root_dir=default_root_dir,
         logger=[wandb_logger],
+        accumulate_grad_batches=cfg['grad_acc'],
+        val_check_interval=cfg['val_every_n_steps'],
+        min_delta=cfg['min_delta'],
     )
 
     trainer.fit(module, datamodule=dm)
