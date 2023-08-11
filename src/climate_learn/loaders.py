@@ -17,7 +17,7 @@ from .models.hub import (
     ViTPretrainedLevelEmb,
     VisionTransformer,
     TimeSformerPretrained,
-    SwinPretrainedSegmentation,
+    # SwinPretrainedSegmentation,
     Mask2Former
 )
 from .models.lr_scheduler import LinearWarmupCosineAnnealingLR
@@ -496,6 +496,9 @@ def load_preset(task, data_module, preset, cfg=None):
                 embed_dim=cfg['embed_dim'],
                 out_embed_dim=cfg['out_embed_dim'], 
                 embed_norm=cfg['embed_norm'],
+                continuous_model=cfg['continuous_model'],
+                mask2former_dir=cfg['mask2former_dir'],
+                pretrained_weights=cfg['pretrained_weights'],
             )
             optimizer = load_optimizer(
                     model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
@@ -607,10 +610,20 @@ def load_transform(transform_name, data_module):
     return transform
 
 def get_data_dims(data_module):
-    return data_module.get_data_dims()
+    if hasattr(data_module, 'get_data_dims'):
+        return data_module.get_data_dims()
+    for batch in data_module.train_dataloader():
+        x, y, _, _ = batch
+        break
+    return x.shape, y.shape
 
 def get_data_variables(data_module):
-    return data_module.get_data_variables()
+    if hasattr(data_module, 'get_data_variables'):
+        return data_module.get_data_variables()
+    in_vars = data_module.train_dataset.task.in_vars
+    out_vars = data_module.train_dataset.task.out_vars
+    return in_vars, out_vars
+    
 
 # def get_data_dims(data_module):
 #     for batch in data_module.train_dataloader():

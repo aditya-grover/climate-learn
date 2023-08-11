@@ -1,11 +1,26 @@
-data_dir: "/home/data/datasets/weatherbench/era5/5.625deg_npz/"
+#Change depending on device
+data_dir: "/local2/hbansal/era5/1.40625_npz/"
+mask2former_dir: "/local/hbansal/Mask2Former/"
+default_root_dir: "/local/hbansal/climate-learn/results_era5/"
+ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage2/"
+gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+batch_size: 8
+grad_acc: 1
+#####################
+
+#Switch between scratch and pretrained models
+use_pretrained_weights: True
+#Switch between video and image segmentation weights
+pretrained_weights: 'video'
+
+#Set the lead time
+pred_range: 72
+
 in_variables: [
   "land_sea_mask",
   "orography",
   "lattitude",
   "2m_temperature",
-  "10m_u_component_of_wind",
-  "10m_v_component_of_wind",
   "geopotential_50",
   "geopotential_250",
   "geopotential_500",
@@ -34,13 +49,6 @@ in_variables: [
   "temperature_700",
   "temperature_850",
   "temperature_925",
-  "relative_humidity_50",
-  "relative_humidity_250",
-  "relative_humidity_500",
-  "relative_humidity_600",
-  "relative_humidity_700",
-  "relative_humidity_850",
-  "relative_humidity_925",
   "specific_humidity_50",
   "specific_humidity_250",
   "specific_humidity_500",
@@ -51,10 +59,6 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-train_years: [1979, 2016]
-val_years: [2016, 2017]
-test_years: [2017, 2018]
-pred_range: 72
 subsample: 1
 history: 1
 window: 0
@@ -62,41 +66,26 @@ num_workers: 1
 
 model: 'mask2former'
 
-in_img_size: [32, 64]
-decoder_depth: 1
-#if vit_pretrained, this must be consistent with the pretrained model's embed dim
+in_img_size: [512, 512]
+embed_type: 'climax'
+mlp_embed_depth: 1
+decoder_depth: 2
+patch_size: 4
 embed_dim: 192
 out_embed_dim: 256
-#for pretrained model only if use_pretrained_embeddings is false
-patch_size: 1
-learn_pos_emb: True
-mlp_embed_depth: 1
-flatten_patch: False
-#not for vit_pretrained
-num_heads: 8
-mlp_ratio: 4
-depth: 8
-drop_path: 0.1
-drop_rate: 0.1
-
-pretrained_model: "mask2former"
-use_pretrained_weights: True
-use_pretrained_embeddings: False
 freeze_backbone: False
 freeze_embeddings: False
-resize_img: False
-num_backbone_blocks: 100
+embed_norm: True
+continuous_model: False
 
-batch_size: 32
-patience: 5
 num_epochs: 50
-gpu: [4, 5]
-seed: 42
-lr: 5.0e-7
 warmup_epochs: 5
-max_epochs: 50
+patience: 5
+min_delta : 1.0e-5
+val_every_n_steps: 2000
+lr: 5.0e-7
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
-weight_decay: 1.0e-5
 betas: [0.9, 0.95]
-val_every_n_steps: 1000
+weight_decay: 1.0e-5
+seed: 42

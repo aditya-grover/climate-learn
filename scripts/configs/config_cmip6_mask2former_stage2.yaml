@@ -1,5 +1,19 @@
-# data_dir: "/home/data/datasets/cmip6/5.625deg_npz_corrected/"
+#Change depending on device (use absolute paths)
 data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
+mask2former_dir: "/home/rohanshah/Mask2Former"
+default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage2/"
+ckpt_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
+gpu: [0,1,2,3,4,5,6,7]
+#use gradient accumulation to maintain a fixed batch size across devices
+batch_size: 8
+grad_acc: 1
+#####################
+
+#Switch between scratch and pretrained models
+use_pretrained_weights: True
+#Switch between video and image segmentation weights
+pretrained_weights: 'video'
+
 in_variables: [
   "land_sea_mask",
   "orography",
@@ -43,10 +57,6 @@ in_variables: [
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
 constants: ["land_sea_mask", "orography", "lattitude"]
-train_years: [1850, 2011]
-val_years: [2011, 2013]
-test_years: [2013, 2015]
-pred_range: 12
 subsample: 1
 history: 1
 window: 0
@@ -57,27 +67,27 @@ model: 'mask2former'
 in_img_size: [512, 512]
 embed_type: 'climax'
 mlp_embed_depth: 1
-decoder_depth: 1
-use_pretrained_weights: True
-freeze_backbone: False
-freeze_embeddings: False
+decoder_depth: 2
 patch_size: 4
 embed_dim: 192
 out_embed_dim: 256
+freeze_backbone: False
+freeze_embeddings: False
 embed_norm: True
-continuous_model: False
-ckpt: null
+continuous_model: True
+min_pred_range: 1
+max_pred_range: 28
+hrs_each_step: 6
+fixed_lead_time_eval: 72
 
-batch_size: 8
-patience: 5
+stage: 2
 num_epochs: 50
-gpu: [0]
-seed: 42
-lr: 5.0e-4
 warmup_epochs: 5
-max_epochs: 50
+patience: 5
+val_every_n_steps: 2000
+lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
-weight_decay: 1.0e-5
 betas: [0.9, 0.95]
-val_every_n_steps: 1000
+weight_decay: 1.0e-5
+seed: 42

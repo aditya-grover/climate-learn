@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torchvision
 import sys
-import ipdb
 import timm
 from transformers import ViTModel, AutoConfig, AutoModel, CLIPModel
 from timm.models.vision_transformer import Block, PatchEmbed, trunc_normal_

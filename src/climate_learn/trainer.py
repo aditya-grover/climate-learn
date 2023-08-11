@@ -46,8 +46,12 @@ class Trainer(pl.Trainer):
                 lr_monitor
             ]
             if early_stopping:
+                if 'min_delta' not in kwargs:
+                    min_delta = 0.0
+                else:
+                    min_delta = kwargs['min_delta']
                 early_stop_callback = EarlyStopping(
-                    early_stopping, 0.0, patience
+                    early_stopping, min_delta, patience
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
