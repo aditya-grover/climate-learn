@@ -55,7 +55,7 @@ def main():
     )
 
     if cfg['ckpt_dir'] is not None:
-        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
+        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
         state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
         print(msg)
@@ -66,7 +66,7 @@ def main():
     wandb.init(
         project='climate-vision23',
         dir=default_root_dir,
-        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}", 
+        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {cfg['pretrained_weights']}", 
         config=cfg
     )
     wandb_logger = WandbLogger()

@@ -10,6 +10,7 @@ grad_acc: 1
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: True
+#Switch between video and image segmentation weights
 pretrained_weights: 'video'
 
 #Set the lead time

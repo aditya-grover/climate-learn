@@ -24,7 +24,7 @@ def main():
     with open('scripts/configs/config_era5_mask2former.yaml') as f:
         cfg = yaml.safe_load(f)
     
-    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
+    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
     os.makedirs(default_root_dir, exist_ok=True)
     
     dm = ContinuousIterDataModule(
@@ -54,7 +54,7 @@ def main():
 
     
     if cfg['ckpt_dir'] is not None:
-        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
+        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
         state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
         print(msg)
@@ -65,7 +65,7 @@ def main():
     wandb.init(
         dir=default_root_dir,
         project='climate-vision23',
-        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}", 
+        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}, Model = {cfg['pretrained_weights']}']}", 
         config=cfg,
     )
     wandb_logger = WandbLogger()
