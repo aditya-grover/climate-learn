@@ -53,6 +53,7 @@ class Trainer(pl.Trainer):
                 early_stop_callback = EarlyStopping(
                     early_stopping, min_delta, patience
                 )
+                kwargs.pop('min_delta')
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
         if "strategy" not in kwargs:

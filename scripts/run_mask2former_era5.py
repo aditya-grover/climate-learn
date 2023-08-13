@@ -1,5 +1,5 @@
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data import IterDataModule, ContinuousIterDataModule
 from climate_learn.utils.datetime import Hours
 
 import torch
@@ -27,7 +27,7 @@ def main():
     default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
     os.makedirs(default_root_dir, exist_ok=True)
     
-    dm = IterDataModule(
+    dm = ContinuousIterDataModule(
         task='forecasting',
         inp_root_dir=cfg['data_dir'],
         out_root_dir=cfg['data_dir'],
@@ -35,7 +35,10 @@ def main():
         out_vars=cfg['out_variables'],
         history=cfg['history'],
         window=cfg['window'],
-        pred_range=Hours(cfg['pred_range']),
+        random_lead_time=False,
+        min_pred_range=Hours(cfg['pred_range']),
+        max_pred_range=Hours(cfg['pred_range']),
+        hrs_each_step=Hours(cfg['hrs_each_step']),
         subsample=Hours(cfg['subsample']),
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],

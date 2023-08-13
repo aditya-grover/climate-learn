@@ -10,6 +10,7 @@ grad_acc: 1
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: True
+pretrained_weights: 'video'
 
 #Set the lead time
 pred_range: 72
@@ -74,7 +75,8 @@ out_embed_dim: 256
 freeze_backbone: False
 freeze_embeddings: False
 embed_norm: True
-continuous_model: False
+continuous_model: True
+hrs_each_step: 1
 
 num_epochs: 50
 warmup_epochs: 5
