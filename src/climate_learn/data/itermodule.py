@@ -60,7 +60,7 @@ class IterDataModule(LightningDataModule):
         window: int = 6,
         pred_range=Hours(6),
         subsample=Hours(1),
-        buffer_size=2000,
+        buffer_size=1000,
         batch_size=64,
         num_workers=0,
         pin_memory=False,

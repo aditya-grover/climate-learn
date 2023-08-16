@@ -1,24 +1,38 @@
 import climate_learn as cl
-from climate_learn.data import IterDataModule
+from climate_learn.data import ContinuousIterDataModule, IterDataModule
 from climate_learn.utils.datetime import Hours
 
+import os
 import torch
 import yaml
-import os
+import wandb
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 from datetime import datetime
 
-now = datetime.now()
-now = now.strftime("%H-%M-%S_%d-%m-%Y")
+
+def get_best_checkpoint(dir):
+    ckpt_paths = os.listdir(f'{dir}/checkpoints/')
+    assert len(ckpt_paths) == 2
+    for ckpt_path in ckpt_paths:
+        if 'last' not in ckpt_paths:
+            return os.path.join(dir, 'checkpoints/', ckpt_path)
 
 os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
-    with open('scripts/configs/config_cmip6_mask2former.yaml') as f:
+    with open('scripts/configs/config_cmip6_mask2former_stage1_fixed.yaml') as f:
         cfg = yaml.safe_load(f)
-
-    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/"
     
+    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
+    
+    if os.path.exists(default_root_dir):
+        print('Root directory exists')
+        exit()
+    else:
+        os.makedirs(default_root_dir, exist_ok=True)
+
+
     dm = IterDataModule(
         task='forecasting',
         inp_root_dir=cfg['data_dir'],
@@ -31,6 +45,7 @@ def main():
         subsample=Hours(cfg['subsample']),
         batch_size=cfg['batch_size'],
         num_workers=cfg['num_workers'],
+        pin_memory=True,
     )
 
     # load module
@@ -40,18 +55,19 @@ def main():
         cfg=cfg,
     )
 
-    if cfg['ckpt'] is not None:
-        state_dict = torch.load(f'results_pretrained_cmip6_stage1/mask2former_{cfg["embed_type"]}_emb_pretrained_{cfg["use_pretrained_weights"]}/checkpoints/', map_location='cpu')['state_dict']
+    if cfg['ckpt_dir'] is not None:
+        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/")
+        state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
-        print (msg)
+        print(msg)
     
-    # logger = TensorBoardLogger(
-    #     save_dir=f"{default_root_dir}/logs"
+    # tb_logger = TensorBoardLogger(
+        # save_dir=f"{default_root_dir}/logs"
     # )
-
     wandb.init(
-        project='Climate', 
-        name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}", 
+        project='climate-vision23',
+        dir=default_root_dir,
+            name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {cfg['pretrained_weights']}, Lead Time = {pred_range}", 
         config=cfg
     )
     wandb_logger = WandbLogger()
@@ -64,7 +80,9 @@ def main():
         precision=16,
         max_epochs=cfg["num_epochs"],
         default_root_dir=default_root_dir,
-        logger=wandb_logger,
+        logger=[wandb_logger],
+        accumulate_grad_batches=cfg['grad_acc'],
+        val_check_interval=cfg['val_every_n_steps'],
     )
 
     trainer.fit(module, datamodule=dm)
