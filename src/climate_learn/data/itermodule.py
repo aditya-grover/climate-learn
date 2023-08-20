@@ -1,6 +1,6 @@
 # Standard library
 import glob
-from typing import Optional
+from typing import Any, Callable, Dict, Sequence, Tuple, Union, Optional
 
 # Third party
 import torch
@@ -11,10 +11,38 @@ from pytorch_lightning import LightningDataModule
 # Local application
 from .climate_dataset.era5_iterdataset import *
 from ..utils.datetime import Hours
-from .module import collate_fn
+# from .module import collate_fn
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
+
+
+def collate_fn(
+    batch,
+) -> Tuple[torch.tensor, torch.tensor, Sequence[str], Sequence[str]]:
+    r"""Collate function for DataLoaders.
+
+    :param batch: A batch of data samples.
+    :type batch: List[Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]]
+    :return: A tuple of `input`, `output`, `variables`, and `out_variables`.
+    :rtype: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]]
+    """
+
+    def handle_dict_features(t: torch.tensor) -> torch.tensor:
+        ## Hotfix for the models to work with dict style data
+        ## Handles the case for forecasting input as it has history in it
+        ## TODO: Come up with an efficient solution instead of if condition
+        if len(t.size()) == 4:
+            return torch.transpose(t, 0, 1)
+        return t
+
+    ## As a hotfix inp is just stacking input and constants data
+    ## via {**inp_data, **const_data} i.e. merging both of them unto one dict
+    inp = torch.stack([handle_dict_features(batch[i][0]) for i in range(len(batch))])
+    out = torch.stack([handle_dict_features(batch[i][1]) for i in range(len(batch))])
+    variables = batch[0][2]
+    out_variables = batch[0][3]
+    return inp, out, variables, out_variables
 
 
 class IterDataModule(LightningDataModule):

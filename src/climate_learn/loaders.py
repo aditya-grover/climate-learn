@@ -75,6 +75,7 @@ def load_model_module(
         optimizer = load_optimizer(model, optim, optim_kwargs)
     elif isinstance(optim, torch.optim.Optimizer):
         print("Using custom optimizer")
+        optimizer = optim
     else:
         raise TypeError("'optim' must be str or torch.optim.Optimizer")
     # Load the LR scheduler
@@ -87,6 +88,7 @@ def load_model_module(
         lr_scheduler = load_lr_scheduler(sched, optimizer, sched_kwargs)
     elif isinstance(sched, LRScheduler):
         print("Using custom learning rate scheduler")
+        lr_scheduler = sched
     else:
         raise TypeError("'sched' must be str or torch.optim.lr_scheduler._LRScheduler")
     # Load training loss
@@ -183,6 +185,7 @@ def load_model_module(
     # Instantiate Lightning Module
     model_module = LitModule(
         model,
+        data_module.hparams.pred_range,
         optimizer,
         lr_scheduler,
         train_loss,
@@ -361,8 +364,8 @@ def get_data_dims(data_module):
 
 
 def get_data_variables(data_module):
-    in_vars = data_module.train_dataset.task.in_vars
-    out_vars = data_module.train_dataset.task.out_vars
+    in_vars = data_module.hparams.in_vars
+    out_vars = data_module.hparams.out_vars
     return in_vars, out_vars
 
 
@@ -371,5 +374,6 @@ def get_climatology(data_module, split):
     if clim is None:
         raise RuntimeError("Climatology has not yet been set.")
     # Hotfix to work with dict style data
-    clim = torch.stack(tuple(clim.values()))
+    # print (clim.shape)
+    # clim = torch.stack(tuple(clim.values()))
     return clim

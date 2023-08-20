@@ -5,12 +5,14 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
+from climate_learn.models.hub.climax import ClimaX
 
 
 class LitModule(pl.LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
+        lead_times: int,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: LRScheduler,
         train_loss: Callable,
@@ -22,6 +24,7 @@ class LitModule(pl.LightningModule):
     ):
         super().__init__()
         self.net = net
+        self.lead_times = lead_times
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.train_loss = train_loss
@@ -45,7 +48,9 @@ class LitModule(pl.LightningModule):
                 )
         self.test_target_transforms = test_target_transforms
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, lead_times, variables, out_variables) -> torch.Tensor:
+        if isinstance(self.net, ClimaX):
+            return self.net(x, lead_times, variables, out_variables)
         return self.net(x)
 
     def training_step(
@@ -54,7 +59,7 @@ class LitModule(pl.LightningModule):
         batch_idx: int,
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
-        yhat = self(x).to(device=y.device)
+        yhat = self(x, self.lead_times, in_variables, out_variables).to(device=y.device)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -63,12 +68,12 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         if losses.dim() == 0:  # aggregate loss only
             loss = losses
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"train/{loss_name}:aggregate"] = loss
         else:  # per channel + aggregate
             for var_name, loss in zip(out_variables, losses):
-                loss_dict[f"{loss_name}:{var_name}"] = loss
+                loss_dict[f"train/{loss_name}:{var_name}"] = loss
             loss = losses[-1]
-            loss_dict[f"{loss_name}:aggregate"] = loss
+            loss_dict[f"train/{loss_name}:aggregate"] = loss
         self.log_dict(
             loss_dict,
             prog_bar=True,
@@ -96,7 +101,7 @@ class LitModule(pl.LightningModule):
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
         x, y, in_variables, out_variables = batch
-        yhat = self(x).to(device=y.device)
+        yhat = self(x, self.lead_times, in_variables, out_variables).to(device=y.device)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms
@@ -113,12 +118,12 @@ class LitModule(pl.LightningModule):
             losses = lf(yhat_T, y_T)
             loss_name = getattr(lf, "name", f"loss_{i}")
             if losses.dim() == 0:  # aggregate loss
-                loss_dict[f"{loss_name}:agggregate"] = losses
+                loss_dict[f"{stage}/{loss_name}:agggregate"] = losses
             else:  # per channel + aggregate
                 for var_name, loss in zip(out_variables, losses):
-                    name = f"{loss_name}:{var_name}"
+                    name = f"{stage}/{loss_name}:{var_name}"
                     loss_dict[name] = loss
-                loss_dict[f"{loss_name}:aggregate"] = losses[-1]
+                loss_dict[f"{stage}/{loss_name}:aggregate"] = losses[-1]
         self.log_dict(
             loss_dict,
             on_step=False,
