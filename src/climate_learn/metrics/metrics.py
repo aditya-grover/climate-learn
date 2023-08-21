@@ -8,6 +8,7 @@ from .functional import *
 # Third party
 import numpy as np
 import torch
+from torch.distributions.normal import Normal
 
 
 class Metric:
@@ -29,7 +30,7 @@ class Metric:
         self.aggregate_only = aggregate_only
         self.metainfo = metainfo
 
-    def __call__(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def __call__(self, pred: Union[torch.Tensor, Normal], target: torch.Tensor) -> torch.Tensor:
         """
         :param pred: The predicted value(s).
         :type pred: torch.Tensor
@@ -55,13 +56,15 @@ class LatitudeWeightedMetric(Metric):
         self.lat_weights = lat_weights
 
     def cast_to_device(
-        self, pred: Union[torch.FloatTensor, torch.DoubleTensor]
+        self, pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal]
     ) -> None:
         r"""
         .. highlight:: python
 
         Casts latitude weights to the same device as `pred`.
         """
+        if isinstance(pred, Normal):
+            pred = pred.loc
         self.lat_weights = self.lat_weights.to(device=pred.device)
 
 
@@ -77,13 +80,15 @@ class ClimatologyBasedMetric(Metric):
         self.climatology = climatology
 
     def cast_to_device(
-        self, pred: Union[torch.FloatTensor, torch.DoubleTensor]
+        self, pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal]
     ) -> None:
         r"""
         .. highlight:: python
 
         Casts climatology to the same device as `pred`.
         """
+        if isinstance(pred, Normal):
+            pred = pred.loc
         self.climatology = self.climatology.to(device=pred.device)
 
 
@@ -97,7 +102,7 @@ class TransformedMetric:
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> None:
         pred = self.transform(pred)
@@ -111,7 +116,7 @@ class MSE(Metric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -136,7 +141,7 @@ class LatWeightedMSE(LatitudeWeightedMetric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -162,7 +167,7 @@ class RMSE(Metric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -187,7 +192,7 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -207,6 +212,58 @@ class LatWeightedRMSE(LatitudeWeightedMetric):
         return rmse(pred, target, self.aggregate_only, self.lat_weights)
 
 
+@register("lat_crps_gaussian")
+class LatWeightedCRPSGaussian(LatitudeWeightedMetric):
+    """Computes latitude-weighted CRPS."""
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().cast_to_device(pred)
+        return crps_gaussian(pred, target, self.aggregate_only, self.lat_weights)
+
+
+@register("lat_spread_skill")
+class LatWeightedSpreadSkill(LatitudeWeightedMetric):
+    """Computes latitude-weighted spread skill."""
+
+    def __call__(
+        self,
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
+        target: Union[torch.FloatTensor, torch.DoubleTensor],
+    ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
+        r"""
+        .. highlight:: python
+
+        :param pred: The predicted values of shape [B,C,H,W].
+        :type pred: torch.FloatTensor|torch.DoubleTensor
+        :param target: The ground truth target values of shape [B,C,H,W].
+        :type target: torch.FloatTensor|torch.DoubleTensor
+
+        :return: A singleton tensor if `self.aggregate_only` is `True`. Else, a
+            tensor of shape [C+1], where the last element is the aggregate
+            RMSE, and the preceding elements are the channel-wise RMSEs.
+        :rtype: torch.FloatTensor|torch.DoubleTensor
+        """
+        super().cast_to_device(pred)
+        return spread_skill(pred, target, self.aggregate_only, self.lat_weights)
+
+
 @register("acc")
 class ACC(ClimatologyBasedMetric):
     """
@@ -218,7 +275,7 @@ class ACC(ClimatologyBasedMetric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -252,7 +309,7 @@ class LatWeightedACC(LatitudeWeightedMetric, ClimatologyBasedMetric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -289,7 +346,7 @@ class Pearson(Metric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""
@@ -317,7 +374,7 @@ class MeanBias(Metric):
 
     def __call__(
         self,
-        pred: Union[torch.FloatTensor, torch.DoubleTensor],
+        pred: Union[torch.FloatTensor, torch.DoubleTensor, Normal],
         target: Union[torch.FloatTensor, torch.DoubleTensor],
     ) -> Union[torch.FloatTensor, torch.DoubleTensor]:
         r"""

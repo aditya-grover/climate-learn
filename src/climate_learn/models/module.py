@@ -6,6 +6,7 @@ import torch
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
 import pytorch_lightning as pl
 from climate_learn.models.hub.climax import ClimaX
+from torch.distributions.normal import Normal
 
 
 class LitModule(pl.LightningModule):
@@ -59,7 +60,14 @@ class LitModule(pl.LightningModule):
         batch_idx: int,
     ) -> torch.Tensor:
         x, y, in_variables, out_variables = batch
-        yhat = self(x, self.lead_times, in_variables, out_variables).to(device=y.device)
+        yhat = self(x, self.lead_times, in_variables, out_variables)
+        if isinstance(yhat, Normal):
+            loc, scale = yhat.loc, yhat.scale
+            loc = loc.to(device=y.device)
+            scale = scale.to(device=y.device)
+            yhat = Normal(loc, scale)
+        else:
+            yhat = yhat.to(device=y.device)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -101,7 +109,14 @@ class LitModule(pl.LightningModule):
         self, batch: Tuple[torch.Tensor, torch.Tensor, List[str], List[str]], stage: str
     ):
         x, y, in_variables, out_variables = batch
-        yhat = self(x, self.lead_times, in_variables, out_variables).to(device=y.device)
+        yhat = self(x, self.lead_times, in_variables, out_variables)
+        if isinstance(yhat, Normal):
+            loc, scale = yhat.loc, yhat.scale
+            loc = loc.to(device=y.device)
+            scale = scale.to(device=y.device)
+            yhat = Normal(loc, scale)
+        else:
+            yhat = yhat.to(device=y.device)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms
@@ -113,7 +128,10 @@ class LitModule(pl.LightningModule):
         loss_dict = {}
         for i, lf in enumerate(loss_fns):
             if transforms is not None and transforms[i] is not None:
-                yhat_T = transforms[i](yhat)
+                if isinstance(transforms[i], torch.nn.Identity):
+                    yhat_T = yhat
+                else:
+                    yhat_T = transforms[i](yhat)
                 y_T = transforms[i](y)
             losses = lf(yhat_T, y_T)
             loss_name = getattr(lf, "name", f"loss_{i}")

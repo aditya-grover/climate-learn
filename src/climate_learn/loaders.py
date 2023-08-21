@@ -39,6 +39,7 @@ def load_model_module(
     train_target_transform: Optional[Union[str, Callable]] = None,
     val_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
     test_target_transform: Optional[Iterable[Union[str, Callable]]] = None,
+    probabilistic=False,
 ):
     # Temporary fix, per this discussion:
     # https://github.com/aditya-grover/climate-learn/pull/100#discussion_r1192812343
@@ -207,6 +208,17 @@ load_forecasting_module = partial(
     train_target_transform=None,
     val_target_transform=[nn.Identity(), "denormalize", "denormalize"],
     test_target_transform=["denormalize", "denormalize"],
+)
+
+load_prob_forecasting_module = partial(
+    load_model_module,
+    task="forecasting",
+    train_loss="lat_crps_gaussian",
+    val_loss=["lat_crps_gaussian", "lat_spread_skill", "lat_rmse", "lat_acc"],
+    test_loss=["lat_crps_gaussian", "lat_spread_skill", "lat_rmse", "lat_acc"],
+    train_target_transform=None,
+    val_target_transform=[nn.Identity(), "denormalize_gaussian", "denormalize_gaussian", "denormalize_gaussian"],
+    test_target_transform=["denormalize_gaussian", "denormalize_gaussian", "denormalize_gaussian", "denormalize_gaussian"],
 )
 
 load_downscaling_module = partial(
