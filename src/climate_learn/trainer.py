@@ -9,6 +9,7 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     RichModelSummary,
     RichProgressBar,
+    LearningRateMonitor
 )
 
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
@@ -21,10 +22,15 @@ class Trainer(pl.Trainer):
         self, early_stopping=None, patience=0, summary_depth=-1, seed=0, **kwargs
     ):
         pl.seed_everything(seed)
+        default_root_dir = kwargs["default_root_dir"]
         if "logger" not in kwargs:
             kwargs["logger"] = False
         if "callbacks" not in kwargs:
             checkpoint_callback = ModelCheckpoint(
+                dirpath=f"{default_root_dir}/checkpoints",
+                monitor=early_stopping,
+                mode="min",
+                save_top_k=1,
                 save_last=True,
                 verbose=False,
                 filename="epoch_{epoch:03d}",
@@ -32,14 +38,21 @@ class Trainer(pl.Trainer):
             )
             summary_callback = RichModelSummary(max_depth=summary_depth)
             progress_callback = RichProgressBar()
+            lr_monitor = LearningRateMonitor(logging_interval="step")
             callbacks = [
                 checkpoint_callback,
                 summary_callback,
                 progress_callback,
+                lr_monitor
             ]
             if early_stopping:
+                if 'min_delta' not in kwargs:
+                    min_delta = 0.0
+                else:
+                    min_delta = kwargs['min_delta']
+                    kwargs.pop('min_delta')
                 early_stop_callback = EarlyStopping(
-                    monitor=early_stopping, patience=patience, verbose=False
+                    early_stopping, min_delta, patience
                 )
                 callbacks.append(early_stop_callback)
             kwargs["callbacks"] = callbacks
@@ -48,8 +61,9 @@ class Trainer(pl.Trainer):
                 warn("In interactive environment: cannot use DDP spawn strategy")
                 kwargs["strategy"] = None
             else:
-                kwargs["strategy"] = "ddp_spawn"
+                kwargs["strategy"] = "ddp"
         self.trainer = pl.Trainer(**kwargs)
+        self.trainer.favorite_metric = early_stopping
 
     def fit(self, model_module, *args, **kwargs):
         if model_module.optimizer is None:
