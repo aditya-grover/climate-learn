@@ -4,6 +4,7 @@ from .linear_regression import LinearRegression
 from .persistence import Persistence
 from .resnet import ResNet
 from .resnet_gaussian import ResNetGaussian
+from .resnet_ensemble import ResNetEnsemble
 from .unet import Unet
 from .utils import MODEL_REGISTRY
 from .vit import VisionTransformer
