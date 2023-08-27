@@ -1,18 +1,19 @@
 #Change depending on device
-data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
-mask2former_dir: "/home/rohanshah/Mask2Former"
-default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
+data_dir: "/local2/hbansal/cmip6/1.40625_npz"
+mask2former_dir: "/local/hbansal/Mask2Former"
+default_root_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage1/"
+ckpt_dir: null
 gpu: [0,1,2,3,4,5,6,7]
 batch_size: 8
 grad_acc: 1
 #####################
 
 #Switch between scratch and pretrained models
-use_pretrained_weights: True
+use_pretrained_weights: False
 #Switch between video and image segmentation weights
-pretrained_weights: 'image'
+pretrained_weights: 'video'
 #Set pretraining lead time
-pred_range: 72
+pred_range: 12
 
 in_variables: [
   "land_sea_mask",
@@ -75,7 +76,6 @@ freeze_backbone: True
 freeze_embeddings: False
 embed_norm: True
 continuous_model: False
-ckpt_dir: null
 
 stage: 1
 num_epochs: 20

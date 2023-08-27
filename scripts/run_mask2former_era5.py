@@ -65,7 +65,7 @@ def main():
     wandb.init(
         dir=default_root_dir,
         project='climate-vision23',
-        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}, Model = {cfg['pretrained_weights']}']}", 
+        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}, Model = {cfg['pretrained_weights']}", 
         config=cfg,
     )
     wandb_logger = WandbLogger()

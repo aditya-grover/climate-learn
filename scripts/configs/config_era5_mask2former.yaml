@@ -3,9 +3,9 @@ data_dir: "/local2/hbansal/era5/1.40625_npz/"
 mask2former_dir: "/local/hbansal/Mask2Former/"
 default_root_dir: "/local/hbansal/climate-learn/results_era5/"
 ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage2/"
-gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+gpu: [0, 1, 2, 3]
 batch_size: 8
-grad_acc: 1
+grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
@@ -14,7 +14,7 @@ use_pretrained_weights: True
 pretrained_weights: 'video'
 
 #Set the lead time
-pred_range: 72
+pred_range: 120
 
 in_variables: [
   "land_sea_mask",

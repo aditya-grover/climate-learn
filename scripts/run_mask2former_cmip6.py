@@ -18,19 +18,15 @@ def get_best_checkpoint(dir):
         if 'last' not in ckpt_paths:
             return os.path.join(dir, 'checkpoints/', ckpt_path)
 
-os.environ["NCCL_P2P_DISABLE"] = "1"
+# os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
-    with open('scripts/configs/config_cmip6_mask2former_stage1_fixed.yaml') as f:
+    with open('scripts/configs/config_cmip6_mask2former_stage2_fixed.yaml') as f:
         cfg = yaml.safe_load(f)
     
     default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
     
-    if os.path.exists(default_root_dir):
-        print('Root directory exists')
-        exit()
-    else:
-        os.makedirs(default_root_dir, exist_ok=True)
+    os.makedirs(default_root_dir, exist_ok=True)
 
 
     dm = IterDataModule(
@@ -67,7 +63,7 @@ def main():
     wandb.init(
         project='climate-vision23',
         dir=default_root_dir,
-            name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {cfg['pretrained_weights']}, Lead Time = {pred_range}", 
+            name=f"{cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {cfg['pretrained_weights']}, Lead Time = {cfg['pred_range']}", 
         config=cfg
     )
     wandb_logger = WandbLogger()
