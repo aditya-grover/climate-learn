@@ -6,7 +6,6 @@ ckpt_dir: null
 gpu: [0,1,2,3,4,5,6,7]
 batch_size: 8
 grad_acc: 1
-#####################
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: False
@@ -80,8 +79,8 @@ continuous_model: False
 stage: 1
 num_epochs: 20
 warmup_epochs: 5
-patience: 5000
-val_every_n_steps: 2000
+patience: 5
+val_every_n_steps: 5
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
