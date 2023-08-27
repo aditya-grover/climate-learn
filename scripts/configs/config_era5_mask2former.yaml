@@ -12,6 +12,8 @@ grad_acc: 1
 use_pretrained_weights: True
 #Switch between video and image segmentation weights
 pretrained_weights: 'video'
+#Switch between normal and climax embeddings
+embed_type: 'climax'
 
 #Set the lead time
 pred_range: 72

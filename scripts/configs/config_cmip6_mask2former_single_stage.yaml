@@ -1,18 +1,18 @@
 #Change depending on device
-data_dir: "/home/rohanshah/data/cmip6/1.40625_npz"
+data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
 mask2former_dir: "/home/rohanshah/Mask2Former"
-default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_stage1/"
-ckpt_dir: null
-gpu: [0, 1, 2, 3, 4, 5, 6, 7]
-batch_size: 8
-grad_acc: 1
+default_root_dir: "/home/rohanshah/climate-learn/results_pretrained_cmip6_single_stage/"
+gpu: [0,1,2,3,4,5,6,7]
+batch_size: 4
+grad_acc: 2
+#####################
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: True
 #Switch between video and image segmentation weights
 pretrained_weights: 'video'
-#Set pretraining lead time
-pred_range: 12
+#Switch between normal and climax embeddings
+embed_type: 'climax'
 
 in_variables: [
   "land_sea_mask",
@@ -65,22 +65,26 @@ num_workers: 1
 model: 'mask2former'
 
 in_img_size: [512, 512]
-embed_type: 'climax'
 mlp_embed_depth: 1
 decoder_depth: 2
 patch_size: 4
 embed_dim: 192
 out_embed_dim: 256
-freeze_backbone: True
+freeze_backbone: False
 freeze_embeddings: False
 embed_norm: True
-continuous_model: False
+continuous_model: True
+min_pred_range: 1
+max_pred_range: 28
+hrs_each_step: 6
+fixed_lead_time_eval: 72
+ckpt_dir: null
 
-stage: 1
-num_epochs: 20
+stage: 0
+num_epochs: 50
 warmup_epochs: 5
-patience: 5
-val_every_n_steps: 5
+patience: 5000
+val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
