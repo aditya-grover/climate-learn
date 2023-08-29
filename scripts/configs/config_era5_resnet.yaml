@@ -1,0 +1,82 @@
+#Change depending on device
+data_dir: "/local2/hbansal/era5/1.40625_npz/"
+default_root_dir: "/local/hbansal/climate-learn/results_era5/"
+ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_single_stage/"
+gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+batch_size: 8
+grad_acc: 1
+#####################
+
+#Set the lead time (3 day - 72, 5 day - 120)
+pred_range: 120
+
+in_variables: [
+  "land_sea_mask",
+  "orography",
+  "lattitude",
+  "2m_temperature",
+  "geopotential_50",
+  "geopotential_250",
+  "geopotential_500",
+  "geopotential_600",
+  "geopotential_700",
+  "geopotential_850",
+  "geopotential_925",
+  "u_component_of_wind_50",
+  "u_component_of_wind_250",
+  "u_component_of_wind_500",
+  "u_component_of_wind_600",
+  "u_component_of_wind_700",
+  "u_component_of_wind_850",
+  "u_component_of_wind_925",
+  "v_component_of_wind_50",
+  "v_component_of_wind_250",
+  "v_component_of_wind_500",
+  "v_component_of_wind_600",
+  "v_component_of_wind_700",
+  "v_component_of_wind_850",
+  "v_component_of_wind_925",
+  "temperature_50",
+  "temperature_250",
+  "temperature_500",
+  "temperature_600",
+  "temperature_700",
+  "temperature_850",
+  "temperature_925",
+  "specific_humidity_50",
+  "specific_humidity_250",
+  "specific_humidity_500",
+  "specific_humidity_600",
+  "specific_humidity_700",
+  "specific_humidity_850",
+  "specific_humidity_925",
+]
+out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
+constants: ["land_sea_mask", "orography", "lattitude"]
+subsample: 1
+history: 1
+window: 0
+num_workers: 1
+
+model: 'resnet-baseline'
+
+in_img_size: [512, 512]
+hidden_channels: 128
+activation: 'leaky'
+norm: True
+dropout: 0.1
+n_blocks: 28
+continuous_model: True
+hrs_each_step: 1
+
+num_epochs: 50
+warmup_epochs: 5
+patience: 5
+min_delta : 1.0e-5
+val_every_n_steps: 2000
+lr: 5.0e-7
+warmup_start_lr: 1.0e-8
+eta_min: 1.0e-8
+betas: [0.9, 0.95]
+weight_decay: 1.0e-5
+seed: 42
