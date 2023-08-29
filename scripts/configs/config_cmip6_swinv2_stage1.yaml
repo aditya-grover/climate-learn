@@ -1,6 +1,5 @@
 #Change depending on device
 data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
-mask2former_dir: "/home/tungnd/Mask2Former"
 default_root_dir: "/home/tungnd/climate-learn/results_pretrained_cmip6_stage1/"
 gpu: [0,1,2,3,4,5,6,7]
 batch_size: 4
