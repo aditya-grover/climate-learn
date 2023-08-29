@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import copy
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
-from climate_learn.models.hub import ViTPretrainedClimaXEmb, ViTPretrainedLevelEmb, Mask2Former
+from climate_learn.models.hub import ViTPretrainedClimaXEmb, ViTPretrainedLevelEmb, Mask2Former, SwinV2Classification
 
 
 class LitModule(pl.LightningModule):
@@ -68,7 +68,8 @@ class LitModule(pl.LightningModule):
     def forward(self, x: torch.Tensor, in_variables, lead_times=None) -> torch.Tensor:
         if isinstance(self.net, ViTPretrainedClimaXEmb) or\
             isinstance(self.net, ViTPretrainedLevelEmb) or \
-            isinstance(self.net, Mask2Former):
+            isinstance(self.net, Mask2Former) or \
+            isinstance(self.net, SwinV2Classification):
             return self.net(x, in_variables, lead_times)
         return self.net(x)
 
