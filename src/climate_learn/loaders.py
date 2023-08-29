@@ -1,6 +1,7 @@
 # Standard library
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 from functools import partial
+from copy import deepcopy
 import warnings
 
 # Local application
@@ -13,8 +14,6 @@ from .models.hub import (
     Persistence,
     ResNet,
     ViTPretrained,
-    ViTPretrainedClimaXEmb,
-    ViTPretrainedLevelEmb,
     VisionTransformer,
     TimeSformerPretrained,
     # SwinPretrainedSegmentation,
@@ -315,90 +314,6 @@ def load_preset(task, data_module, preset, cfg=None):
                 "linear-warmup-cosine-annealing",
                 optimizer,
                 {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
-            ) 
-            # lr_scheduler = None
-        elif preset.lower() == 'vit_pretrained':
-            model = ViTPretrained(
-                in_img_size = cfg['in_img_size'],
-                out_img_size = (in_height, in_width),
-                in_channels = in_channels,
-                out_channels = out_channels,
-                history=history,
-                learn_pos_emb=cfg['learn_pos_emb'],
-                patch_size = cfg['patch_size'],
-                embed_dim = cfg['embed_dim'],
-                decoder_depth=cfg['decoder_depth'],
-                use_pretrained_weights=cfg['use_pretrained_weights'],
-                use_pretrained_embeddings=cfg['use_pretrained_embeddings'],
-                use_n_blocks=cfg['use_n_blocks'],
-                freeze_backbone=cfg['freeze_backbone'],
-                freeze_embeddings=cfg['freeze_embeddings'],
-                resize_img=cfg['resize_img'],
-                pretrained_model=cfg['pretrained_model'],
-                mlp_embed_depth=cfg['mlp_embed_depth']
-            )
-            optimizer = load_optimizer(
-                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
-            )
-            lr_scheduler = load_lr_scheduler(
-                "linear-warmup-cosine-annealing",
-                optimizer,
-                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
-            )
-        elif preset.lower() == 'vit_pretrained_climax_emb':
-            model = ViTPretrainedClimaXEmb(
-                in_img_size = cfg['in_img_size'],
-                out_img_size = (in_height, in_width),
-                in_channels = in_channels,
-                out_channels = out_channels,
-                history=history,
-                learn_pos_emb=cfg['learn_pos_emb'],
-                patch_size = cfg['patch_size'],
-                embed_dim = cfg['embed_dim'],
-                decoder_depth=cfg['decoder_depth'],
-                use_pretrained_weights=cfg['use_pretrained_weights'],
-                use_pretrained_climax=cfg['use_pretrained_climax'],
-                use_n_blocks=cfg['use_n_blocks'],
-                freeze_backbone=cfg['freeze_backbone'],
-                freeze_embeddings=cfg['freeze_embeddings'],
-                resize_img=cfg['resize_img'],
-                pretrained_model=cfg['pretrained_model'],
-                mlp_embed_depth=cfg['mlp_embed_depth']
-            )
-            optimizer = load_optimizer(
-                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
-            )
-            lr_scheduler = load_lr_scheduler(
-                "linear-warmup-cosine-annealing",
-                optimizer,
-                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['max_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
-            )
-        elif preset.lower() == 'vit_pretrained_level_emb':
-            model = ViTPretrainedLevelEmb(
-                in_img_size = cfg['in_img_size'],
-                out_img_size = (in_height, in_width),
-                in_channels = in_channels,
-                out_channels = out_channels,
-                history=history,
-                learn_pos_emb=cfg['learn_pos_emb'],
-                patch_size = cfg['patch_size'],
-                embed_dim = cfg['embed_dim'],
-                decoder_depth=cfg['decoder_depth'],
-                use_pretrained_weights=cfg['use_pretrained_weights'],
-                use_n_blocks=cfg['use_n_blocks'],
-                freeze_backbone=cfg['freeze_backbone'],
-                freeze_embeddings=cfg['freeze_embeddings'],
-                resize_img=cfg['resize_img'],
-                pretrained_model=cfg['pretrained_model'],
-                mlp_embed_depth=cfg['mlp_embed_depth']
-            )
-            optimizer = load_optimizer(
-                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
-            )
-            lr_scheduler = load_lr_scheduler(
-                "linear-warmup-cosine-annealing",
-                optimizer,
-                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['max_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
             )
         elif preset.lower() == 'timesformer_pretrained':
             model = TimeSformerPretrained(
@@ -533,6 +448,30 @@ def load_preset(task, data_module, preset, cfg=None):
                 optimizer,
                 {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
             )
+        elif preset.lower() == 'vit_pretrained':
+            model = ViTPretrained(
+                in_img_size = cfg['in_img_size'],
+                in_channels = in_channels,
+                out_channels = out_channels,
+                embed_type=cfg['embed_type'], # normal or climax
+                patch_size=cfg['patch_size'],
+                embed_norm=cfg['embed_norm'],
+                mlp_embed_depth=cfg['mlp_embed_depth'],
+                decoder_depth=cfg['decoder_depth'],
+                freeze_backbone=cfg['freeze_backbone'],
+                freeze_embeddings=cfg['freeze_embeddings'],
+                pretrained_weights=cfg['pretrained_weights'],
+                use_pretrained_weights=cfg['use_pretrained_weights'],
+                continuous_model=cfg['continuous_model'],
+            )
+            optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
         # elif preset.lower() == 'cli-vit':
         #     model = ClimaX(
         #         default_vars=cfg['in_variables'] + cfg['constants'],
@@ -571,18 +510,40 @@ def load_optimizer(net: torch.nn.Module, optim: str, optim_kwargs: Dict[str, Any
     if len(list(net.parameters())) == 0:
         warnings.warn("Net has no trainable parameters, setting optimizer to `None`")
         optimizer = None
+    
+    decay = []
+    no_decay = []
+    for name, m in net.named_parameters():
+        if "channel_embed" in name \
+            or "pos_embed" in name \
+            or "time_pos_embed" in name \
+            or "pretrained_backbone" in name:
+            no_decay.append(m)
+        else:
+            decay.append(m)
+
+    kwargs_decay = deepcopy(optim_kwargs)
+    kwargs_decay['params'] = decay
+
+    kwargs_no_decay = deepcopy(optim_kwargs)
+    kwargs_no_decay['params'] = no_decay
+    kwargs_no_decay['weight_decay'] = 0.
+
     if optim.lower() == "sgd":
-        optimizer = torch.optim.SGD(net.parameters(), **optim_kwargs)
+        optimizer_cls = torch.optim.SGD
     elif optim.lower() == "adam":
-        optimizer = torch.optim.Adam(net.parameters(), **optim_kwargs)
+        optimizer_cls = torch.optim.Adam
     elif optim.lower() == "adamw":
-        optimizer = torch.optim.AdamW(net.parameters(), **optim_kwargs)
+        optimizer_cls = torch.optim.AdamW
     else:
         raise NotImplementedError(
             f"{optim} is not an implemented optimizer. If you think it should"
             " be, please raise an issue at"
             " https://github.com/aditya-grover/climate-learn/issues"
         )
+
+    optimizer = optimizer_cls([kwargs_decay, kwargs_no_decay])
+
     return optimizer
 
 
