@@ -8,6 +8,7 @@ import torchvision
 from transformers import CLIPVisionModel, CLIPVisionConfig
 from timm.models.vision_transformer import PatchEmbed, trunc_normal_
 from .climax import ClimaXEmbedding
+from .prithvi import MaskedAutoencoderViT
 
 
 @register('vit_pretrained')
@@ -169,8 +170,33 @@ class ViTPretrained(nn.Module):
                 self.pretrained_backbone = CLIPVisionModel(cfg)
             self.pretrained_embed_dim = self.pretrained_backbone.config.hidden_size
             self.num_heads = self.pretrained_backbone.config.num_attention_heads
+        elif 'nasa' in pretrained_weights:
+            # hard-coded
+            self.pretrained_backbone = MaskedAutoencoderViT(
+                img_size=224,
+                patch_size=16,
+                num_frames=3,
+                tubelet_size=1,
+                in_chans=6,
+                embed_dim=768,
+                depth=12,
+                num_heads=12,
+                decoder_embed_dim=512,
+                decoder_depth=8,
+                decoder_num_heads=16,
+            )
+            if self.use_pretrained_weights:
+                print ('Loading NASA weights')
+                checkpoint = "https://huggingface.co/ibm-nasa-geospatial/Prithvi-100M/resolve/main/Prithvi_100M.pt"
+                state_dict = torch.hub.load_state_dict_from_url(checkpoint, map_location='cpu')
+                msg = self.pretrained_backbone.load_state_dict(state_dict)
+                print (msg)
+            else:
+                print(f'Loading randomly initialized model like NASA')
+            self.pretrained_embed_dim = 768
+            self.num_heads = 12
         else:
-            raise NotImplementedError('Only support Dinov2 and CLIP')
+            raise NotImplementedError('Only support Dinov2, CLIP, and NASA')
 
     def initialize_weights(self):
         if not self.use_pretrained_weights:
@@ -222,7 +248,7 @@ class ViTPretrained(nn.Module):
             lead_time_emb = self.lead_time_embed(lead_times.unsqueeze(-1)).unsqueeze(1) # B, 1, D
             x = x + lead_time_emb
         
-        if 'dinov2' in self.pretrained_weights:
+        if 'dinov2' in self.pretrained_weights or 'nasa' in self.pretrained_weights:
             for blk in self.pretrained_backbone.blocks:
                 x = blk(x)
             x = self.pretrained_backbone.norm(x)
@@ -260,7 +286,8 @@ class ViTPretrained(nn.Module):
 #     freeze_backbone=False,
 #     freeze_embeddings=False,
 #     # pretrained_weights="dinov2_vits14",
-#     pretrained_weights="openai/clip-vit-base-patch32",
+#     # pretrained_weights="openai/clip-vit-base-patch32",
+#     pretrained_weights="nasa",
 #     use_pretrained_weights=True,
 #     continuous_model=True
 # ).cuda()
