@@ -472,6 +472,29 @@ def load_preset(task, data_module, preset, cfg=None):
                 optimizer,
                 {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
             )
+        elif preset.lower() == 'resnet-baseline':
+            if cfg['continuous_model']:
+                resnet_in_channels = in_channels + 1
+            else:
+                resnet_in_channels = in_channels
+            model = ResNet(
+                in_channels=resnet_in_channels,
+                out_channels=out_channels,
+                history=cfg['history'],
+                hidden_channels=cfg['hidden_channels'],
+                activation=cfg['activation'],
+                norm=cfg['norm'],
+                dropout=cfg['dropout'],
+                n_blocks=cfg['n_blocks'],
+            )
+            optimizer = load_optimizer(
+                    model, "AdamW", {"lr": cfg['lr'], "weight_decay": cfg['weight_decay'], "betas": cfg['betas']}
+            )
+            lr_scheduler = load_lr_scheduler(
+                "linear-warmup-cosine-annealing",
+                optimizer,
+                {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
+            )
         # elif preset.lower() == 'cli-vit':
         #     model = ClimaX(
         #         default_vars=cfg['in_variables'] + cfg['constants'],

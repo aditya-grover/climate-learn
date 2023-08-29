@@ -59,9 +59,16 @@ class ResNet(nn.Module):
             hidden_channels, out_channels, kernel_size=7, padding=3
         )
 
-    def forward(self, x):
+    def forward(self, x, lead_times = None):
         if len(x.shape) == 5:  # x.shape = [B,T,C,H,W]
+            b, t, _, h, w = x.shape
+            lead_times = lead_times.reshape(b, 1, 1, 1, 1).repeat(1, t, 1, h, w)
+            x = torch.cat((x, lead_times), dim=2)
             x = x.flatten(1, 2)
+        else:
+            b, _, h, w = x.shape
+            lead_times = lead_times.reshape(b, 1, 1, 1).repeat(1, 1, h, w)
+            x = torch.cat((x, lead_times), dim=1)
         # x.shape = [B,T*C,H,W]
         x = self.image_proj(x)
         for block in self.blocks:
