@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import climate_learn as cl
 from climate_learn.data import IterDataModule, ContinuousIterDataModule
 from climate_learn.utils.datetime import Hours
@@ -18,13 +20,26 @@ def get_best_checkpoint(dir):
         if 'last' not in ckpt_paths:
             return os.path.join(dir, 'checkpoints/', ckpt_path)
 
-# os.environ["NCCL_P2P_DISABLE"] = "1"
+os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
-    with open('scripts/configs/config_era5_mask2former.yaml') as f:
-        cfg = yaml.safe_load(f)
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, required=True)
+    args = parser.parse_args()
+
+    config_path = args.config
     
-    default_root_dir=f"{cfg['default_root_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}/"
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+        
+    model_name = cfg['model']
+
+    if '/' in cfg['pretrained_weights']:
+        pretrained_name = cfg['pretrained_weights'].split('/')[1]
+    else:
+        pretrained_name = cfg['pretrained_weights']
+    
+    default_root_dir = os.path.join(cfg['default_root_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}")
     os.makedirs(default_root_dir, exist_ok=True)
     
     dm = ContinuousIterDataModule(
@@ -54,7 +69,7 @@ def main():
 
     
     if cfg['ckpt_dir'] is not None:
-        ckpt_path = get_best_checkpoint(f"{cfg['ckpt_dir']}/mask2former_{cfg['pretrained_weights']}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}/")
+        ckpt_path = get_best_checkpoint(os.path.join(cfg['ckpt_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}"))
         state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
         print(msg)
@@ -65,7 +80,7 @@ def main():
     wandb.init(
         dir=default_root_dir,
         project='climate-vision23',
-        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}, Model = {cfg['pretrained_weights']}", 
+        name=f"ERA5, {cfg['model'].upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Stage = {cfg['stage']}, Lead Time = {cfg['pred_range']}, Model = {cfg['pretrained_weights']}", 
         config=cfg,
     )
     wandb_logger = WandbLogger()
