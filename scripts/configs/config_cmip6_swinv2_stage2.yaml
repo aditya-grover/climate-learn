@@ -1,6 +1,7 @@
 #Change depending on device
 data_dir: "/eagle/MDClimSim/tungnd/data/CMIP6/MPI-ESM/1.40625deg_np_10_shards/"
-default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage1/"
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage2/"
+ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage1/"
 gpu: 4
 batch_size: 8
 grad_acc: 1
@@ -11,8 +12,6 @@ use_pretrained_weights: True
 pretrained_weights: 'microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft'
 #Switch between normal and climax embeddings
 embed_type: 'climax'
-
-### Data
 
 in_variables: [
   # "land_sea_mask",
@@ -77,15 +76,14 @@ patch_size: 4
 embed_norm: True
 mlp_embed_depth: 1
 decoder_depth: 2
-freeze_backbone: True
+freeze_backbone: False
 freeze_embeddings: False
 continuous_model: True
-ckpt_dir: null
 
-stage: 1
-num_epochs: 20
+stage: 2
+num_epochs: 50
 warmup_epochs: 5
-patience: 5000
+patience: 5
 val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8

@@ -1,24 +1,28 @@
 #Change depending on device
-data_dir: "/data0/datasets/weatherbench/data/cmip6/1.40625_npz"
-default_root_dir: "/home/tungnd/climate-learn/results_pretrained_cmip6_stage1/"
-gpu: [0]
-batch_size: 4
-grad_acc: 2
+data_dir: "/eagle/MDClimSim/tungnd/data/CMIP6/MPI-ESM/1.40625deg_np_10_shards/"
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage1/"
+gpu: 4
+batch_size: 2
+grad_acc: 4
 #####################
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: True
-pretrained_weights: 'dinov2_vitl14'
+# pretrained_weights: 'dinov2_vitl14'
+pretrained_weights: 'openai/clip-vit-large-patch14'
+# pretrained_weights: 'nasa'
 #Switch between normal and climax embeddings
 embed_type: 'climax'
 
 ### Data
 
 in_variables: [
-  "land_sea_mask",
-  "orography",
-  "lattitude",
+  # "land_sea_mask",
+  # "orography",
+  # "lattitude",
   "2m_temperature",
+  "10m_u_component_of_wind", 
+  "10m_v_component_of_wind",
   "geopotential_50",
   "geopotential_250",
   "geopotential_500",
@@ -56,7 +60,7 @@ in_variables: [
   "specific_humidity_925",
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
-constants: ["land_sea_mask", "orography", "lattitude"]
+# constants: ["land_sea_mask", "orography", "lattitude"]
 min_pred_range: 1
 max_pred_range: 28
 hrs_each_step: 6
@@ -70,8 +74,8 @@ num_workers: 1
 
 model: 'vit_pretrained'
 
-in_img_size: [32, 64]
-patch_size: 2
+in_img_size: [128, 256]
+patch_size: 4
 embed_norm: True
 mlp_embed_depth: 1
 decoder_depth: 2
