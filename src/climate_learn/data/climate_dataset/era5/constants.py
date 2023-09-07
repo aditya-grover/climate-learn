@@ -56,7 +56,7 @@ PRESSURE_LEVEL_VARS = [
     "potential_vorticity",
 ]
 
-DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925]
+DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925, 1000]
 
 CONSTANTS = ["orography", "land_sea_mask", "slt", "lattitude", "longitude"]
 

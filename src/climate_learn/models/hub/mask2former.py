@@ -59,8 +59,10 @@ class Mask2Former(nn.Module):
             mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_c5c739.pkl']
             from train_net_video import setup
         elif pretrained_weights == 'image':
-            mask2former_config_file = f'{mask2former_dir}/configs/coco/panoptic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml'
-            mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_f07440.pkl']
+            # mask2former_config_file = f'{mask2former_dir}/configs/coco/panoptic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml'
+            # mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_f07440.pkl']
+            mask2former_config_file = f'{mask2former_dir}/configs/ade20k/semantic-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640.yaml'
+            mask2former_opts = ['MODEL.WEIGHTS', f'{mask2former_dir}/checkpoints/model_final_6b4a3a.pkl']
             from train_net import setup
         else:
             print('Pretrained weights must be either video or image')

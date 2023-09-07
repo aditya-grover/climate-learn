@@ -105,7 +105,10 @@ def load_model_module(
     lat, lon = data_module.get_lat_lon()
     if isinstance(train_loss, str):
         print(f"Loading training loss: {train_loss}")
-        clim = get_climatology(data_module, "train")
+        try:
+            clim = get_climatology(data_module, "train")
+        except:
+            clim = None
         metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
         train_loss = load_loss(train_loss, True, metainfo)
     elif isinstance(train_loss, Callable):
@@ -118,7 +121,10 @@ def load_model_module(
     val_losses = []
     for vl in val_loss:
         if isinstance(vl, str):
-            clim = get_climatology(data_module, "val")
+            try:
+                clim = get_climatology(data_module, "val")
+            except:
+                clim = None
             metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
             print(f"Loading validation loss: {vl}")
             val_losses.append(load_loss(vl, False, metainfo))
@@ -133,7 +139,10 @@ def load_model_module(
     test_losses = []
     for tl in test_loss:
         if isinstance(tl, str):
-            clim = get_climatology(data_module, "test")
+            try:
+                clim = get_climatology(data_module, "test")
+            except:
+                clim = None
             metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
             print(f"Loading test loss: {tl}")
             test_losses.append(load_loss(tl, False, metainfo))
@@ -206,15 +215,25 @@ def load_model_module(
     return model_module
 
 
+# load_forecasting_module = partial(
+#     load_model_module,
+#     task="forecasting",
+#     train_loss="lat_mse",
+#     val_loss=["lat_mse", "lat_rmse", "lat_acc"],
+#     test_loss=["lat_rmse", "lat_acc"],
+#     train_target_transform=None,
+#     val_target_transform=[nn.Identity(), "denormalize", "denormalize"], # first metric used for early stopping
+#     test_target_transform=["denormalize", "denormalize"],
+# )
 load_forecasting_module = partial(
     load_model_module,
     task="forecasting",
     train_loss="lat_mse",
-    val_loss=["lat_mse", "lat_rmse", "lat_acc"],
-    test_loss=["lat_rmse", "lat_acc"],
+    val_loss=["lat_mse"],
+    test_loss=["lat_mse"],
     train_target_transform=None,
-    val_target_transform=[nn.Identity(), "denormalize", "denormalize"], # first metric used for early stopping
-    test_target_transform=["denormalize", "denormalize"],
+    val_target_transform=[nn.Identity()], # first metric used for early stopping
+    test_target_transform=[nn.Identity()],
 )
 
 load_climatebench_module = partial(

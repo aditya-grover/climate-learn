@@ -28,9 +28,9 @@ class Trainer(pl.Trainer):
         if "callbacks" not in kwargs:
             checkpoint_callback = ModelCheckpoint(
                 dirpath=f"{default_root_dir}/checkpoints",
-                monitor=early_stopping,
-                mode="min",
-                save_top_k=1,
+                # monitor=early_stopping,
+                # mode="min",
+                # save_top_k=1,
                 save_last=True,
                 verbose=False,
                 filename="epoch_{epoch:03d}",
@@ -42,7 +42,7 @@ class Trainer(pl.Trainer):
             callbacks = [
                 checkpoint_callback,
                 summary_callback,
-                progress_callback,
+                # progress_callback,
                 lr_monitor
             ]
             if early_stopping:
@@ -61,7 +61,7 @@ class Trainer(pl.Trainer):
                 warn("In interactive environment: cannot use DDP spawn strategy")
                 kwargs["strategy"] = None
             else:
-                kwargs["strategy"] = "ddp"
+                kwargs["strategy"] = "ddp_find_unused_parameters_true"
         self.trainer = pl.Trainer(**kwargs)
         self.trainer.favorite_metric = early_stopping
 

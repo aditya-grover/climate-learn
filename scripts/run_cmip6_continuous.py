@@ -21,7 +21,7 @@ def get_best_checkpoint(dir):
             return os.path.join(dir, 'checkpoints/', ckpt_path)
 
 ### comment this line if not running on mint clusters
-os.environ["NCCL_P2P_DISABLE"] = "1"
+# os.environ["NCCL_P2P_DISABLE"] = "1"
 
 def main():
     parser = ArgumentParser()
@@ -92,20 +92,23 @@ def main():
     wandb_logger = WandbLogger()
 
     trainer = cl.Trainer(
-        early_stopping="val/lat_mse:aggregate",
+        # early_stopping="val/lat_mse:aggregate",
+        early_stopping=None,
         patience=cfg["patience"],
         accelerator="gpu",
         devices=cfg["gpu"],
+        num_nodes=2,
         precision=16,
         max_epochs=cfg["num_epochs"],
         default_root_dir=default_root_dir,
         logger=[wandb_logger],
         accumulate_grad_batches=cfg['grad_acc'],
         val_check_interval=cfg['val_every_n_steps'],
+        num_sanity_val_steps=0,
     )
 
     trainer.fit(module, datamodule=dm)
-    trainer.test(module, datamodule=dm, ckpt_path="best")
+    # trainer.test(module, datamodule=dm, ckpt_path="best")
 
 
 if __name__ == "__main__":
