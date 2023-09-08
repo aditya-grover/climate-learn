@@ -188,7 +188,7 @@ class LitModule(pl.LightningModule):
             if yhat_.shape[2] != y_.shape[2] or yhat_.shape[3] != y_.shape[3]:
                 yhat_ = torch.nn.functional.interpolate(yhat_, size=(y_.shape[2], y_.shape[3]))
 
-            yhat_, y_ = self.replace_constant(y_, yhat_, out_variables)
+            yhat_ = self.replace_constant(y_, yhat_, out_variables)
             
             losses = lf(yhat_, y_)
             loss_name = getattr(lf, "name", f"loss_{i}")

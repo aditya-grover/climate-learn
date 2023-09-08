@@ -44,7 +44,7 @@ def main():
     else:
         pretrained_name = cfg['pretrained_weights']
     
-    default_root_dir = os.path.join(cfg['default_root_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_pred_all_6hrs")
+    default_root_dir = os.path.join(cfg['default_root_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_lead_time_{cfg['pred_range']}")
     os.makedirs(default_root_dir, exist_ok=True)
 
     dm = ContinuousIterDataModule(
@@ -73,7 +73,7 @@ def main():
     )
 
     if cfg['ckpt_dir'] is not None:
-        ckpt_path = get_best_checkpoint(os.path.join(cfg['ckpt_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}_pred_all_6hrs"))
+        ckpt_path = get_best_checkpoint(os.path.join(cfg['ckpt_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}"))
         state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
         print(msg)
@@ -84,7 +84,7 @@ def main():
     wandb.init(
         project='climate-vision23',
         dir=default_root_dir,
-        name=f"ERA5, {model_name.upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Steps = {cfg['step']}, Model = {pretrained_name}", 
+        name=f"ERA5, {model_name.upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']}, Lead Time = {cfg['pred_range']}, Model = {pretrained_name}", 
         config=cfg
     )
     wandb_logger = WandbLogger()
@@ -92,6 +92,7 @@ def main():
     trainer = cl.Trainer(
         early_stopping="val/lat_mse:aggregate",
         patience=cfg["patience"],
+        min_delta=cfg['min_delta'],
         accelerator="gpu",
         devices=gpus,
         num_nodes=nodes,
@@ -101,7 +102,7 @@ def main():
         logger=[wandb_logger],
         accumulate_grad_batches=cfg['grad_acc'],
         val_check_interval=cfg['val_every_n_steps'],
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=2,
     )
     
     if os.path.exists(os.path.join(default_root_dir, 'checkpoints', 'last.ckpt')):
