@@ -26,9 +26,13 @@ def get_best_checkpoint(dir):
 def main():
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--nodes", type=int, required=True)
+    parser.add_argument("--gpus", type=int, required=True)
     args = parser.parse_args()
 
     config_path = args.config
+    nodes = args.nodes
+    gpus = args.gpus
 
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
@@ -68,7 +72,7 @@ def main():
     )
 
     # load module
-    module = cl.load_forecasting_module(
+    module = cl.load_forecasting_module_train_only(
         data_module=dm, 
         preset=cfg['model'], 
         cfg=cfg,
@@ -96,8 +100,8 @@ def main():
         early_stopping=None,
         patience=cfg["patience"],
         accelerator="gpu",
-        devices=cfg["gpu"],
-        num_nodes=2,
+        devices=gpus,
+        num_nodes=nodes,
         precision=16,
         max_epochs=cfg["num_epochs"],
         default_root_dir=default_root_dir,
@@ -106,8 +110,13 @@ def main():
         val_check_interval=cfg['val_every_n_steps'],
         num_sanity_val_steps=0,
     )
+    
+    if os.path.exists(os.path.join(default_root_dir, 'checkpoints', 'last.ckpt')):
+        ckpt_resume_path = os.path.join(default_root_dir, 'checkpoints', 'last.ckpt')
+    else:
+        ckpt_resume_path = None
 
-    trainer.fit(module, datamodule=dm)
+    trainer.fit(module, datamodule=dm, ckpt_path=ckpt_resume_path)
     # trainer.test(module, datamodule=dm, ckpt_path="best")
 
 
