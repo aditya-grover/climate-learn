@@ -11,6 +11,7 @@ from pytorch_lightning import LightningDataModule
 # Local application
 from .climate_dataset.era5_continuous_iterdataset import *
 from ..utils.datetime import Hours
+from .climate_dataset.era5.constants import CONSTANTS
 
 # TODO: include exceptions in docstrings
 # TODO: document legal input/output variables for each dataset
@@ -165,8 +166,13 @@ class ContinuousIterDataModule(LightningDataModule):
         clim_dict = np.load(path)
         clim_dict = {
             var: torch.from_numpy(np.squeeze(clim_dict[var].astype(np.float32), axis=0))
-            for var in self.hparams.out_vars
+            for var in self.hparams.out_vars if var in clim_dict.keys()
         }
+        for var in self.hparams.out_vars:
+            if var not in clim_dict.keys() and var in CONSTANTS:
+                # just load the constant value from any npz data file
+                constant_value = np.load(self.inp_lister_train[0])[var][0]
+                clim_dict[var] = torch.from_numpy(np.squeeze(constant_value.astype(np.float32), axis=0))
         return clim_dict
 
     def setup(self, stage: Optional[str] = None):

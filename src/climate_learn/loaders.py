@@ -215,17 +215,18 @@ def load_model_module(
     return model_module
 
 
-# load_forecasting_module = partial(
-#     load_model_module,
-#     task="forecasting",
-#     train_loss="lat_mse",
-#     val_loss=["lat_mse", "lat_rmse", "lat_acc"],
-#     test_loss=["lat_rmse", "lat_acc"],
-#     train_target_transform=None,
-#     val_target_transform=[nn.Identity(), "denormalize", "denormalize"], # first metric used for early stopping
-#     test_target_transform=["denormalize", "denormalize"],
-# )
 load_forecasting_module = partial(
+    load_model_module,
+    task="forecasting",
+    train_loss="lat_mse",
+    val_loss=["lat_mse", "lat_rmse", "lat_acc"],
+    test_loss=["lat_rmse", "lat_acc"],
+    train_target_transform=None,
+    val_target_transform=[nn.Identity(), "denormalize", "denormalize"], # first metric used for early stopping
+    test_target_transform=["denormalize", "denormalize"],
+)
+
+load_forecasting_module_train_only = partial(
     load_model_module,
     task="forecasting",
     train_loss="lat_mse",

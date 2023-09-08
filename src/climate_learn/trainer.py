@@ -26,16 +26,25 @@ class Trainer(pl.Trainer):
         if "logger" not in kwargs:
             kwargs["logger"] = False
         if "callbacks" not in kwargs:
-            checkpoint_callback = ModelCheckpoint(
-                dirpath=f"{default_root_dir}/checkpoints",
-                # monitor=early_stopping,
-                # mode="min",
-                # save_top_k=1,
-                save_last=True,
-                verbose=False,
-                filename="epoch_{epoch:03d}",
-                auto_insert_metric_name=False,
-            )
+            if early_stopping is not None:
+                checkpoint_callback = ModelCheckpoint(
+                    dirpath=f"{default_root_dir}/checkpoints",
+                    monitor=early_stopping,
+                    mode="min",
+                    save_top_k=1,
+                    save_last=True,
+                    verbose=False,
+                    filename="epoch_{epoch:03d}",
+                    auto_insert_metric_name=False,
+                )
+            else:
+                checkpoint_callback = ModelCheckpoint(
+                    dirpath=f"{default_root_dir}/checkpoints",
+                    save_last=True,
+                    verbose=False,
+                    filename="epoch_{epoch:03d}",
+                    auto_insert_metric_name=False,
+                )
             summary_callback = RichModelSummary(max_depth=summary_depth)
             progress_callback = RichProgressBar()
             lr_monitor = LearningRateMonitor(logging_interval="step")

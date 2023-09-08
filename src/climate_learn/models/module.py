@@ -86,7 +86,6 @@ class LitModule(pl.LightningModule):
         
         original_y = copy.deepcopy(y)
         yhat = self(x, in_variables, lead_times).to(device=y.device)
-        yhat = self.replace_constant(y, yhat, out_variables)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -94,6 +93,8 @@ class LitModule(pl.LightningModule):
         # needed for swin transformers
         if yhat.shape[2] != y.shape[2] or yhat.shape[3] != y.shape[3]:
             y = torch.nn.functional.interpolate(y, size=(yhat.shape[2], yhat.shape[3]))
+
+        yhat = self.replace_constant(y, yhat, out_variables)
 
         losses = self.train_loss(yhat, y)
         loss_name = getattr(self.train_loss, "name", "loss")
@@ -169,7 +170,6 @@ class LitModule(pl.LightningModule):
         else:
             x, y, lead_times, in_variables, out_variables = batch    
         yhat = self(x, in_variables, lead_times).to(device=y.device)
-        yhat = self.replace_constant(y, yhat, out_variables)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms
@@ -187,6 +187,8 @@ class LitModule(pl.LightningModule):
             # needed for swin transformers
             if yhat_.shape[2] != y_.shape[2] or yhat_.shape[3] != y_.shape[3]:
                 yhat_ = torch.nn.functional.interpolate(yhat_, size=(y_.shape[2], y_.shape[3]))
+
+            yhat_, y_ = self.replace_constant(y_, yhat_, out_variables)
             
             losses = lf(yhat_, y_)
             loss_name = getattr(lf, "name", f"loss_{i}")
