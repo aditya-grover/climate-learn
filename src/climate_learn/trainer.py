@@ -40,6 +40,8 @@ class Trainer(pl.Trainer):
             else:
                 checkpoint_callback = ModelCheckpoint(
                     dirpath=f"{default_root_dir}/checkpoints",
+                    monitor='"train/lat_mse:aggregate"',
+                    save_top_k=5,
                     save_last=True,
                     verbose=False,
                     filename="epoch_{epoch:03d}",

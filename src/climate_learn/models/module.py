@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import copy
 
 from climate_learn.data.climate_dataset.era5.constants import CONSTANTS
-from climate_learn.models.hub import ViTPretrained, Mask2Former, SwinV2Classification, ResNet
+from climate_learn.models.hub import ViTPretrained, Mask2Former, Mask2FormerPredictAll, SwinV2Classification, ResNet
 
 
 class LitModule(pl.LightningModule):
@@ -65,12 +65,14 @@ class LitModule(pl.LightningModule):
                 yhat[:, i] = y[:, i]
         return yhat
 
-    def forward(self, x: torch.Tensor, in_variables, lead_times=None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, in_variables, out_variables, lead_times=None) -> torch.Tensor:
         if isinstance(self.net, ViTPretrained) or\
             isinstance(self.net, Mask2Former) or \
             isinstance(self.net, SwinV2Classification) or \
             isinstance(self.net, ResNet):
             return self.net(x, in_variables, lead_times)
+        elif isinstance(self.net, Mask2FormerPredictAll):
+            return self.net(x, in_variables, out_variables, lead_times)
         return self.net(x)
 
     def training_step(
@@ -85,7 +87,7 @@ class LitModule(pl.LightningModule):
             x, y, lead_times, in_variables, out_variables = batch
         
         original_y = copy.deepcopy(y)
-        yhat = self(x, in_variables, lead_times).to(device=y.device)
+        yhat = self(x, in_variables, out_variables, lead_times).to(device=y.device)
         if self.train_target_transform:
             yhat = self.train_target_transform(yhat)
             y = self.train_target_transform(y)
@@ -109,31 +111,31 @@ class LitModule(pl.LightningModule):
             loss_dict[f"train/{loss_name}:aggregate"] = loss
         optimization_loss = loss
 
-        loss_fns = self.val_loss                #Compute RMSE and other metrics on train set
-        transforms = self.val_target_transforms
-        for i, lf in enumerate(loss_fns):
-            if transforms is not None and transforms[i] is not None:
-                yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
-                y_T = transforms[i](original_y)
+        # loss_fns = self.val_loss                #Compute RMSE and other metrics on train set
+        # transforms = self.val_target_transforms
+        # for i, lf in enumerate(loss_fns):
+        #     if transforms is not None and transforms[i] is not None:
+        #         yhat_T = transforms[i](yhat)                    #Fixes bug when transforms[i] is None
+        #         y_T = transforms[i](original_y)
 
-                # needed for swin transformers
-                if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
-                    yhat_T = torch.nn.functional.interpolate(yhat_T, size=(y_T.shape[2], y_T.shape[3]))
-                losses = lf(yhat_T, y_T)
-            else:
-                # needed for swin transformers
-                if yhat.shape[2] != original_y.shape[2] or yhat.shape[3] != original_y.shape[3]:
-                    yhat = torch.nn.functional.interpolate(yhat, size=(original_y.shape[2], original_y.shape[3]))
-                losses = lf(yhat, original_y)
+        #         # needed for swin transformers
+        #         if yhat_T.shape[2] != y_T.shape[2] or yhat_T.shape[3] != y_T.shape[3]:
+        #             yhat_T = torch.nn.functional.interpolate(yhat_T, size=(y_T.shape[2], y_T.shape[3]))
+        #         losses = lf(yhat_T, y_T)
+        #     else:
+        #         # needed for swin transformers
+        #         if yhat.shape[2] != original_y.shape[2] or yhat.shape[3] != original_y.shape[3]:
+        #             yhat = torch.nn.functional.interpolate(yhat, size=(original_y.shape[2], original_y.shape[3]))
+        #         losses = lf(yhat, original_y)
 
-            loss_name = getattr(lf, "name", f"loss_{i}")
-            if losses.dim() == 0:
-                loss_dict[f"train/{loss_name}:agggregate"] = losses
-            else:
-                for var_name, loss in zip(out_variables, losses):
-                    name = f"train/{loss_name}:{var_name}"
-                    loss_dict[name] = loss
-                loss_dict[f"train/{loss_name}:aggregate"] = losses[-1]
+        #     loss_name = getattr(lf, "name", f"loss_{i}")
+        #     if losses.dim() == 0:
+        #         loss_dict[f"train/{loss_name}:agggregate"] = losses
+        #     else:
+        #         for var_name, loss in zip(out_variables, losses):
+        #             name = f"train/{loss_name}:{var_name}"
+        #             loss_dict[name] = loss
+        #         loss_dict[f"train/{loss_name}:aggregate"] = losses[-1]
         
         self.log_dict(
             loss_dict,
@@ -169,7 +171,7 @@ class LitModule(pl.LightningModule):
             lead_times = None
         else:
             x, y, lead_times, in_variables, out_variables = batch    
-        yhat = self(x, in_variables, lead_times).to(device=y.device)
+        yhat = self(x, in_variables, out_variables, lead_times).to(device=y.device)
         if stage == "val":
             loss_fns = self.val_loss
             transforms = self.val_target_transforms

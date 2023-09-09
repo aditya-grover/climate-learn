@@ -4,6 +4,7 @@ from .download import *
 from .itermodule import *
 from .climatebench_module import *
 from .continuous_itermodule import *
+from .multisource_continuous_itermodule import *
 from .module import *
 from .nc2npz import convert_nc2npz
 from .task import *
