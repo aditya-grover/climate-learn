@@ -111,7 +111,7 @@ def load_model_module(
         except:
             clim = None
         metainfo = MetricsMetaInfo(in_vars, out_vars, lat, lon, clim)
-        train_loss = load_loss(train_loss, True, metainfo)
+        train_loss = load_loss(train_loss, False, metainfo)
     elif isinstance(train_loss, Callable):
         print("Using custom training loss")
     else:
@@ -514,6 +514,7 @@ def load_preset(task, data_module, preset, cfg=None):
             lr_scheduler = load_lr_scheduler(
                 "linear-warmup-cosine-annealing",
                 optimizer,
+                # {"warmup_epochs": 20000, "max_epochs": 200000, "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
                 {"warmup_epochs": cfg['warmup_epochs'], "max_epochs": cfg['num_epochs'], "warmup_start_lr": cfg['warmup_start_lr'], "eta_min": cfg['eta_min']}
             )
         elif preset.lower() == 'resnet-baseline':

@@ -3,8 +3,8 @@ data_dir: "/eagle/MDClimSim/tungnd/data/CMIP6/MPI-ESM/1.40625deg_np_10_shards/"
 default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage2/"
 ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage1/"
 gpu: 4
-batch_size: 4
-grad_acc: 2
+batch_size: 2
+grad_acc: 1
 #####################
 
 #Switch between scratch and pretrained models

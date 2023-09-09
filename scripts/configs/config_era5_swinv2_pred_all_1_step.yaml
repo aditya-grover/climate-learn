@@ -1,6 +1,6 @@
 #Change depending on device
-data_dir: "/localhome/data/datasets/climate/era5/1.40625_npz/"
-default_root_dir: "/home/tungnd/climate-learn/results_era5/"
+data_dir: "/eagle/datasets/era5/1.40625_npz/"
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_era5/"
 gpu: 8
 batch_size: 16
 grad_acc: 1
@@ -115,8 +115,8 @@ num_workers: 1
 
 model: 'swinv2_classification'
 
-in_img_size: [256, 256]
-patch_size: 4
+in_img_size: [128, 256]
+patch_size: 2
 embed_norm: True
 mlp_embed_depth: 1
 decoder_depth: 2
@@ -129,6 +129,7 @@ step: 1
 num_epochs: 50
 warmup_epochs: 5
 patience: 5
+min_delta : 1.0e-5
 val_every_n_steps: 2000
 lr: 5.0e-4
 warmup_start_lr: 1.0e-8

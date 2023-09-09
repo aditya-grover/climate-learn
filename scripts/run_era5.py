@@ -17,7 +17,8 @@ def get_best_checkpoint(dir):
     ckpt_paths = os.listdir(os.path.join(dir, 'checkpoints'))
     assert len(ckpt_paths) == 2
     for ckpt_path in ckpt_paths:
-        if 'last' not in ckpt_paths:
+        # if 'last-v2' in ckpt_path:
+        if 'last' not in ckpt_path:
             return os.path.join(dir, 'checkpoints/', ckpt_path)
 
 ### comment this line if not running on mint clusters

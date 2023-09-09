@@ -4,8 +4,8 @@ mask2former_dir: "/home/tungnd/Mask2Former"
 default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage2/"
 ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage1/"
 gpu: 4
-batch_size: 8
-grad_acc: 1
+batch_size: 4
+grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
