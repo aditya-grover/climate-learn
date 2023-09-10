@@ -13,12 +13,12 @@ from pytorch_lightning.loggers import WandbLogger
 from datetime import datetime
 
 
-def get_best_checkpoint(dir):
+def get_last_checkpoint(dir):
     ckpt_paths = os.listdir(os.path.join(dir, 'checkpoints'))
-    assert len(ckpt_paths) == 2
+    # assert len(ckpt_paths) == 2
     for ckpt_path in ckpt_paths:
         # if 'last-v2' in ckpt_path:
-        if 'last' not in ckpt_path:
+        if 'last' in ckpt_path:
             return os.path.join(dir, 'checkpoints/', ckpt_path)
 
 ### comment this line if not running on mint clusters
@@ -74,7 +74,7 @@ def main():
     )
 
     if cfg['ckpt_dir'] is not None:
-        ckpt_path = get_best_checkpoint(os.path.join(cfg['ckpt_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}"))
+        ckpt_path = get_last_checkpoint(os.path.join(cfg['ckpt_dir'], f"{model_name}_{pretrained_name}_{cfg['embed_type']}_emb_pretrained_{cfg['use_pretrained_weights']}"))
         state_dict = torch.load(f'{ckpt_path}', map_location='cpu')['state_dict']
         msg = module.load_state_dict(state_dict)
         print(msg)
