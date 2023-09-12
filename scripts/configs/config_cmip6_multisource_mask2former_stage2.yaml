@@ -1,0 +1,266 @@
+#Change depending on device
+mask2former_dir: "/home/tungnd/Mask2Former"
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_multisource_stage2/"
+ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_multisource_stage1/"
+gpu: 4
+batch_size: 4
+grad_acc: 2
+#####################
+
+#Switch between scratch and pretrained models
+use_pretrained_weights: True
+#Switch between video and image segmentation weights
+pretrained_weights: 'image'
+
+# multi-source data hyperparameters
+
+dict_data_dir: {
+  "mpi1": "/eagle/MDClimSim/tungnd/data/CMIP6/MPI-ESM/1.40625deg_np_10_shards/",
+  "mpi2": "/eagle/MDClimSim/tungnd/data/CMIP6/MPI-ESM/1.40625deg_np_10_shards/",
+  "tai1": "/eagle/MDClimSim/tungnd/data/CMIP6/TaiESM1/1.40625deg_np_20_shards/",
+  "tai2": "/eagle/MDClimSim/tungnd/data/CMIP6/TaiESM1/1.40625deg_np_20_shards/",
+  "awi1": "/eagle/MDClimSim/tungnd/data/CMIP6/AWI-ESM/1.40625deg_np_2_shards/",
+  "awi2": "/eagle/MDClimSim/tungnd/data/CMIP6/AWI-ESM/1.40625deg_np_2_shards/",
+  "hammoz1": "/eagle/MDClimSim/tungnd/data/CMIP6/HAMMOZ/1.40625deg_np_40_shards/",
+  "hammoz2": "/eagle/MDClimSim/tungnd/data/CMIP6/HAMMOZ/1.40625deg_np_40_shards/",
+  "cmcc1": "/eagle/MDClimSim/tungnd/data/CMIP6/CMCC/1.40625deg_np_2_shards/",
+  "cmcc2": "/eagle/MDClimSim/tungnd/data/CMIP6/CMCC/1.40625deg_np_2_shards/",
+}
+
+dict_start_idx: {
+  "mpi1": 0,
+  "mpi2": 0.5,
+  "tai1": 0,
+  "tai2": 0.5,
+  "awi1": 0,
+  "awi2": 0.5,
+  "hammoz1": 0,
+  "hammoz2": 0.5,
+  "cmcc1": 0,
+  "cmcc2": 0.5,
+}
+
+dict_end_idx: {
+  "mpi1": 0.5,
+  "mpi2": 1,
+  "tai1": 0.5,
+  "tai2": 1,
+  "awi1": 0.5,
+  "awi2": 1,
+  "hammoz1": 0.5,
+  "hammoz2": 1,
+  "cmcc1": 0.5,
+  "cmcc2": 1,
+}
+
+dict_random_lead_time: {
+  "mpi1": True,
+  "mpi2": True,
+  "tai1": True,
+  "tai2": True,
+  "awi1": True,
+  "awi2": True,
+  "hammoz1": True,
+  "hammoz2": True,
+  "cmcc1": True,
+  "cmcc2": True,
+}
+
+dict_min_pred_range: {
+  "mpi1": 1,
+  "mpi2": 1,
+  "tai1": 1,
+  "tai2": 1,
+  "awi1": 1,
+  "awi2": 1,
+  "hammoz1": 1,
+  "hammoz2": 1,
+  "cmcc1": 1,
+  "cmcc2": 1,
+}
+
+dict_max_pred_range: {
+  "mpi1": 28,
+  "mpi2": 28,
+  "tai1": 28,
+  "tai2": 28,
+  "awi1": 28,
+  "awi2": 28,
+  "hammoz1": 28,
+  "hammoz2": 28,
+  "cmcc1": 28,
+  "cmcc2": 28,
+}
+
+dict_hrs_each_step: {
+  "mpi1": 6,
+  "mpi2": 6,
+  "tai1": 6,
+  "tai2": 6,
+  "awi1": 6,
+  "awi2": 6,
+  "hammoz1": 6,
+  "hammoz2": 6,
+  "cmcc1": 6,
+  "cmcc2": 6,
+}
+
+dict_subsample: {
+  "mpi1": 1,
+  "mpi2": 1,
+  "tai1": 1,
+  "tai2": 1,
+  "awi1": 1,
+  "awi2": 1,
+  "hammoz1": 1,
+  "hammoz2": 1,
+  "cmcc1": 1,
+  "cmcc2": 1,
+}
+
+dict_buffer_size: {
+  "mpi1": 2000,
+  "mpi2": 2000,
+  "tai1": 2000,
+  "tai2": 2000,
+  "awi1": 2000,
+  "awi2": 2000,
+  "hammoz1": 2000,
+  "hammoz2": 2000,
+  "cmcc1": 2000,
+  "cmcc2": 2000,
+}
+
+history: 1
+window: 0
+num_workers: 1
+
+dict_in_variables: {
+  "mpi1": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "mpi2": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "tai1": [
+    "2m_temperature",
+    "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_850",
+    "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_850",
+    "temperature_250", "temperature_500", "temperature_850",
+    "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "tai2": [
+    "2m_temperature",
+    "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_850",
+    "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_850",
+    "temperature_250", "temperature_500", "temperature_850",
+    "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "awi1": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "awi2": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "hammoz1": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "hammoz2": [
+    "2m_temperature",
+    "10m_u_component_of_wind", 
+    "10m_v_component_of_wind",
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_50", "temperature_250", "temperature_500", "temperature_600", "temperature_700", "temperature_850", "temperature_925",
+    "specific_humidity_50", "specific_humidity_250", "specific_humidity_500", "specific_humidity_600", "specific_humidity_700", "specific_humidity_850", "specific_humidity_925",
+  ],
+  "cmcc1": [
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_250", "temperature_500", "temperature_850",
+  ],
+  "cmcc2": [
+    "geopotential_50", "geopotential_250", "geopotential_500", "geopotential_600", "geopotential_700", "geopotential_850", "geopotential_925",
+    "u_component_of_wind_50", "u_component_of_wind_250", "u_component_of_wind_500", "u_component_of_wind_600", "u_component_of_wind_700", "u_component_of_wind_850", "u_component_of_wind_925",
+    "v_component_of_wind_50", "v_component_of_wind_250", "v_component_of_wind_500", "v_component_of_wind_600", "v_component_of_wind_700", "v_component_of_wind_850", "v_component_of_wind_925",
+    "temperature_250", "temperature_500", "temperature_850",
+  ],
+}
+
+dict_out_variables: {
+  "mpi1": null,
+  "mpi2": null,
+  "tai1": null,
+  "tai2": null,
+  "awi1": null,
+  "awi2": null,
+  "hammoz1": null,
+  "hammoz2": null,
+  "cmcc1": null,
+  "cmcc2": null,
+}
+# constants: ["land_sea_mask", "orography", "lattitude"]
+
+model: 'mask2former_pred_all'
+
+in_img_size: [640, 640]
+decoder_depth: 2
+patch_size: 4
+embed_dim: 192
+out_embed_dim: 256
+freeze_backbone: False
+freeze_embeddings: False
+embed_norm: True
+continuous_model: True
+
+
+stage: 2
+num_epochs: 50
+warmup_epochs: 5
+patience: 5
+val_every_n_steps: 2000
+lr: 5.0e-4
+warmup_start_lr: 1.0e-8
+eta_min: 1.0e-8
+betas: [0.9, 0.95]
+weight_decay: 1.0e-5
+seed: 42
