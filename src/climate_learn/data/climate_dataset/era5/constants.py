@@ -17,7 +17,9 @@ NAME_TO_VAR = {
     "total_precipitation": "tp",
     "land_sea_mask": "lsm",
     "orography": "orography",
+    "slt": "slt",
     "lattitude": "lat2d",
+    "longitude": "lon2d",
     "geopotential": "z",
     "u_component_of_wind": "u",
     "v_component_of_wind": "v",
@@ -56,7 +58,7 @@ PRESSURE_LEVEL_VARS = [
     "potential_vorticity",
 ]
 
-DEFAULT_PRESSURE_LEVELS = [50, 250, 500, 600, 700, 850, 925, 1000]
+DEFAULT_PRESSURE_LEVELS = [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000]
 
 CONSTANTS = ["orography", "land_sea_mask", "slt", "lattitude", "longitude"]
 
