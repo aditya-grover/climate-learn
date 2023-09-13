@@ -88,13 +88,17 @@ def main():
     # tb_logger = TensorBoardLogger(
         # save_dir=f"{default_root_dir}/logs"
     # )
-    wandb.init(
+    # wandb.init(
+    #     project='climate-vision23',
+    #     dir=default_root_dir,
+    #     name=f"{model_name.upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {pretrained_name}, Dataset = {dataset_name_concat}", 
+    #     config=cfg
+    # )
+    wandb_logger = WandbLogger(
         project='climate-vision23',
-        dir=default_root_dir,
+        save_dir=default_root_dir,
         name=f"{model_name.upper()}, Pretrained Backbone = {cfg['use_pretrained_weights']} Stage = {cfg['stage']}, Model = {pretrained_name}, Dataset = {dataset_name_concat}", 
-        config=cfg
     )
-    wandb_logger = WandbLogger()
 
     trainer = cl.Trainer(
         # early_stopping="val/lat_mse:aggregate",
