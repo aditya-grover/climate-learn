@@ -1,28 +1,30 @@
 #Change depending on device
-data_dir: "/local2/hbansal/era5/1.40625_npz/"
-mask2former_dir: "/local/hbansal/Mask2Former/"
-default_root_dir: "/local/hbansal/climate-learn/results_era5/"
-ckpt_dir: "/local/hbansal/climate-learn/results_pretrained_cmip6_stage2/"
-gpu: [0, 1, 2, 3]
-batch_size: 8
+data_dir: "/eagle/datasets/era5/1.40625_npz/"
+mask2former_dir: "/home/tungnd/Mask2Former/"
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_era5/"
+ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_cmip6_stage2/"
+gpu: 4
+batch_size: 4
 grad_acc: 2
 #####################
 
 #Switch between scratch and pretrained models
 use_pretrained_weights: True
 #Switch between video and image segmentation weights
-pretrained_weights: 'video'
+pretrained_weights: 'image'
 #Switch between normal and climax embeddings
 embed_type: 'climax'
 
 #Set the lead time
-pred_range: 120
+pred_range: 72
 
 in_variables: [
   "land_sea_mask",
   "orography",
   "lattitude",
   "2m_temperature",
+  "10m_u_component_of_wind", 
+  "10m_v_component_of_wind",
   "geopotential_50",
   "geopotential_250",
   "geopotential_500",
@@ -60,7 +62,7 @@ in_variables: [
   "specific_humidity_925",
 ]
 out_variables: ["2m_temperature", "geopotential_500", "temperature_850"]
-constants: ["land_sea_mask", "orography", "lattitude"]
+# constants: ["land_sea_mask", "orography", "lattitude"]
 subsample: 1
 history: 1
 window: 0
@@ -69,7 +71,6 @@ num_workers: 1
 model: 'mask2former'
 
 in_img_size: [512, 512]
-embed_type: 'climax'
 mlp_embed_depth: 1
 decoder_depth: 2
 patch_size: 4
@@ -89,6 +90,6 @@ val_every_n_steps: 2000
 lr: 5.0e-7
 warmup_start_lr: 1.0e-8
 eta_min: 1.0e-8
-betas: [0.9, 0.95]
+betas: [0.9, 0.99]
 weight_decay: 1.0e-5
 seed: 42

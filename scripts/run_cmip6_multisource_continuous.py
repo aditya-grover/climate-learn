@@ -15,7 +15,6 @@ from datetime import datetime
 
 def get_last_checkpoint(dir):
     ckpt_paths = os.listdir(os.path.join(dir, 'checkpoints'))
-    assert len(ckpt_paths) == 2
     for ckpt_path in ckpt_paths:
         if 'last' in ckpt_path:
             return os.path.join(dir, 'checkpoints/', ckpt_path)

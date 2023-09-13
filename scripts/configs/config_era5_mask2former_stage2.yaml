@@ -1,9 +1,10 @@
 #Change depending on device
-data_dir: "/home/data/datasets/climate/era5/1.40625_npz/"
+data_dir: "/eagle/datasets/era5/1.40625_npz/"
 mask2former_dir: "/home/tungnd/Mask2Former"
-default_root_dir: "/home/tungnd/climate-learn/results_era5_stage_2/"
-ckpt_dir: "/home/tungnd/climate-learn/results_era5_stage_1/"
-gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+default_root_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_era5_stage_2/"
+ckpt_dir: "/eagle/MDClimSim/tungnd/climate-learn/results_era5_stage_1/"
+# gpu: [0, 1, 2, 3, 4, 5, 6, 7]
+gpu: 4
 batch_size: 8
 grad_acc: 2
 #####################
